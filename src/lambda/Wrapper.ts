@@ -15,6 +15,7 @@ import { TypedSchema } from "yup/lib/util/types";
 import { createNoopMeter } from "@opentelemetry/api";
 import { reject } from "lodash";
 import { resolve } from "path";
+import { SdkInfo } from "@sentry/serverless";
 
 export const wrapBaseLambdaHandler = <U, I, V>(
   handler: LambdaHandler<U, I, V>,
@@ -53,9 +54,15 @@ export const wrapBaseLambdaHandler = <U, I, V>(
   };
 };
 
-export const wrapGenericHandler = <T, I, U, Y extends ObjectSchema<any>>(
+export const wrapGenericHandler = <
+  T,
+  I,
+  U,
+  SInput extends ObjectSchema<any> | any,
+  SOutput extends ObjectSchema<any> | any
+>(
   handler: LambdaHandler<T, I, U>,
-  configuration: HandlerConfigurationWithType<I, Y>
+  configuration: HandlerConfigurationWithType<I, SInput, SOutput>
 ) => {
   // Needs to wrap before the secrets manager, because secrets should be available in the init phase
   let wrappedHandler = wrapBaseLambdaHandler(
@@ -70,11 +77,6 @@ export const wrapGenericHandler = <T, I, U, Y extends ObjectSchema<any>>(
 
   wrappedHandler = wrapRuntime(wrappedHandler);
 
-  /*
-  if (configuration.yupSchema) {
-    wrappedHandler = wrapYup(wrappedHandler, configuration.yupSchema);
-  }
-*/
   if (configuration.sentry) {
     wrappedHandler = wrapSentry(wrappedHandler);
   }

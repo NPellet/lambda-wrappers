@@ -143,8 +143,10 @@ describe("API Gateway: Telemetry", function () {
 
     expect(spans[0].parentSpanId).toBe(spans[1].spanContext().spanId);
   });
+});
 
-  it("Checking schema validation", async () => {
+describe("API Gateway: Checking", () => {
+  it("Input schema validation is enforced", async () => {
     const handler = createApiGatewayHandler(
       async (request) => {
         await request.getData();
@@ -155,7 +157,7 @@ describe("API Gateway: Telemetry", function () {
         };
       },
       {
-        yupSchema: yup.object({
+        yupSchemaInput: yup.object({
           num: yup.number().required(),
         }),
       }
@@ -183,6 +185,58 @@ describe("API Gateway: Telemetry", function () {
       handler(validObjectGatewayEvent, LambdaContext, () => {})
     ).resolves.toMatchObject({
       statusCode: 200,
+    });
+  });
+
+  it("Output schema validation is enforced", async () => {
+    const handler = createApiGatewayHandler(
+      async (request) => {
+        const data = await request.getData();
+
+        return {
+          statusCode: 200,
+          body: data,
+        };
+      },
+      {
+        yupSchemaOutput: yup.object({
+          outputField: yup.number().required(),
+        }),
+      }
+    );
+
+    await expect(
+      handler(testApiGatewayEvent, LambdaContext, () => {})
+    ).resolves.toMatchObject({
+      statusCode: 500,
+      body: expect.stringContaining("in JSON at position"), // Validatint output
+    });
+
+    const wrongObjectGatewayEvent = _.cloneDeep(testApiGatewayEvent);
+    wrongObjectGatewayEvent.body = JSON.stringify({ property: "value" });
+    await expect(
+      handler(wrongObjectGatewayEvent, LambdaContext, () => {})
+    ).resolves.toMatchObject({
+      statusCode: 500,
+      body: expect.stringContaining("Output object not according to schema"),
+    });
+
+    const wrongTypeGatewayEvent = _.cloneDeep(testApiGatewayEvent);
+    wrongTypeGatewayEvent.body = JSON.stringify({ outputField: "value" });
+    await expect(
+      handler(wrongTypeGatewayEvent, LambdaContext, () => {})
+    ).resolves.toMatchObject({
+      statusCode: 500,
+      body: expect.stringContaining("Output object not according to schema"),
+    });
+
+    const validObjectGatewayEvent = _.cloneDeep(testApiGatewayEvent);
+    validObjectGatewayEvent.body = JSON.stringify({ outputField: 12 });
+    await expect(
+      handler(validObjectGatewayEvent, LambdaContext, () => {})
+    ).resolves.toMatchObject({
+      statusCode: 200,
+      body: JSON.stringify({ outputField: 12 }),
     });
   });
 });

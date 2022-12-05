@@ -8,16 +8,12 @@ import {
 } from "aws-lambda";
 import { InferType, ObjectSchema } from "yup";
 import { recordException } from "../../util/exceptions";
-import {
-  ApiGatewayLambdaHandler,
-  BaseLambdaHandler,
-  LambdaContext,
-  LambdaHandler,
-} from "../../util/LambdaHandler";
+import { LambdaContext, LambdaHandler } from "../../util/LambdaHandler";
 import { AwsApiGatewayRequest } from "../../util/apigateway";
 import { HandlerConfiguration, LambdaType } from "../config";
 import { log } from "../utils/logger";
 import { wrapGenericHandler } from "../Wrapper";
+import { config } from "process";
 
 /**
  * Make sure that the return format of the lambda matches what is expected from the API Gateway
@@ -25,18 +21,25 @@ import { wrapGenericHandler } from "../Wrapper";
  * @returns
  */
 export const createApiGatewayHandler = <
-  T,
-  TInit,
-  U extends ObjectSchema<any> | undefined = undefined
+  TInit = any,
+  SInput extends ObjectSchema<any> | undefined = any,
+  SOutput extends ObjectSchema<any> | undefined = any
 >(
   handler: LambdaHandler<
-    AwsApiGatewayRequest<U extends ObjectSchema<any> ? InferType<U> : T>,
+    AwsApiGatewayRequest<
+      SInput extends ObjectSchema<any> ? InferType<SInput> : SInput
+    >,
     TInit,
-    APIGatewayProxyResult
+    Omit<APIGatewayProxyResult, "body"> & {
+      body: SOutput extends ObjectSchema<any>
+        ? InferType<SOutput>
+        : void | string;
+    }
   >,
-  configuration: Omit<HandlerConfiguration<TInit, U>, "type">
+  configuration: Omit<HandlerConfiguration<TInit, SInput, SOutput>, "type">
 ) => {
-  type V = U extends ObjectSchema<any> ? InferType<U> : T;
+  type TInput = SInput extends ObjectSchema<any> ? InferType<SInput> : SInput;
+  type TOutput = Awaited<ReturnType<typeof handler>>;
 
   const wrappedHandler = wrapGenericHandler(handler, {
     type: LambdaType.API_GATEWAY,
@@ -48,7 +51,8 @@ export const createApiGatewayHandler = <
     context: Context,
     callback: Callback
   ) {
-    let out: APIGatewayProxyResult | void;
+    let out: APIGatewayProxyEvent;
+    let actualOut: TOutput | void;
 
     log.info(`Received event through APIGateway on path  ${event.path}.`);
     try {
@@ -61,12 +65,12 @@ export const createApiGatewayHandler = <
         }
       );
 
-      out = await wrappedHandler(
-        new AwsApiGatewayRequest<V>(event, configuration.yupSchema),
+      actualOut = await wrappedHandler(
+        new AwsApiGatewayRequest<TInput>(event, configuration.yupSchemaInput),
         newCtx,
         callback
       );
-      if (!out) {
+      if (!actualOut) {
         recordException(
           new Error("API Gateway lambda functions must return a Promise")
         );
@@ -76,7 +80,7 @@ export const createApiGatewayHandler = <
         };
       }
 
-      if (!out.statusCode || !out.body) {
+      if (!actualOut.statusCode) {
         recordException(out);
         return {
           statusCode: 500,
@@ -85,6 +89,29 @@ export const createApiGatewayHandler = <
             JSON.stringify(out, undefined, "\t "),
         };
       }
+
+      if (!actualOut.body) {
+        return { ...actualOut, body: "" };
+      }
+
+      if (typeof actualOut.body === "object") {
+        try {
+          if (configuration.yupSchemaOutput) {
+            await configuration.yupSchemaOutput?.validate(actualOut.body);
+          }
+
+          return {
+            ...actualOut,
+            body: JSON.stringify(actualOut.body),
+          };
+        } catch (e) {
+          return {
+            statusCode: 500,
+            body: "Output object not according to schema",
+          };
+        }
+      }
+      return actualOut;
     } catch (e) {
       // We do not rethrow the exception.
       // Exception should already be recorded by the rumtime wrapper
@@ -96,7 +123,5 @@ export const createApiGatewayHandler = <
           (typeof e === "string" ? e : e.message),
       };
     }
-
-    return out;
   };
 };

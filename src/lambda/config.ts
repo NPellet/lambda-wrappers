@@ -6,10 +6,12 @@ import { SecretTuple } from "./utils/secrets_manager";
 
 export type HandlerConfiguration<
   I = any,
-  U extends TypedSchema | ObjectSchema<any> = undefined
+  U extends any | ObjectSchema<any> = any,
+  V extends any | ObjectSchema<any> = any
 > = {
   secretInjection?: Record<string, { secret: SecretTuple; required: boolean }>;
-  yupSchema?: U;
+  yupSchemaInput?: U;
+  yupSchemaOutput?: V;
   initFunction?: () => Promise<I>;
   sentry?: boolean;
   opentelemetry?: boolean;
@@ -18,8 +20,9 @@ export type HandlerConfiguration<
 
 export type HandlerConfigurationWithType<
   I,
-  U extends TypedSchema | ObjectSchema<any>
-> = Omit<HandlerConfiguration<I, U>, "type"> & {
+  U extends any | ObjectSchema<any> = any,
+  V extends any | ObjectSchema<any> = any
+> = Omit<HandlerConfiguration<I, U, V>, "type"> & {
   type: LambdaType;
 };
 

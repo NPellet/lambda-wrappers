@@ -43,7 +43,7 @@ export const createEventBridgeHandler = <
     log.info(event.detail);
 
     return wrappedHandler(
-      new AwsEventBridgeEvent<V>(event, configuration.yupSchema),
+      new AwsEventBridgeEvent<V>(event, configuration.yupSchemaInput),
       context,
       callback
     );

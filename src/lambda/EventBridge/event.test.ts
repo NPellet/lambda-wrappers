@@ -45,7 +45,7 @@ describe("Event bridge handler", function () {
       },
       {
         initFunction: init,
-        yupSchema: yup.object({
+        yupSchemaInput: yup.object({
           field: yup.number().required(),
         }),
       }

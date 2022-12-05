@@ -18,8 +18,12 @@ const init = async () => {
 };
 
 const configuration = {
-  yupSchema: yup.object({
+  yupSchemaInput: yup.object({
     name: yup.string().required(),
+  }),
+  yupSchemaOutput: yup.object({
+    // Currently only applies to the API Gateway body output
+    age: yup.number().required(),
   }),
   secretInjection: {
     // The secret Algolia-Products with key lwaAdminApiKey will be injected into process.env.key
