@@ -107,3 +107,29 @@ createApiGatewayHandler<{ hello: string }>(async (request, init) => {
   };
 }, {});
 ```
+
+## Init method
+
+After not being triggered for a while, or after a change of configuration, the lambda runtime shuts down. At the next invocation, a "cold start" takes place, which is basically the setting up of the runtime and the acquisition of resources.
+
+Following the cold start, on subsequent invocations of the lambdas, some of its state is persisted, for example any resource set on the `global` object.
+
+You can use the `initMethod` in the configuration to perform tasks which should pre-run the lambda handler itself. In other words, tasks that would benefit from being executed only once. An example would be to open up a connection to a database and keep that connection between lambda handlers:
+
+```typescript
+createApiGatewayHandler(async (request, init) => {
+  // Main handler
+
+  const dbClient = init.client;
+  // Do something with dbClient
+}, {
+
+  initFunction: function( ) {
+    const client = // await database connection
+
+    return {
+      client;
+    }
+  }
+});
+```
