@@ -63,20 +63,24 @@ export { configuration }; // Can be picked up by other tools, for example for Op
 The wrapper function to call is:
 
 ```typescript
-createApiGatewayHandler(handler, initFunction, configuration);
+createApiGatewayHandler(handler, configuration);
 ```
 
-The handler's first argument is an instance of `AwsApiGatewayRequest<T>` and exposes `public async getData(): Promise<T>` to fetch the data with optional validation
+The handler's first argument is an instance of `AwsApiGatewayRequest<T>` and exposes `public async getData(): Promise<T>` to fetch the data with optional validation.
+
+The handler's second argument is the result of the `initFunction` function ran during the cold start, after being awaited.
 
 ### Event bridge
 
 The wrapper function to call is:
 
 ```typescript
-createEventBridgeHandler(handler, initFunction, configuration);
+createEventBridgeHandler(handler, configuration);
 ```
 
 The handler's first argument is an instance of `AwsEventBridgeEvent<T>` and exposes `public async getData(): Promise<T>` to fetch the data with optional validation.
+
+The handler's second argument is the result of the `initFunction` function ran during the cold start, after being awaited.
 
 ## Without yup validation
 
@@ -86,4 +90,20 @@ You can opt out of the yup schema validation by skipping the configuration entry
 createEventBridgeHandler<T, INIT>;
 ```
 
-Where `T` is the underlying type and `INIT` is the result of the init function (without the wrapping `Promise<>`). Unfortunately, the `INIT` parameter is required until such time that partial type inference is supported in Typescript (should be happening in a couple of months). You may resort to using ` Awaited<ReturnType<typeof initFunction>>` to extract the return type of the init function
+Where `T` is the underlying type and `INIT` is the result of the init function (without the wrapping `Promise<>`). Unfortunately, the `INIT` parameter is required (or will default to any) until such time that partial type inference is supported in Typescript (should be happening in a couple of months). You may resort to using ` Awaited<ReturnType<typeof initFunction>>` to extract the return type of the init function.
+
+Example:
+
+```typescript
+createApiGatewayHandler<{ hello: string }>(async (request, init) => {
+  const data = await request.getData();
+
+  // Data is of type { hello: string }
+  data.hello;
+
+  return {
+    statusCode: 200,
+    body: "ok",
+  };
+}, {});
+```

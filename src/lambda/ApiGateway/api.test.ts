@@ -190,6 +190,7 @@ describe("API Gateway: Checking", () => {
 
   it("Output schema validation is enforced", async () => {
     const handler = createApiGatewayHandler(
+      // @ts-ignore
       async (request) => {
         const data = await request.getData();
 

@@ -14,6 +14,7 @@ import { HandlerConfiguration, LambdaType } from "../config";
 import { log } from "../utils/logger";
 import { wrapGenericHandler } from "../Wrapper";
 import { config } from "process";
+import { create } from "lodash";
 
 /**
  * Make sure that the return format of the lambda matches what is expected from the API Gateway
@@ -21,14 +22,13 @@ import { config } from "process";
  * @returns
  */
 export const createApiGatewayHandler = <
+  T,
   TInit = any,
-  SInput extends ObjectSchema<any> | undefined = any,
-  SOutput extends ObjectSchema<any> | undefined = any
+  SInput extends ObjectSchema<any> | undefined = undefined,
+  SOutput extends ObjectSchema<any> | undefined = undefined
 >(
   handler: LambdaHandler<
-    AwsApiGatewayRequest<
-      SInput extends ObjectSchema<any> ? InferType<SInput> : SInput
-    >,
+    AwsApiGatewayRequest<SInput extends undefined ? T : InferType<SInput>>,
     TInit,
     Omit<APIGatewayProxyResult, "body"> & {
       body: SOutput extends ObjectSchema<any>
@@ -38,7 +38,7 @@ export const createApiGatewayHandler = <
   >,
   configuration: Omit<HandlerConfiguration<TInit, SInput, SOutput>, "type">
 ) => {
-  type TInput = SInput extends ObjectSchema<any> ? InferType<SInput> : SInput;
+  type TInput = SInput extends undefined ? T : InferType<SInput>;
   type TOutput = Awaited<ReturnType<typeof handler>>;
 
   const wrappedHandler = wrapGenericHandler(handler, {
@@ -125,3 +125,13 @@ export const createApiGatewayHandler = <
     }
   };
 };
+
+createApiGatewayHandler<{ hello: string }>(async (request, init) => {
+  const data = await request.getData();
+  data.hello;
+
+  return {
+    statusCode: 200,
+    body: "ok",
+  };
+}, {});
