@@ -2,6 +2,7 @@ import { AssertionError } from "assert";
 import { Handler } from "aws-lambda";
 import { event } from "../../test_utils/apigateway";
 import { LambdaContext } from "../../test_utils/utils";
+import { LambdaSecretsHandler } from "../../util/LambdaHandler";
 import { LambdaType } from "../config";
 import { wrapGenericHandler } from "../Wrapper";
 
@@ -29,7 +30,7 @@ import {
 } from "./secrets_manager";
 
 import { fetchAwsSecret } from "./secrets_manager_aws";
-const handler: Handler<any, any> = async () => {
+const handler: LambdaSecretsHandler<any, any, any> = async () => {
   return "Ok";
 };
 
@@ -192,6 +193,25 @@ describe("Secret manager", () => {
     const wrappedHandler = wrapGenericHandler(handler, {
       type: LambdaType.GENERIC,
       initFunction: init,
+      secretInjection: {
+        secret: {
+          secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),
+          required: false,
+        },
+      },
+    });
+
+    await wrappedHandler(event, LambdaContext, () => {});
+  });
+
+  test("Secret is injected in the init and handler parameter", async () => {
+    const handler = async (event: any, init) => {};
+
+    const wrappedHandler = wrapGenericHandler(handler, {
+      type: LambdaType.GENERIC,
+      initFunction: async (secrets) => {
+        expect(secrets.secret).toBe("algoliaApiKey");
+      },
       secretInjection: {
         secret: {
           secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),

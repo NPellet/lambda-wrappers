@@ -14,7 +14,7 @@ import {
 } from "@opentelemetry/semantic-conventions";
 import { getAwsFromAccountFromArn } from "../../util/aws";
 import { AWSXRAY_TRACE_ID_HEADER } from "@opentelemetry/propagator-aws-xray";
-import { LambdaHandler } from "../../util/LambdaHandler";
+import { LambdaInitSecretHandler } from "../../util/LambdaHandler";
 
 export const tracer = api.trace.getTracerProvider().getTracer("aws_lambda");
 

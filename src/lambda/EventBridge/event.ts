@@ -1,6 +1,9 @@
 import { Callback, Context, EventBridgeEvent, Handler } from "aws-lambda";
 import { HandlerConfiguration, LambdaType } from "../config";
-import { LambdaContext, LambdaHandler } from "../../util/LambdaHandler";
+import {
+  LambdaContext,
+  LambdaInitSecretHandler,
+} from "../../util/LambdaHandler";
 import { log } from "../utils/logger";
 import { wrapGenericHandler } from "../Wrapper";
 
@@ -10,9 +13,10 @@ import { AwsEventBridgeEvent } from "../../util/eventbridge";
 export const createEventBridgeHandler = <
   T,
   I,
+  TSecrets extends string,
   U extends ObjectSchema<any> | undefined = undefined
 >(
-  listener: LambdaHandler<
+  listener: LambdaInitSecretHandler<
     AwsEventBridgeEvent<U extends ObjectSchema<any> ? InferType<U> : T>,
     I & {
       originalData: EventBridgeEvent<
@@ -20,6 +24,7 @@ export const createEventBridgeHandler = <
         U extends ObjectSchema<any> ? InferType<U> : T
       >;
     },
+    TSecrets,
     void
   >,
   configuration: HandlerConfiguration<I, U>

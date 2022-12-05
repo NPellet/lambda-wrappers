@@ -8,7 +8,10 @@ import {
 } from "aws-lambda";
 import { InferType, ObjectSchema } from "yup";
 import { recordException } from "../../util/exceptions";
-import { LambdaContext, LambdaHandler } from "../../util/LambdaHandler";
+import {
+  LambdaContext,
+  LambdaInitSecretHandler,
+} from "../../util/LambdaHandler";
 import { AwsApiGatewayRequest } from "../../util/apigateway";
 import { HandlerConfiguration, LambdaType } from "../config";
 import { log } from "../utils/logger";
@@ -24,19 +27,24 @@ import { create } from "lodash";
 export const createApiGatewayHandler = <
   T,
   TInit = any,
+  TSecrets extends string = any,
   SInput extends ObjectSchema<any> | undefined = undefined,
   SOutput extends ObjectSchema<any> | undefined = undefined
 >(
-  handler: LambdaHandler<
+  handler: LambdaInitSecretHandler<
     AwsApiGatewayRequest<SInput extends undefined ? T : InferType<SInput>>,
     TInit,
+    TSecrets,
     Omit<APIGatewayProxyResult, "body"> & {
       body: SOutput extends ObjectSchema<any>
         ? InferType<SOutput>
         : void | string;
     }
   >,
-  configuration: Omit<HandlerConfiguration<TInit, SInput, SOutput>, "type">
+  configuration: Omit<
+    HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
+    "type"
+  >
 ) => {
   type TInput = SInput extends undefined ? T : InferType<SInput>;
   type TOutput = Awaited<ReturnType<typeof handler>>;

@@ -28,9 +28,17 @@ export abstract class EventBridgeLambdaHandler<T> extends BaseLambdaHandler<
 > {
   async init() {}
 }
-export type LambdaHandler<T, I, V> = (
+export type LambdaInitSecretHandler<T, TInit, TSecrets extends string, V> = (
   data: T,
-  init: I,
+  init: TInit,
+  secrets: Record<TSecrets, string>,
+  context: Context,
+  callback: Callback<any>
+) => Promise<V>;
+
+export type LambdaSecretsHandler<T, TSecrets extends string, V> = (
+  data: T,
+  secrets: Record<TSecrets, string>,
   context: Context,
   callback: Callback<any>
 ) => Promise<V>;

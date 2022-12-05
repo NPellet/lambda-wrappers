@@ -133,3 +133,48 @@ createApiGatewayHandler(async (request, init) => {
   }
 });
 ```
+
+### Secret injection
+
+Secrets are by default injected into environment variables, e.g. if the secret definition is
+
+```
+{
+  key1: getAwsSecretDef('MySecretName', 'SecretKey'),
+  key2: getAwsSecretDef('MyOtherSecretName', 'OtherSecretKey'),
+}
+```
+
+Will populate the environment variables
+
+```typescript
+process.env.key1;
+// and
+process.env.key2;
+```
+
+The secrets are injected during the cold start of the runtime and renewed every 2h
+
+Note that the injection in `process.env` occurs before the init function is called, so the secrets may be freely used.
+
+The record of secrets is also passed as the first argument of the `init` function:
+
+```typescript
+const wrappedHandler = wrapGenericHandler(
+  async (event: any, init, secrets) => {
+    // secrets.secretKey is defined
+  },
+  {
+    type: LambdaType.GENERIC,
+    initFunction: async (secrets) => {
+      //secrets.secretKey is defined
+    },
+    secretInjection: {
+      secretKey: {
+        secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),
+        required: false,
+      },
+    },
+  }
+);
+```

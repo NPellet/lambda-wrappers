@@ -2,7 +2,7 @@ import { AWSXRAY_TRACE_ID_HEADER } from "@opentelemetry/propagator-aws-xray";
 import { APIGatewayEvent, APIGatewayProxyResult, Handler } from "aws-lambda";
 import _ from "lodash";
 import { AwsApiGatewayRequest } from "../util/apigateway";
-import { LambdaHandler } from "../util/LambdaHandler";
+import { LambdaInitSecretHandler } from "../util/LambdaHandler";
 import { sampledAwsHeader, testApiGatewayEvent } from "./utils";
 
 const event = _.cloneDeep(testApiGatewayEvent);
@@ -52,38 +52,41 @@ export const syncHandler: Handler<APIGatewayEvent, APIGatewayProxyResult> = (
   callback
 ) => {};
 
-export const successLHandler: LambdaHandler<
+export const successLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
+  string,
   APIGatewayProxyResult
-> = async (event, init, context, callback) => {
+> = async (event, init, secrets, context, callback) => {
   return {
     statusCode: 200,
     body: "Ok",
   };
 };
 
-export const errorLHandler: LambdaHandler<
+export const errorLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
+  string,
   APIGatewayProxyResult
-> = async (event, init, context, callback) => {
+> = async (event, init, secrets, context, callback) => {
   return {
     statusCode: 500,
     body: "Internal Server Error",
   };
 };
 
-export const exceptionLHandler: LambdaHandler<
+export const exceptionLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
+  string,
   APIGatewayProxyResult
-> = async (event, init, context, callback) => {
+> = async (event, init, secrets, context, callback) => {
   throw new Error("Some exception");
 };
 
 // @ts-ignore On purpose wrong type output
-export const malformedLHandler: LambdaHandler<
+export const malformedLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
   APIGatewayProxyResult
@@ -92,7 +95,7 @@ export const malformedLHandler: LambdaHandler<
 };
 
 // @ts-ignore
-export const syncLHandler: LambdaHandler<
+export const syncLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
   APIGatewayProxyResult

@@ -2,12 +2,15 @@ import { aws_secrets } from "@lendis-tech/secrets-manager-utilities";
 import { SecretsContentOf } from "@lendis-tech/secrets-manager-utilities/dist/secrets";
 import { strict } from "assert";
 import { Handler } from "aws-lambda";
-import { LambdaHandler } from "../../util/LambdaHandler";
+import {
+  LambdaInitSecretHandler,
+  LambdaSecretsHandler,
+} from "../../util/LambdaHandler";
 import { HandlerConfiguration } from "../config";
 import { log } from "./logger";
 import { fetchAwsSecret } from "./secrets_manager_aws";
 
-const SecretCache: Map<string, { expiresOn: Date }> = new Map();
+const SecretCache: Map<string, { expiresOn: Date; value: string }> = new Map();
 
 export type SecretTuple = {
   [K in keyof typeof aws_secrets]: [K, SecretsContentOf<K>];
@@ -30,8 +33,8 @@ export const clearCache = () => {
   }
 };
 
-export const wrapHandlerSecretsManager = <T, U>(
-  handler: Handler<T, U>,
+export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
+  handler: LambdaSecretsHandler<T, TSecrets, U>,
   secrets: HandlerConfiguration<any>["secretInjection"]
 ) => {
   const wrappedHandler: Handler<T, U | void> = async (
@@ -42,6 +45,7 @@ export const wrapHandlerSecretsManager = <T, U>(
     log.debug("Checking AWS Secrets in environment variables");
 
     const secretsToFetch: Set<string> = new Set();
+    const secretsOut: Partial<Record<TSecrets, string>> = {};
     // List all needed secrets for this lambda
     for (let [k, { secret, required }] of Object.entries(secrets)) {
       const isInCache = SecretCache.has(k);
@@ -55,6 +59,7 @@ export const wrapHandlerSecretsManager = <T, U>(
         );
         secretsToFetch.add(secret[0]);
       } else {
+        secretsOut[k] = SecretCache.get(k).value;
         strict(
           process.env[k] !== undefined,
           "The Secret was found in the cache, but not in process.env. This points to a bug"
@@ -109,13 +114,20 @@ export const wrapHandlerSecretsManager = <T, U>(
 
         SecretCache.set(k, {
           expiresOn: new Date(Date.now() + 3600 * 1000 * 2),
+          value,
         });
+        secretsOut[k] = SecretCache.get(k).value;
       }
     }
 
     // End of secrets manager run. Move on to the handler
 
-    return await handler(event, context, callback);
+    return await handler(
+      event,
+      secretsOut as Record<TSecrets, string>,
+      context,
+      callback
+    );
   };
 
   return wrappedHandler;

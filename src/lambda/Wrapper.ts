@@ -1,6 +1,9 @@
 import { Callback, Context, Handler } from "aws-lambda";
 import { recordException } from "../util/exceptions";
-import { LambdaHandler } from "../util/LambdaHandler";
+import {
+  LambdaInitSecretHandler,
+  LambdaSecretsHandler,
+} from "../util/LambdaHandler";
 import {
   HandlerConfiguration,
   HandlerConfigurationWithType,
@@ -17,21 +20,22 @@ import { reject } from "lodash";
 import { resolve } from "path";
 import { SdkInfo } from "@sentry/serverless";
 
-export const wrapBaseLambdaHandler = <U, I, V>(
-  handler: LambdaHandler<U, I, V>,
-  init?: () => Promise<I>
-): Handler<U, V | void> => {
+export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
+  handler: LambdaInitSecretHandler<U, TInit, TSecrets, V>,
+  init?: (secrets: Record<TSecrets, string>) => Promise<TInit>
+): LambdaSecretsHandler<U, TSecrets, V | void> => {
   let isInit: boolean = false;
-  let initValue: I;
+  let initValue: TInit;
 
   return async function wrappedInitableHandler(
     event: U,
+    secrets: Record<TSecrets, string>,
     context: Context,
     callback: Callback
   ) {
     if (!isInit) {
       console.log("RUNNING INIT");
-      if (init) initValue = await init();
+      if (init) initValue = await init(secrets);
 
       isInit = true;
     }
@@ -45,7 +49,7 @@ export const wrapBaseLambdaHandler = <U, I, V>(
         }
       };
 
-      const out = handler(event, initValue, context, shimmedCb);
+      const out = handler(event, initValue, secrets, context, shimmedCb);
 
       if (typeof out.then === "function") {
         out.then(resolve).catch(reject);
@@ -56,13 +60,14 @@ export const wrapBaseLambdaHandler = <U, I, V>(
 
 export const wrapGenericHandler = <
   T,
-  I,
+  TInit,
   U,
   SInput extends ObjectSchema<any> | any,
-  SOutput extends ObjectSchema<any> | any
+  SOutput extends ObjectSchema<any> | any,
+  TSecrets extends string
 >(
-  handler: LambdaHandler<T, I, U>,
-  configuration: HandlerConfigurationWithType<I, SInput, SOutput>
+  handler: LambdaInitSecretHandler<T, TInit, TSecrets, U>,
+  configuration: HandlerConfigurationWithType<TInit, SInput, SOutput, TSecrets>
 ) => {
   // Needs to wrap before the secrets manager, because secrets should be available in the init phase
   let wrappedHandler = wrapBaseLambdaHandler(
@@ -70,26 +75,26 @@ export const wrapGenericHandler = <
     configuration.initFunction
   );
 
-  wrappedHandler = wrapHandlerSecretsManager(
+  let wrappedHandlerWithSecrets = wrapHandlerSecretsManager(
     wrappedHandler,
     configuration?.secretInjection ?? {}
   );
 
-  wrappedHandler = wrapRuntime(wrappedHandler);
+  wrappedHandlerWithSecrets = wrapRuntime(wrappedHandlerWithSecrets);
 
   if (configuration.sentry) {
-    wrappedHandler = wrapSentry(wrappedHandler);
+    wrappedHandlerWithSecrets = wrapSentry(wrappedHandlerWithSecrets);
   }
 
   if (configuration.opentelemetry) {
-    wrappedHandler = wrapTelemetryLambda(
-      wrappedHandler,
+    wrappedHandlerWithSecrets = wrapTelemetryLambda(
+      wrappedHandlerWithSecrets,
       LambdaTypeConfiguration[configuration.type]?.opentelemetryWrapper ||
         ((handler) => handler)
     );
   }
 
-  return wrappedHandler;
+  return wrappedHandlerWithSecrets;
 };
 
 const wrapRuntime = <T, U>(handler: Handler<T, U>) => {
