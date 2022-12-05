@@ -10,6 +10,13 @@ Other handlers will be supported in the future
 The handler definition file may look something like:
 
 ```typescript
+// Ran only once on a cold start. Use this method to cache data, initiate DB connection, etc...
+const init = async () => {
+  return {
+    resourceKey: "value",
+  };
+};
+
 const configuration = {
   yupSchema: yup.object({
     name: yup.string().required(),
@@ -22,37 +29,27 @@ const configuration = {
       required: false,
     },
   },
+  initFunction: init,
   useSentry: true,
   useOpentelemetry: true,
 };
 
-// Ran only once on a cold start. Use this method to cache data, initiate DB connection, etc...
-const init = async () => {
-  return {
-    resourceKey: "value",
-  };
-};
+export const handler = createEventBridgeHandler(async (request, init) => {
+  // Data if of instance AwsApiGatewayRequest<T>, where T is the typed schema
+  // Init has the form of the result of the init method
 
-export const handler = createEventBridgeHandler(
-  async (request, init) => {
-    // Data if of instance AwsApiGatewayRequest<T>, where T is the typed schema
-    // Init has the form of the result of the init method
+  // This will validate the event data against the yup schema
+  // The lambda will fail if the schema is not respected
+  const data = await request.getData();
 
-    // This will validate the event data against the yup schema
-    // The lambda will fail if the schema is not respected
-    const data = await request.getData();
+  data.name; // Ok
+  //data.inexistingProperty; // <== TS Error
 
-    data.name; // Ok
-    //data.inexistingProperty; // <== TS Error
+  init.resourceKey;
+  //init.otherResourceKey; // <== TS Error
 
-    init.resourceKey;
-    //init.otherResourceKey; // <== TS Error
-
-    process.env.secretKeyInProcessEnv; // The injected secret
-  },
-  init,
-  configuration
-);
+  process.env.secretKeyInProcessEnv; // The injected secret
+}, configuration);
 
 export { configuration }; // Can be picked up by other tools, for example for OpenAPI or for CDK
 ```

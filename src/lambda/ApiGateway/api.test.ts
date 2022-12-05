@@ -67,7 +67,7 @@ describe("API Gateway. Sanitizing outputs", function () {
   });
 
   it("Handles 200 ", async () => {
-    const handler = createApiGatewayHandler(successLHandler, init, cfg);
+    const handler = createApiGatewayHandler(successLHandler, cfg);
 
     expect(wrapGenericHandler).toHaveBeenCalled();
     const out = await handler(event, LambdaContext, () => {});
@@ -76,7 +76,7 @@ describe("API Gateway. Sanitizing outputs", function () {
   });
 
   it("Handles 500 ", async () => {
-    const handler = createApiGatewayHandler(errorLHandler, init, cfg);
+    const handler = createApiGatewayHandler(errorLHandler, cfg);
     const out = await handler(event, LambdaContext, () => {});
 
     expect(out.statusCode).toBe(500);
@@ -84,7 +84,7 @@ describe("API Gateway. Sanitizing outputs", function () {
   });
 
   it("Handles exception ", async () => {
-    const handler = createApiGatewayHandler(exceptionLHandler, init, cfg);
+    const handler = createApiGatewayHandler(exceptionLHandler, cfg);
     const out = await handler(event, LambdaContext, () => {});
 
     expect(out.statusCode).toBe(500);
@@ -93,7 +93,7 @@ describe("API Gateway. Sanitizing outputs", function () {
   });
 
   it("Handles malformed output ", async () => {
-    const handler = createApiGatewayHandler(malformedLHandler, init, cfg);
+    const handler = createApiGatewayHandler(malformedLHandler, cfg);
     const out = await handler(event, LambdaContext, () => {});
 
     expect(out.statusCode).toBe(500);
@@ -124,7 +124,7 @@ describe("API Gateway: Telemetry", function () {
   });
 
   it("Creates 2 nested spans ", async () => {
-    const handler = createApiGatewayHandler(successLHandler, init, cfg);
+    const handler = createApiGatewayHandler(successLHandler, cfg);
 
     expect(wrapGenericHandler).toHaveBeenCalled();
     const out = await handler(event, LambdaContext, () => {});
@@ -154,7 +154,6 @@ describe("API Gateway: Telemetry", function () {
           body: "Ok",
         };
       },
-      init,
       {
         yupSchema: yup.object({
           num: yup.number().required(),

@@ -2,6 +2,8 @@ import { AssertionError } from "assert";
 import { Handler } from "aws-lambda";
 import { event } from "../../test_utils/apigateway";
 import { LambdaContext } from "../../test_utils/utils";
+import { LambdaType } from "../config";
+import { wrapGenericHandler } from "../Wrapper";
 
 jest.mock("./secrets_manager_aws", function () {
   return {
@@ -179,5 +181,25 @@ describe("Secret manager", () => {
       "Ok"
     );
     expect(process.env.key).toBeUndefined();
+  });
+
+  test("Secret is injected before the init method is called", async () => {
+    const init = async () => {
+      expect(process.env.secret).toBe("algoliaApiKey");
+    };
+    const handler = async (event: any, init) => {};
+
+    const wrappedHandler = wrapGenericHandler(handler, {
+      type: LambdaType.GENERIC,
+      initFunction: init,
+      secretInjection: {
+        secret: {
+          secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),
+          required: false,
+        },
+      },
+    });
+
+    await wrappedHandler(event, LambdaContext, () => {});
   });
 });

@@ -17,7 +17,8 @@ const mockHandler = jest.fn(async () => {});
 
 describe("Event bridge handler", function () {
   it("Calls init once", async () => {
-    const handler = createEventBridgeHandler(mockHandler, mockInit, {
+    const handler = createEventBridgeHandler(mockHandler, {
+      initFunction: mockInit,
       type: LambdaType.GENERIC,
       secretInjection: {},
     });
@@ -42,8 +43,8 @@ describe("Event bridge handler", function () {
         const data = await request.getData();
         return;
       },
-      init,
       {
+        initFunction: init,
         yupSchema: yup.object({
           field: yup.number().required(),
         }),

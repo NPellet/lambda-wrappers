@@ -5,18 +5,21 @@ import { wrapTelemetryEventBridge } from "./EventBridge/telemetry/Wrapper";
 import { SecretTuple } from "./utils/secrets_manager";
 
 export type HandlerConfiguration<
+  I = any,
   U extends TypedSchema | ObjectSchema<any> = undefined
 > = {
   secretInjection?: Record<string, { secret: SecretTuple; required: boolean }>;
   yupSchema?: U;
+  initFunction?: () => Promise<I>;
   sentry?: boolean;
   opentelemetry?: boolean;
   type?: LambdaType;
 };
 
 export type HandlerConfigurationWithType<
+  I,
   U extends TypedSchema | ObjectSchema<any>
-> = Omit<HandlerConfiguration<U>, "type"> & {
+> = Omit<HandlerConfiguration<I, U>, "type"> & {
   type: LambdaType;
 };
 

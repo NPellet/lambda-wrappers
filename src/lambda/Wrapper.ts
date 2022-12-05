@@ -18,7 +18,7 @@ import { resolve } from "path";
 
 export const wrapBaseLambdaHandler = <U, I, V>(
   handler: LambdaHandler<U, I, V>,
-  init: () => Promise<I>
+  init?: () => Promise<I>
 ): Handler<U, V | void> => {
   let isInit: boolean = false;
   let initValue: I;
@@ -29,7 +29,8 @@ export const wrapBaseLambdaHandler = <U, I, V>(
     callback: Callback
   ) {
     if (!isInit) {
-      initValue = await init();
+      console.log("RUNNING INIT");
+      if (init) initValue = await init();
 
       isInit = true;
     }
@@ -54,18 +55,21 @@ export const wrapBaseLambdaHandler = <U, I, V>(
 
 export const wrapGenericHandler = <T, I, U, Y extends ObjectSchema<any>>(
   handler: LambdaHandler<T, I, U>,
-  init: () => Promise<I>,
-  configuration: HandlerConfigurationWithType<Y>
+  configuration: HandlerConfigurationWithType<I, Y>
 ) => {
-  handler = wrapRuntime(handler);
-
   // Needs to wrap before the secrets manager, because secrets should be available in the init phase
-  let wrappedHandler = wrapBaseLambdaHandler(handler, init);
+  let wrappedHandler = wrapBaseLambdaHandler(
+    handler,
+    configuration.initFunction
+  );
 
   wrappedHandler = wrapHandlerSecretsManager(
     wrappedHandler,
     configuration?.secretInjection ?? {}
   );
+
+  wrappedHandler = wrapRuntime(wrappedHandler);
+
   /*
   if (configuration.yupSchema) {
     wrappedHandler = wrapYup(wrappedHandler, configuration.yupSchema);
@@ -86,11 +90,11 @@ export const wrapGenericHandler = <T, I, U, Y extends ObjectSchema<any>>(
   return wrappedHandler;
 };
 
-const wrapRuntime = <T, I, U>(handler: LambdaHandler<T, I, U>) => {
-  return async function (event, init, context, callback) {
+const wrapRuntime = <T, U>(handler: Handler<T, U>) => {
+  return async function (event, context, callback) {
     try {
       log.debug("Executing innermost handler");
-      return await handler(event, init, context, callback);
+      return await handler(event, context, callback);
     } catch (e) {
       log.error("Innermost lambda handler function has failed");
       log.error(e);
@@ -101,14 +105,3 @@ const wrapRuntime = <T, I, U>(handler: LambdaHandler<T, I, U>) => {
     }
   };
 };
-/*
-const wrapYup = <T, U>(handler: Handler<T, U>, schema: ObjectSchema<any>) => {
-  const yupHandler: Handler<T, U> = (event, context, callback) => {
-    schema.validate(event);
-
-    return handler(event, context, callback);
-  };
-
-  return yupHandler;
-};
-*/

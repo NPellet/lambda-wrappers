@@ -34,12 +34,11 @@ export const createApiGatewayHandler = <
     TInit,
     APIGatewayProxyResult
   >,
-  init: () => Promise<TInit>,
-  configuration: Omit<HandlerConfiguration<U>, "type">
+  configuration: Omit<HandlerConfiguration<TInit, U>, "type">
 ) => {
   type V = U extends ObjectSchema<any> ? InferType<U> : T;
 
-  const wrappedHandler = wrapGenericHandler(handler, init, {
+  const wrappedHandler = wrapGenericHandler(handler, {
     type: LambdaType.API_GATEWAY,
     ...configuration,
   });

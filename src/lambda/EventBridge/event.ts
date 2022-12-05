@@ -22,13 +22,12 @@ export const createEventBridgeHandler = <
     },
     void
   >,
-  init: () => Promise<I>,
-  configuration: HandlerConfiguration<U>
+  configuration: HandlerConfiguration<I, U>
 ): Handler<
   EventBridgeEvent<string, U extends ObjectSchema<any> ? InferType<U> : T>
 > => {
   type V = U extends ObjectSchema<any> ? InferType<U> : T;
-  const wrappedHandler = wrapGenericHandler(listener, init, {
+  const wrappedHandler = wrapGenericHandler(listener, {
     type: LambdaType.EVENT_BRIDGE,
     ...configuration,
   });
