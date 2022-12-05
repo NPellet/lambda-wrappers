@@ -17,7 +17,7 @@ const configuration = {
   secretInjection: {
     // The secret Algolia-Products with key lwaAdminApiKey will be injected into process.env.key
     // It will only happen at cold start of after a two hour cache expiracy
-    key: {
+    secretKeyInProcessEnv: {
       secret: getAwsSecretDef("Algolia-Products", "lwaAdminApiKey"),
       required: false,
     },
@@ -48,7 +48,7 @@ export const handler = createEventBridgeHandler(
     init.resourceKey;
     //init.otherResourceKey; // <== TS Error
 
-    process.env.key; // The injected secret
+    process.env.secretKeyInProcessEnv; // The injected secret
   },
   init,
   configuration
