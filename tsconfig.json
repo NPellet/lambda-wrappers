@@ -6,7 +6,9 @@
     "moduleResolution": "node",
     "sourceMap": true,
     "target": "es2017",
-    "outDir": "lib",
+    "outDir": "dist",
+    "emitDeclarationOnly": true,
+    "declaration": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "typeRoots": ["./node_modules/@types"]

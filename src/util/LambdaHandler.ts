@@ -7,6 +7,7 @@ import {
   EventBridgeEvent,
 } from "aws-lambda";
 import { Event } from "../lambda/EventBridge/types/Event";
+import { SecretsRecord } from "../lambda/utils/secrets_manager";
 
 export abstract class BaseLambdaHandler<T, U> {
   public isInit: boolean = false;
@@ -31,14 +32,14 @@ export abstract class EventBridgeLambdaHandler<T> extends BaseLambdaHandler<
 export type LambdaInitSecretHandler<T, TInit, TSecrets extends string, V> = (
   data: T,
   init: TInit,
-  secrets: Record<TSecrets, string>,
+  secrets: SecretsRecord<TSecrets>,
   context: Context,
   callback: Callback<any>
 ) => Promise<V>;
 
 export type LambdaSecretsHandler<T, TSecrets extends string, V> = (
   data: T,
-  secrets: Record<TSecrets, string>,
+  secrets: SecretsRecord<TSecrets>,
   context: Context,
   callback: Callback<any>
 ) => Promise<V>;

@@ -1,0 +1,19 @@
+{
+  "name": "@lendis-tech/lambda-handlers-cdk",
+  "version": "1.0.0",
+  "description": "",
+  "repository": "git@github.com:lendis-tech/lambda-wrappers.git",
+  "main": "index.js",
+  "scripts": {
+    "build": "node esbuild.cjs && npx tsc && cp -ar dist/cdk_utils/src/** dist/ && rm -rf dist/cdk_utils && rm -rf dist/src"
+  },
+  "author": "Norman Pellet",
+  "license": "ISC",
+  "dependencies": {
+    "@lendis-tech/secrets-manager-infrastructure": "^2.0.9",
+    "aws-cdk": "^2.53.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.3"
+  }
+}

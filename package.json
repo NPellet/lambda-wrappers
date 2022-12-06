@@ -1,8 +1,9 @@
 {
-  "name": "@lendis-tech/lambda_handlers",
+  "name": "@lendis-tech/lambda-handlers",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/lambda/index.d.ts",
   "scripts": {
     "build": "node esbuild.cjs",
     "test": "jest"

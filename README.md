@@ -3,6 +3,12 @@
 This is a collection of wrapper functions that you should use to wrap your handlers, whether you are implementing an API Gateway hander or an Event Bridge handler.
 Other handlers will be supported in the future
 
+## Installation
+
+```bash
+npm i @lendis-tech/lambda-handlers
+```
+
 ## Usage
 
 ### TL;DR
@@ -28,10 +34,11 @@ const configuration = {
   secretInjection: {
     // The secret Algolia-Products with key lwaAdminApiKey will be injected into process.env.key
     // It will only happen at cold start of after a two hour cache expiracy
-    secretKeyInProcessEnv: {
-      secret: getAwsSecretDef("Algolia-Products", "lwaAdminApiKey"),
-      required: false,
-    },
+    secretKeyInProcessEnv: getAwsSecretDef(
+      "Algolia-Products",
+      "lwaAdminApiKey",
+      false
+    ),
   },
   initFunction: init,
   useSentry: true,
@@ -170,11 +177,49 @@ const wrappedHandler = wrapGenericHandler(
       //secrets.secretKey is defined
     },
     secretInjection: {
-      secretKey: {
-        secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),
-        required: false,
-      },
+      secretKey: getAwsSecretDef("Algolia-Products", "adminApiKey", false),
     },
   }
 );
+```
+
+## Enhancing CDK code
+
+We provide the ability to automatically parse the secrets manager configuration in the configuration object and use it in the CDK code. For example:
+
+```typescript
+// Trigger handler example
+const trigger = {
+  handler: "../src/path/to/file/main.handler",
+};
+
+const lastIndexOfSlash = trigger.handler.lastIndexOf("/");
+
+const fn = new Function(this, "func", {
+  functionName: "func_test",
+  runtime: cdk.aws_lambda.Runtime.NODEJS_14_X,
+  code: cdk.aws_lambda.Code.fromAsset(
+    trigger.handler.substring(0, lastIndexOfSlash)
+  ),
+  handler: trigger.handler.substr(lastIndexOfSlash + 1),
+  timeout: cdk.Duration.minutes(1),
+  memorySize: 512,
+  environment: {},
+});
+
+// Use path.resolve to get an absolute path to the file
+enhanceCDKLambda(fn, resolve(trigger.handler));
+```
+
+The function `fn` will automatically receive the IAM grants to fetch the secrets at runtime.
+
+Note that we expect the configuration object to be exported with the name `configuration`, otherwise this will not work.
+
+The function `enhanceCDKLambda` is available in package `@lendis-tech/lambda-handlers-cdk`
+
+via
+
+```typescript
+// Use v2 for CDK V2
+import { enhanceCDKLambda } from "@lendis-tech/cdk-lambda-handler-utils/dist/v1/enhanceCDKLambda";
 ```

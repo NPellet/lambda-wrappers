@@ -1,8 +1,7 @@
 import { ObjectSchema } from "yup";
-import { TypedSchema } from "yup/lib/util/types";
 import { wrapTelemetryApiGateway } from "./ApiGateway/telemetry/Wrapper";
 import { wrapTelemetryEventBridge } from "./EventBridge/telemetry/Wrapper";
-import { SecretTuple } from "./utils/secrets_manager";
+import { SecretConfig, SecretsRecord } from "./utils/secrets_manager";
 
 export type HandlerConfiguration<
   I = any,
@@ -10,13 +9,10 @@ export type HandlerConfiguration<
   V extends any | ObjectSchema<any> = any,
   TSecrets extends string = string
 > = {
-  secretInjection?: Record<
-    TSecrets,
-    { secret: SecretTuple; required: boolean }
-  >;
+  secretInjection?: Record<TSecrets, SecretConfig>;
   yupSchemaInput?: U;
   yupSchemaOutput?: V;
-  initFunction?: (secrets: Record<TSecrets, string>) => Promise<I>;
+  initFunction?: (secrets: SecretsRecord<TSecrets>) => Promise<I>;
   sentry?: boolean;
   opentelemetry?: boolean;
   type?: LambdaType;
@@ -31,6 +27,13 @@ export type HandlerConfigurationWithType<
   type: LambdaType;
 };
 
+export const enum LambdaType {
+  EVENT_BRIDGE,
+  API_GATEWAY,
+  SQS,
+  GENERIC,
+}
+
 export const LambdaTypeConfiguration = {
   [LambdaType.EVENT_BRIDGE]: {
     opentelemetryWrapper: wrapTelemetryEventBridge,
@@ -39,10 +42,3 @@ export const LambdaTypeConfiguration = {
     opentelemetryWrapper: wrapTelemetryApiGateway,
   },
 };
-
-export const enum LambdaType {
-  EVENT_BRIDGE,
-  API_GATEWAY,
-  SQS,
-  GENERIC,
-}

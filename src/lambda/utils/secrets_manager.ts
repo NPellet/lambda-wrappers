@@ -16,11 +16,22 @@ export type SecretTuple = {
   [K in keyof typeof aws_secrets]: [K, SecretsContentOf<K>];
 }[keyof typeof aws_secrets];
 
+export type SecretsRecord<TSecrets extends string> = Record<TSecrets, string>;
+
+export type SecretConfig = {
+  secret: SecretTuple;
+  required: boolean;
+};
+
 export const getAwsSecretDef = <T extends keyof typeof aws_secrets>(
   secretName: T,
-  secretKey: SecretsContentOf<T> | undefined
-): SecretTuple => {
-  return [secretName, secretKey] as SecretTuple;
+  secretKey: SecretsContentOf<T> | undefined,
+  required: boolean = true
+): SecretConfig => {
+  return {
+    secret: [secretName, secretKey] as SecretTuple,
+    required,
+  };
 };
 
 export const modifyCacheExpiracy = (key: string, newDate: Date) => {

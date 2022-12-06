@@ -42,18 +42,15 @@ describe("Secret manager", () => {
   });
 
   test("Testing getAwsSecretDef", function () {
-    expect(getAwsSecretDef("Algolia-Products", "adminApiKey")).toStrictEqual([
-      "Algolia-Products",
-      "adminApiKey",
-    ]);
+    expect(getAwsSecretDef("Algolia-Products", "adminApiKey")).toStrictEqual({
+      secret: ["Algolia-Products", "adminApiKey"],
+      required: true,
+    });
   });
 
   test("Fetching basic functionality", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: {
-        secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),
-        required: true,
-      },
+      key: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
     });
 
     await wrappedHandler(event, LambdaContext, () => {});
@@ -64,14 +61,8 @@ describe("Secret manager", () => {
 
   test("Fetching string and json", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: {
-        secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),
-        required: true,
-      },
-      key2: {
-        secret: getAwsSecretDef("Google", undefined),
-        required: true,
-      },
+      key: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
+      key2: getAwsSecretDef("Google", undefined, true),
     });
 
     await wrappedHandler(event, LambdaContext, () => {});
@@ -84,10 +75,7 @@ describe("Secret manager", () => {
 
   test("Fetching wrong string/json pair", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: {
-        secret: getAwsSecretDef("Algolia-Products", undefined),
-        required: true,
-      },
+      key: getAwsSecretDef("Algolia-Products", undefined, true),
     });
     expect(
       wrappedHandler(event, LambdaContext, () => {})
@@ -96,14 +84,8 @@ describe("Secret manager", () => {
 
   test("Fetching a secret twice should result in a single call", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: {
-        secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),
-        required: true,
-      },
-      key2: {
-        secret: getAwsSecretDef("Algolia-Products", "apiKey"),
-        required: true,
-      },
+      key: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
+      key2: getAwsSecretDef("Algolia-Products", "apiKey", true),
     });
 
     await wrappedHandler(event, LambdaContext, () => {});
@@ -115,10 +97,7 @@ describe("Secret manager", () => {
 
   test("Subsequent handler calls does not result in more fetches to the secret manager, except after a cache clear", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: {
-        secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),
-        required: true,
-      },
+      key: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
     });
 
     await wrappedHandler(event, LambdaContext, () => {});
@@ -139,10 +118,7 @@ describe("Secret manager", () => {
 
   test("After expiring, a new call to the secret manager is done", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: {
-        secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),
-        required: true,
-      },
+      key: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
     });
 
     await wrappedHandler(event, LambdaContext, () => {});
@@ -159,10 +135,7 @@ describe("Secret manager", () => {
 
   test("Required secrets should fail if undefined", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: {
-        secret: getAwsSecretDef("Algolia-Products", "lwaAdminApiKey"),
-        required: true,
-      },
+      key: getAwsSecretDef("Algolia-Products", "lwaAdminApiKey", true),
     });
 
     await expect(
@@ -172,10 +145,7 @@ describe("Secret manager", () => {
 
   test("Non-required secrets should not fail if undefined", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: {
-        secret: getAwsSecretDef("Algolia-Products", "lwaAdminApiKey"),
-        required: false,
-      },
+      key: getAwsSecretDef("Algolia-Products", "lwaAdminApiKey", false),
     });
 
     await expect(wrappedHandler(event, LambdaContext, () => {})).resolves.toBe(
@@ -194,10 +164,7 @@ describe("Secret manager", () => {
       type: LambdaType.GENERIC,
       initFunction: init,
       secretInjection: {
-        secret: {
-          secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),
-          required: false,
-        },
+        secret: getAwsSecretDef("Algolia-Products", "adminApiKey", false),
       },
     });
 
@@ -205,20 +172,20 @@ describe("Secret manager", () => {
   });
 
   test("Secret is injected in the init and handler parameter", async () => {
-    const handler = async (event: any, init) => {};
-
-    const wrappedHandler = wrapGenericHandler(handler, {
-      type: LambdaType.GENERIC,
-      initFunction: async (secrets) => {
+    const wrappedHandler = wrapGenericHandler(
+      async (event: any, init, secrets) => {
         expect(secrets.secret).toBe("algoliaApiKey");
       },
-      secretInjection: {
-        secret: {
-          secret: getAwsSecretDef("Algolia-Products", "adminApiKey"),
-          required: false,
+      {
+        type: LambdaType.GENERIC,
+        initFunction: async (secrets) => {
+          expect(secrets.secret).toBe("algoliaApiKey");
         },
-      },
-    });
+        secretInjection: {
+          secret: getAwsSecretDef("Algolia-Products", "adminApiKey", false),
+        },
+      }
+    );
 
     await wrappedHandler(event, LambdaContext, () => {});
   });
