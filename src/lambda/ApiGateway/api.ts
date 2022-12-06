@@ -16,7 +16,7 @@ import { AwsApiGatewayRequest } from "../../util/apigateway/apigateway";
 import { HandlerConfiguration, LambdaType } from "../config";
 import { log } from "../utils/logger";
 import { wrapGenericHandler } from "../Wrapper";
-import { Response } from "../../util/apigateway/response";
+import { HTTPError, Response } from "../../util/apigateway/response";
 import { TypedSchema } from "yup/lib/util/types";
 import { getAwsSecretDef } from "../utils/secrets_manager";
 import * as yup from "yup";
@@ -70,7 +70,8 @@ export const createApiGatewayHandler = <
     AwsApiGatewayRequest<SInput extends BaseSchema ? InferType<SInput> : T>,
     TInit,
     TSecrets,
-    Response<SOutput extends BaseSchema ? InferType<SOutput> : void | string>
+    | Response<SOutput extends BaseSchema ? InferType<SOutput> : void | string>
+    | HTTPError
   >,
   configuration: Omit<
     HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
@@ -98,6 +99,14 @@ export const createApiGatewayHandler = <
 
     const responseData = response.getData();
     const headers = response.getHeaders();
+
+    if (response instanceof HTTPError) {
+      return {
+        headers,
+        statusCode: response.getStatusCode(),
+        body: responseData as string,
+      };
+    }
 
     if (Buffer.isBuffer(responseData)) {
       return {
@@ -172,6 +181,7 @@ export const createApiGatewayHandler = <
         callback
       );
       if (!actualOut) {
+        console.log("ERROR PROMISE");
         recordException(
           new Error("API Gateway lambda functions must return a Promise")
         );

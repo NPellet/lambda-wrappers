@@ -34,9 +34,7 @@ export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
     callback: Callback
   ) {
     if (!isInit) {
-      console.log("RUNNING INIT");
       if (init) initValue = await init(secrets);
-
       isInit = true;
     }
 

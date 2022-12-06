@@ -11,18 +11,31 @@ import {
 } from "../../../test_utils/apigateway";
 import { flush } from "../../utils/telemetry";
 import { AwsApiGatewayRequest } from "../../../util/apigateway/apigateway";
+import { HTTPError, Response } from "../../../util/apigateway/response";
 
 describe("Telemetry: API Gateway wrapper handles all types of outputs", function () {
-  it("Handles 200 ", async () => {
+  it("Response is of instance Response", async () => {
     const handler = wrapTelemetryApiGateway(successHandler);
 
-    await handler(new AwsApiGatewayRequest(event), LambdaContext, () => {});
-    await flush();
+    const out = await handler(
+      new AwsApiGatewayRequest(event),
+      LambdaContext,
+      () => {}
+    );
+    expect(out).toBeInstanceOf(Response);
+  });
+
+  it("Handles 200", async () => {
+    const handler = wrapTelemetryApiGateway(successHandler);
+
+    const out = await expect(
+      handler(new AwsApiGatewayRequest(event), LambdaContext, () => {})
+    ).resolves.toBeDefined();
 
     const spans = memoryExporter.getFinishedSpans();
 
     expect(spans.length).toBe(1);
-    expect(spans[0].status.code).toBe(SpanStatusCode.OK);
+    expect(spans[0].status.code).toBe(SpanStatusCode.UNSET);
     expect(spans[0].kind).toBe(SpanKind.SERVER);
 
     expect(spans[0].attributes[SemanticAttributes.HTTP_METHOD]).toBe(
@@ -54,8 +67,13 @@ describe("Telemetry: API Gateway wrapper handles all types of outputs", function
 
   it("Handles 500 ", async () => {
     const handler = wrapTelemetryApiGateway(errorHandler);
-    await handler(new AwsApiGatewayRequest(event), LambdaContext, () => {});
+    const out = await handler(
+      new AwsApiGatewayRequest(event),
+      LambdaContext,
+      () => {}
+    );
     await flush();
+
     const spans = memoryExporter.getFinishedSpans();
     expect(spans.length).toBe(1);
     expect(spans[0].status.code).toBe(SpanStatusCode.ERROR);
@@ -63,7 +81,10 @@ describe("Telemetry: API Gateway wrapper handles all types of outputs", function
 
   it("Handles exception ", async () => {
     const handler = wrapTelemetryApiGateway(exceptionHandler);
-    await handler(new AwsApiGatewayRequest(event), LambdaContext, () => {});
+    const out = await expect(
+      handler(new AwsApiGatewayRequest(event), LambdaContext, () => {})
+    ).rejects.toBeTruthy();
+
     await flush();
     const spans = memoryExporter.getFinishedSpans();
     expect(spans.length).toBe(1);

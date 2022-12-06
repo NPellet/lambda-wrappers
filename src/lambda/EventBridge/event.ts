@@ -9,6 +9,7 @@ import { wrapGenericHandler } from "../Wrapper";
 
 import { BaseSchema, InferType, ObjectSchema } from "yup";
 import { AwsEventBridgeEvent } from "../../util/eventbridge";
+import { getAwsSecretDef } from "../utils/secrets_manager";
 
 export const eventBridgeHandlerFactory = <
   TInit = any,

@@ -40,9 +40,9 @@ export const wrapTelemetryLambda = <T, U>(
   handler: Handler<T, U>,
   wrapper: (handler: Handler<T, U | void>) => Handler<T, U | void>
 ) => {
-  const wrappedHandlerGeneric = _wrapTelemetryLambda(handler);
+  const wrappedHandlerTelGeneric = _wrapTelemetryLambda(handler);
 
-  const wrappedHandler = wrapper(wrappedHandlerGeneric);
+  const wrappedHandler = wrapper(wrappedHandlerTelGeneric);
   return wrappedHandler;
 };
 
@@ -63,29 +63,26 @@ const _wrapTelemetryLambda = <T, U>(handler: Handler<T, U>) => {
       api.context.active()
     );
 
-    const out = await api.context.with(
-      api.trace.setSpan(api.context.active(), lambdaSpan),
-      async () => {
-        let out: U | void;
-        try {
-          out = await handler(event, context, callback);
-
-          // The span status should remain unset, see https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md
-        } catch (e) {
-          lambdaSpan.recordException(e);
-          // Fail the span
-          lambdaSpan.setStatus({
-            code: SpanStatusCode.ERROR,
-            message: typeof e == "object" ? e.message : e,
-          });
+    try {
+      const out = await api.context.with(
+        api.trace.setSpan(api.context.active(), lambdaSpan),
+        () => {
+          return handler(event, context, callback);
         }
+      );
+      lambdaSpan.end();
+      return out;
+    } catch (e) {
+      lambdaSpan.recordException(e);
+      // Fail the span
+      lambdaSpan.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: typeof e == "object" ? e.message : e,
+      });
+      lambdaSpan.end();
 
-        return out;
-      }
-    );
-
-    lambdaSpan.end();
-    return out;
+      throw e;
+    }
   };
 };
 

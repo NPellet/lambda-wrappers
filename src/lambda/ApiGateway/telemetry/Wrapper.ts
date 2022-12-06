@@ -14,11 +14,11 @@ import {
   SemanticResourceAttributes,
 } from "@opentelemetry/semantic-conventions";
 import { flush, tracer } from "../../utils/telemetry";
-import { log } from "../../utils/logger";
 import { AwsApiGatewayRequest } from "../../../util/apigateway/apigateway";
+import { HTTPError, Response } from "../../../util/apigateway/response";
 
-export const wrapTelemetryApiGateway = <T>(
-  handler: Handler<AwsApiGatewayRequest<T>, APIGatewayProxyResult>
+export const wrapTelemetryApiGateway = <T, U>(
+  handler: Handler<AwsApiGatewayRequest<T>, Response<U> | HTTPError>
 ) => {
   return async function (
     event: AwsApiGatewayRequest<T>,
@@ -87,42 +87,26 @@ export const wrapTelemetryApiGateway = <T>(
       parentContext
     );
 
-    const out = await otelapi.context.with(
-      otelapi.trace.setSpan(parentContext, span),
-      async () => {
-        let out: void | APIGatewayProxyResult;
-
-        try {
-          out = await handler(event, context, callback); // This should NEVER throw
-        } catch (e) {
-          // We must run a try-catch here, despite our expectation that the handler should not throw
-          // This is because if it DOES in fact throw, the span will not end
-          otelapi.diag.error(
-            "API Gateway lambda has thrown an error at the telemetry level. This should not be happening and points to a bug. Make sure the handler is properly wrapped in a try-catch clause"
-          );
-          out = {
-            statusCode: 500,
-            body: "Internal server error",
-          };
+    try {
+      const out = await otelapi.context.with(
+        otelapi.trace.setSpan(parentContext, span),
+        async () => {
+          return handler(event, context, callback);
         }
+      );
 
-        if (!out) {
-          log.error("Only use asynchronous handlers");
-          return callback("The lambda must by asynchronous", undefined); // TODO: Fill the callback
-        }
-
-        if (out.statusCode >= 400 && out.statusCode < 600) {
-          span.setStatus({ code: SpanStatusCode.ERROR });
-        } else {
-          span.setStatus({ code: SpanStatusCode.OK });
-        }
-        return out;
+      if (out instanceof HTTPError) {
+        span.setStatus({ code: SpanStatusCode.ERROR });
       }
-    );
+      span.end();
+      await flush();
 
-    span.end();
-    await flush();
-
-    return out;
+      return out;
+    } catch (e) {
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      span.end();
+      await flush();
+      throw e;
+    }
   };
 };

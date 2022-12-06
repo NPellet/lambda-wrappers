@@ -45,12 +45,15 @@ describe("Telemetry: generic lambda", () => {
     ).toBe("12345678");
   });
 
-  test("Lambda exception is properly caught", async () => {
+  test("Lambda exception is properly rethrown", async () => {
     const wrappedHandler = wrapTelemetryLambda(
       failedHandler,
       (handler) => handler
     );
-    await wrappedHandler(event, LambdaContext, () => {});
+
+    await expect(
+      wrappedHandler(event, LambdaContext, () => {})
+    ).rejects.toBeTruthy();
 
     await flush();
     const spans = memoryExporter.getFinishedSpans();

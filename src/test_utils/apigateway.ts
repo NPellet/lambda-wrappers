@@ -2,7 +2,7 @@ import { AWSXRAY_TRACE_ID_HEADER } from "@opentelemetry/propagator-aws-xray";
 import { APIGatewayEvent, APIGatewayProxyResult, Handler } from "aws-lambda";
 import _ from "lodash";
 import { AwsApiGatewayRequest } from "../util/apigateway/apigateway";
-import { Response } from "../util/apigateway/response";
+import { HTTPError, Response } from "../util/apigateway/response";
 import { LambdaInitSecretHandler } from "../util/LambdaHandler";
 import { sampledAwsHeader, testApiGatewayEvent } from "./utils";
 
@@ -13,27 +13,21 @@ export { event };
 
 export const successHandler: Handler<
   AwsApiGatewayRequest<any>,
-  APIGatewayProxyResult
+  Response<string> | HTTPError
 > = async (event, context, callback) => {
-  return {
-    statusCode: 200,
-    body: "Ok",
-  };
+  return Response.OK("Ok");
 };
 
 export const errorHandler: Handler<
   AwsApiGatewayRequest<any>,
-  APIGatewayProxyResult
+  Response<string> | HTTPError
 > = async (event, context, callback) => {
-  return {
-    statusCode: 500,
-    body: "Internal Server Error",
-  };
+  return HTTPError.SERVER_ERROR("Internal Server Error");
 };
 
 export const exceptionHandler: Handler<
   AwsApiGatewayRequest<any>,
-  APIGatewayProxyResult
+  Response<string> | HTTPError
 > = async (event, context, callback) => {
   throw new Error("Some exception");
 };
@@ -41,7 +35,7 @@ export const exceptionHandler: Handler<
 // @ts-ignore On purpose wrong type output
 export const malformedHandler: Handler<
   AwsApiGatewayRequest<any>,
-  APIGatewayProxyResult
+  Response<string> | HTTPError
 > = async (event, context, callback) => {
   return "Some wrong string";
 };
@@ -68,7 +62,7 @@ export const errorLHandler: LambdaInitSecretHandler<
   string,
   Response<string>
 > = async (event, init, secrets, context, callback) => {
-  return Response.SERVER_ERROR("Internal Server Error");
+  return HTTPError.SERVER_ERROR("Internal Server Error");
   // return "ash";//Response.SERVER_ERROR("Internal Server Error");
 };
 

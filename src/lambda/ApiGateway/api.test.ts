@@ -139,7 +139,7 @@ describe("API Gateway: Telemetry", function () {
     expect(spans.length).toBe(2);
     expect(spans[0].status.code).toBe(SpanStatusCode.UNSET);
     expect(spans[0].kind).toBe(SpanKind.SERVER);
-    expect(spans[1].status.code).toBe(SpanStatusCode.OK);
+    expect(spans[1].status.code).toBe(SpanStatusCode.UNSET);
     expect(spans[0].kind).toBe(SpanKind.SERVER);
 
     expect(spans[0].parentSpanId).toBe(spans[1].spanContext().spanId);
