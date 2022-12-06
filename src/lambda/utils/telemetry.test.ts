@@ -59,7 +59,7 @@ describe("Telemetry: generic lambda", () => {
 
     expect(spans[0].events.length).toBe(1);
     expect(
-      spans[0].events[0].attributes[SemanticAttributes.EXCEPTION_STACKTRACE]
+      spans[0].events[0].attributes![SemanticAttributes.EXCEPTION_STACKTRACE]
     ).toBeDefined();
   });
 });

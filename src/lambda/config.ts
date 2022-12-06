@@ -32,9 +32,12 @@ export type HandlerConfigurationWithType<
   type: LambdaType;
 };
 
-export type TInit<A extends HandlerConfiguration> = Awaited<
-  ReturnType<A["initFunction"]>
->;
+export type TInit<A extends HandlerConfiguration> = A["initFunction"] extends (
+  ...args: any[]
+) => any
+  ? Awaited<ReturnType<A["initFunction"]>>
+  : never;
+
 export type TSecrets<A extends HandlerConfiguration> =
   keyof A["secretInjection"];
 

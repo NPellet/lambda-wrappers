@@ -7,7 +7,7 @@ export const recordException = (e: any) => {
   }
 
   if (process.env.USE_OPENTELEMETRY) {
-    if (otelapi.trace.getActiveSpan().isRecording()) {
+    if (otelapi.trace.getActiveSpan()?.isRecording()) {
       otelapi.trace.getActiveSpan()?.recordException(e);
     }
   }

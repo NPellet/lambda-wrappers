@@ -7,14 +7,44 @@ import {
 import { log } from "../utils/logger";
 import { wrapGenericHandler } from "../Wrapper";
 
-import { InferType, ObjectSchema } from "yup";
+import { BaseSchema, InferType, ObjectSchema } from "yup";
 import { AwsEventBridgeEvent } from "../../util/eventbridge";
+
+export const eventBridgeHandlerFactory = <
+  TInit = any,
+  TSecrets extends string = any,
+  SInput extends BaseSchema | undefined = undefined
+>(
+  configuration: Omit<
+    HandlerConfiguration<TInit, SInput, void, TSecrets>,
+    "type"
+  >
+) => {
+  return function <T = SInput extends BaseSchema ? InferType<SInput> : any>(
+    handler: LambdaInitSecretHandler<
+      AwsEventBridgeEvent<T>,
+      TInit & {
+        originalData: EventBridgeEvent<string, T>;
+      },
+      TSecrets,
+      void
+    >
+  ) {
+    return {
+      handlerFactory: createEventBridgeHandler<T, TInit, TSecrets, SInput>(
+        handler,
+        configuration
+      ),
+      configuration,
+    };
+  };
+};
 
 export const createEventBridgeHandler = <
   T,
   I,
   TSecrets extends string,
-  U extends ObjectSchema<any> | undefined = undefined
+  U extends BaseSchema | undefined = undefined
 >(
   listener: LambdaInitSecretHandler<
     AwsEventBridgeEvent<U extends ObjectSchema<any> ? InferType<U> : T>,

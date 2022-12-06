@@ -41,6 +41,7 @@ export class Response<T> {
   public static OK_NO_CONTENT<T>(
     headers: Record<string, string> = {}
   ): Response<T> {
+    // @ts-ignore
     return new Response(null, headers, 204);
   }
 

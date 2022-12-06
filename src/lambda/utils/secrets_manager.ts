@@ -54,83 +54,84 @@ export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
     callback
   ) => {
     log.debug("Checking AWS Secrets in environment variables");
-
-    const secretsToFetch: Set<string> = new Set();
     const secretsOut: Partial<Record<TSecrets, string>> = {};
-    // List all needed secrets for this lambda
-    for (let [k, { secret, required }] of Object.entries(secrets)) {
-      const isInCache = SecretCache.has(k);
-      const isExpired =
-        !isInCache || SecretCache.get(k)!.expiresOn.getTime() < Date.now();
 
-      if (!isInCache || isExpired) {
-        // Fetch the secret
-        log.debug(
-          `Secret for key ${k} is either not in cache or has expired. Tagging for a refetch`
-        );
-        secretsToFetch.add(secret[0]);
-      } else {
-        secretsOut[k] = SecretCache.get(k).value;
-        strict(
-          process.env[k] !== undefined,
-          "The Secret was found in the cache, but not in process.env. This points to a bug"
-        );
-      }
-    }
-    const fetchedAwsSecrets: Map<string, string | object> = new Map();
-    for (let awsSecretName of secretsToFetch.values()) {
-      log.debug(`Fetching secret ${awsSecretName} from AWS`);
-      const awsSecret = await fetchAwsSecret(awsSecretName);
-      fetchedAwsSecrets.set(awsSecretName, awsSecret);
-    }
+    if (secrets) {
+      const secretsToFetch: Set<string> = new Set();
+      // List all needed secrets for this lambda
+      for (let [k, { secret, required }] of Object.entries(secrets)) {
+        const isInCache = SecretCache.has(k);
+        const isExpired =
+          !isInCache || SecretCache.get(k)!.expiresOn.getTime() < Date.now();
 
-    for (let [k, { secret, required }] of Object.entries(secrets)) {
-      if (secretsToFetch.has(secret[0])) {
-        const awsSecretValue = fetchedAwsSecrets.get(secret[0]);
-
-        let value: string;
-        if (secret[1] === undefined) {
-          strict(
-            typeof awsSecretValue === "string",
-            "Secret value for secretName " +
-              secret[0] +
-              " is not a string. Either use [ secretName, undefined ] with a string secret [ secretName, secretKey ] for a key-value secret"
+        if (!isInCache || isExpired) {
+          // Fetch the secret
+          log.debug(
+            `Secret for key ${k} is either not in cache or has expired. Tagging for a refetch`
           );
-
-          value = awsSecretValue;
+          secretsToFetch.add(secret[0]);
         } else {
+          secretsOut[k] = SecretCache.get(k)!.value;
           strict(
-            typeof awsSecretValue === "object",
-            "Secret value for secretName " +
-              secret[0] +
-              " is not a string. Either use [ secretName, undefined ] with a string secret [ secretName, secretKey ] for a key-value secret"
-          );
-
-          value = awsSecretValue[secret[1]];
-        }
-
-        if (required && value === undefined) {
-          throw new Error(
-            `Secret ${secret[0]} (key ${secret[1]}) should not be undefined`
+            process.env[k] !== undefined,
+            "The Secret was found in the cache, but not in process.env. This points to a bug"
           );
         }
+      }
+      const fetchedAwsSecrets: Map<string, string | object> = new Map();
+      for (let awsSecretName of secretsToFetch.values()) {
+        log.debug(`Fetching secret ${awsSecretName} from AWS`);
+        const awsSecret = await fetchAwsSecret(awsSecretName);
+        fetchedAwsSecrets.set(awsSecretName, awsSecret);
+      }
 
-        log.debug(
-          `Injecting newly fetched secret ${secret[0]}:${secret[1]} into env ${k}`
-        );
+      for (let [k, { secret, required }] of Object.entries(secrets)) {
+        if (secretsToFetch.has(secret[0])) {
+          const awsSecretValue = fetchedAwsSecrets.get(secret[0]);
 
-        if (value !== undefined) {
-          process.env[k] = value;
+          let value: string;
+          if (secret[1] === undefined) {
+            strict(
+              typeof awsSecretValue === "string",
+              "Secret value for secretName " +
+                secret[0] +
+                " is not a string. Either use [ secretName, undefined ] with a string secret [ secretName, secretKey ] for a key-value secret"
+            );
+
+            value = awsSecretValue;
+          } else {
+            strict(
+              typeof awsSecretValue === "object",
+              "Secret value for secretName " +
+                secret[0] +
+                " is not a string. Either use [ secretName, undefined ] with a string secret [ secretName, secretKey ] for a key-value secret"
+            );
+
+            value = awsSecretValue[secret[1]];
+          }
+
+          if (required && value === undefined) {
+            throw new Error(
+              `Secret ${secret[0]} (key ${secret[1]}) should not be undefined`
+            );
+          }
+
+          log.debug(
+            `Injecting newly fetched secret ${secret[0]}:${secret[1]} into env ${k}`
+          );
+
+          if (value !== undefined) {
+            process.env[k] = value;
+          }
+
+          SecretCache.set(k, {
+            expiresOn: new Date(Date.now() + 3600 * 1000 * 2),
+            value,
+          });
+          secretsOut[k] = SecretCache.get(k)!.value;
         }
-
-        SecretCache.set(k, {
-          expiresOn: new Date(Date.now() + 3600 * 1000 * 2),
-          value,
-        });
-        secretsOut[k] = SecretCache.get(k).value;
       }
     }
-
     // End of secrets manager run. Move on to the handler
 
     return await handler(

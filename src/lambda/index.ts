@@ -1,5 +1,11 @@
-export { createEventBridgeHandler } from "./EventBridge/event";
-export { createApiGatewayHandler } from "./ApiGateway/api";
+export {
+  createEventBridgeHandler,
+  eventBridgeHandlerFactory,
+} from "./EventBridge/event";
+export {
+  createApiGatewayHandler,
+  apiGatewayHandlerFactory,
+} from "./ApiGateway/api";
 
 export { Response } from "../util/apigateway/response";
 export { Request } from "../util/apigateway/request";

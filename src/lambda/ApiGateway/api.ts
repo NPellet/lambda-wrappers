@@ -6,7 +6,7 @@ import {
   Context,
   Handler,
 } from "aws-lambda";
-import { InferType, ObjectSchema } from "yup";
+import { BaseSchema, InferType, ObjectSchema } from "yup";
 import { recordException } from "../../util/exceptions";
 import {
   LambdaContext,
@@ -16,10 +16,42 @@ import { AwsApiGatewayRequest } from "../../util/apigateway/apigateway";
 import { HandlerConfiguration, LambdaType } from "../config";
 import { log } from "../utils/logger";
 import { wrapGenericHandler } from "../Wrapper";
-import { config } from "process";
-import { create } from "lodash";
 import { Response } from "../../util/apigateway/response";
-import { Request } from "../../util/apigateway/request";
+import { TypedSchema } from "yup/lib/util/types";
+import { getAwsSecretDef } from "../utils/secrets_manager";
+import * as yup from "yup";
+
+export const apiGatewayHandlerFactory = <
+  TInit = any,
+  TSecrets extends string = any,
+  SInput extends BaseSchema | undefined = undefined,
+  SOutput extends BaseSchema | undefined = undefined
+>(
+  configuration: Omit<
+    HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
+    "type"
+  >
+) => {
+  return function <T = SInput extends BaseSchema ? InferType<SInput> : any>(
+    handler: LambdaInitSecretHandler<
+      AwsApiGatewayRequest<T>,
+      TInit,
+      TSecrets,
+      Response<SOutput extends BaseSchema ? InferType<SOutput> : void | string>
+    >
+  ) {
+    return {
+      handlerFactory: createApiGatewayHandler<
+        T,
+        TInit,
+        TSecrets,
+        SInput,
+        SOutput
+      >(handler, configuration),
+      configuration,
+    };
+  };
+};
 
 /**
  * Make sure that the return format of the lambda matches what is expected from the API Gateway
@@ -30,23 +62,21 @@ export const createApiGatewayHandler = <
   T,
   TInit = any,
   TSecrets extends string = any,
-  SInput extends ObjectSchema<any> | undefined = undefined,
-  SOutput extends ObjectSchema<any> | undefined = undefined
+  SInput extends BaseSchema | undefined = undefined,
+  SOutput extends BaseSchema | undefined = undefined
 >(
   handler: LambdaInitSecretHandler<
-    AwsApiGatewayRequest<SInput extends undefined ? T : InferType<SInput>>,
+    AwsApiGatewayRequest<SInput extends BaseSchema ? InferType<SInput> : T>,
     TInit,
     TSecrets,
-    Response<
-      SOutput extends ObjectSchema<any> ? InferType<SOutput> : void | string
-    >
+    Response<SOutput extends BaseSchema ? InferType<SOutput> : void | string>
   >,
   configuration: Omit<
     HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
     "type"
   >
 ) => {
-  type TInput = SInput extends undefined ? T : InferType<SInput>;
+  type TInput = SInput extends BaseSchema ? InferType<SInput> : T;
   type TOutput = Awaited<ReturnType<typeof handler>>;
 
   const buildResponse = async (
@@ -164,3 +194,24 @@ export const createApiGatewayHandler = <
     }
   };
 };
+
+/*
+
+const handlerWrapper = createApiGatewayHandlerFactory({
+  secretInjection: {
+    k: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
+  },
+  yupSchemaInput: yup.object({
+    b: yup.string(),
+  }),
+  initFunction: async () => {
+    return { k: "ugf" };
+  },
+});
+
+handlerWrapper(async (event, init, secrets, context) => {
+  const d = await event.getData();
+  d.b;
+  return Response.OK("");
+});
+*/

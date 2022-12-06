@@ -23,7 +23,7 @@ const init = async () => {
   };
 };
 
-const configuration = {
+const { configuration, handlerFactory } = apiGatewayHandlerFactory({
   yupSchemaInput: yup.object({
     name: yup.string().required(),
   }),
@@ -43,9 +43,9 @@ const configuration = {
   initFunction: init,
   useSentry: true,
   useOpentelemetry: true,
-};
+});
 
-export const handler = createEventBridgeHandler(async (request, init) => {
+export const handler = handlerFactory(async (request, init) => {
   // Data if of instance AwsApiGatewayRequest<T>, where T is the typed schema
   // Init has the form of the result of the init method
 
@@ -60,52 +60,72 @@ export const handler = createEventBridgeHandler(async (request, init) => {
   //init.otherResourceKey; // <== TS Error
 
   process.env.secretKeyInProcessEnv; // The injected secret
-}, configuration);
+});
 
 export { configuration }; // Can be picked up by other tools, for example for OpenAPI or for CDK
 ```
+
+### HandlerFactoryFactory
+
+To satisfy a strict type system, we use the pattern of factory-of-factory, where a configuration is fed into the factory-of-factory to output a strongly typed factory function called `handlerFactory`.
+
+The `handlerFactory` function is then used to wrap the application handler.
+
+One of the reason for this seemingly complex pattern is linked to the user of either yup to defined the input types, or to be able to feed your own.
 
 ### API Gateway
 
 The wrapper function to call is:
 
 ```typescript
-createApiGatewayHandler(handler, configuration);
+const { handlerFactory, configuration } =
+  apiGatewayHandlerFactory(_configuration);
+
+export const handler = handlerFactory(/* Your handler here */);
+export { configuration }; // Used for CDK, OpenAPI, etc.
 ```
 
 The handler's first argument is an instance of `AwsApiGatewayRequest<T>` and exposes `public async getData(): Promise<T>` to fetch the data with optional validation.
-
-The handler's second argument is the result of the `initFunction` function ran during the cold start, after being awaited.
 
 ### Event bridge
 
 The wrapper function to call is:
 
 ```typescript
-createEventBridgeHandler(handler, configuration);
+const { handlerFactory, configuration } =
+  eventBridgeHandlerFactory(_configuration);
+
+export const handler = handlerFactory(/* Your handler here */);
+export { configuration }; // Used for CDK, OpenAPI, etc.
 ```
 
 The handler's first argument is an instance of `AwsEventBridgeEvent<T>` and exposes `public async getData(): Promise<T>` to fetch the data with optional validation.
 
-The handler's second argument is the result of the `initFunction` function ran during the cold start, after being awaited.
-
 ## Without yup validation
 
-You can opt out of the yup schema validation by skipping the configuration entry. In this case, by default the underlying type (for the API Gateway `body` and for the Event Bridge `detail`) becomes any. You can still force the type using
+You can opt out of the yup schema validation by omitting the entry in the configuration object. In this case, by default the underlying type (for the API Gateway `body` and for the Event Bridge `detail`) becomes any. You can still force the type using
 
 ```typescript
-createEventBridgeHandler<T, INIT>;
+// Define your type as you see fit
+type T = {
+  a: string;
+  b?: number;
+};
+handlerFactory<T>(handler);
 ```
 
-Where `T` is the underlying type and `INIT` is the result of the init function (without the wrapping `Promise<>`). Unfortunately, the `INIT` parameter is required (or will default to any) until such time that partial type inference is supported in Typescript (should be happening in a couple of months). You may resort to using ` Awaited<ReturnType<typeof initFunction>>` to extract the return type of the init function.
+Obviously, in this case, no payload validation will be performed.
+
+One use case for this feature is to accept `null` as a body type. Yup does not support `null` schemas (see https://github.com/jquense/yup/issues/1851) and therefore for now cannot be validated.
 
 Example:
 
 ```typescript
-createApiGatewayHandler<{ hello: string }>(async (request, init) => {
+handlerFactory<{ hello: string }>(async (request, init) => {
   const data = await request.getData();
 
   // Data is of type { hello: string }
+  // But only if the yupSchemaInput was not set
   data.hello;
 
   return {
@@ -124,20 +144,20 @@ Following the cold start, on subsequent invocations of the lambdas, some of its 
 You can use the `initMethod` in the configuration to perform tasks which should pre-run the lambda handler itself. In other words, tasks that would benefit from being executed only once. An example would be to open up a connection to a database and keep that connection between lambda handlers:
 
 ```typescript
-createApiGatewayHandler(async (request, init) => {
-  // Main handler
-
-  const dbClient = init.client;
-  // Do something with dbClient
-}, {
-
-  initFunction: function( ) {
+declare const configuration = {
+  initFunction: async function( ) {
     const client = // await database connection
-
     return {
       client;
     }
   }
+}
+
+handlerFactory(async (request, init) => {
+  // Main handler
+
+  const dbClient = init.client;
+  // Do something with dbClient
 });
 ```
 
@@ -167,20 +187,19 @@ Note that the injection in `process.env` occurs before the init function is call
 The record of secrets is also passed as the first argument of the `init` function:
 
 ```typescript
-const wrappedHandler = wrapGenericHandler(
-  async (event: any, init, secrets) => {
-    // secrets.secretKey is defined
+const { configuration, handlerFactory } = XXXHandlerFactory({
+  type: LambdaType.GENERIC,
+  initFunction: async (secrets) => {
+    //secrets.secretKey is defined
   },
-  {
-    type: LambdaType.GENERIC,
-    initFunction: async (secrets) => {
-      //secrets.secretKey is defined
-    },
-    secretInjection: {
-      secretKey: getAwsSecretDef("Algolia-Products", "adminApiKey", false),
-    },
-  }
-);
+  secretInjection: {
+    secretKey: getAwsSecretDef("Algolia-Products", "adminApiKey", false),
+  },
+});
+
+const wrappedHandler = handlerFactory(async (event, init, secrets) => {
+  // secrets.secretKey is defined
+});
 ```
 
 ## Enhancing CDK code
