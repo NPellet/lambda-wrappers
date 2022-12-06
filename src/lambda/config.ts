@@ -1,7 +1,12 @@
 import { ObjectSchema } from "yup";
+import { getAwsFromAccountFromArn } from "../util/aws";
 import { wrapTelemetryApiGateway } from "./ApiGateway/telemetry/Wrapper";
 import { wrapTelemetryEventBridge } from "./EventBridge/telemetry/Wrapper";
-import { SecretConfig, SecretsRecord } from "./utils/secrets_manager";
+import {
+  getAwsSecretDef,
+  SecretConfig,
+  SecretsRecord,
+} from "./utils/secrets_manager";
 
 export type HandlerConfiguration<
   I = any,
@@ -26,6 +31,20 @@ export type HandlerConfigurationWithType<
 > = Omit<HandlerConfiguration<I, U, V, TSecrets>, "type"> & {
   type: LambdaType;
 };
+
+export const buildHandlerConfiguration = <
+  I,
+  U extends any | ObjectSchema<any> = any,
+  V extends any | ObjectSchema<any> = any,
+  TSecrets extends string = string
+>(cfg: {
+  secretInjection?: Record<TSecrets, SecretConfig>;
+  yupSchemaInput?: U;
+  yupSchemaOutput?: V;
+  initFunction?: (secrets: SecretsRecord<TSecrets>) => Promise<I>;
+  sentry?: boolean;
+  opentelemetry?: boolean;
+}) => cfg;
 
 export const enum LambdaType {
   EVENT_BRIDGE,
