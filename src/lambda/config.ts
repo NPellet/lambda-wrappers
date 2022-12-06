@@ -32,6 +32,12 @@ export type HandlerConfigurationWithType<
   type: LambdaType;
 };
 
+export type TInit<A extends HandlerConfiguration> = Awaited<
+  ReturnType<A["initFunction"]>
+>;
+export type TSecrets<A extends HandlerConfiguration> =
+  keyof A["secretInjection"];
+
 export const buildHandlerConfiguration = <
   I,
   U extends any | ObjectSchema<any> = any,
@@ -61,3 +67,9 @@ export const LambdaTypeConfiguration = {
     opentelemetryWrapper: wrapTelemetryApiGateway,
   },
 };
+
+const secrets = buildHandlerConfiguration({
+  secretInjection: {
+    k: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
+  },
+});

@@ -7,3 +7,5 @@ export { Request } from "../util/apigateway/request";
 export { getAwsSecretDef } from "../lambda/utils/secrets_manager";
 
 export { buildHandlerConfiguration } from "../lambda/config";
+
+export type { TInit, TSecrets } from "./config";
