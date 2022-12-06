@@ -1,6 +1,5 @@
-import { APIGatewayProxyEvent } from "aws-lambda";
 import { ObjectSchema } from "yup";
-import { log } from "../lambda/utils/logger";
+import { log } from "../../lambda/utils/logger";
 
 export class Request<T> {
   private validator: ObjectSchema<any> | undefined;
@@ -43,25 +42,5 @@ export class Request<T> {
 
   protected setValidator(validator: ObjectSchema<any>) {
     this.validator = validator;
-  }
-}
-
-export class AwsApiGatewayRequest<T> extends Request<T> {
-  constructor(
-    private event: APIGatewayProxyEvent,
-    validator?: ObjectSchema<any>
-  ) {
-    super(
-      event.body,
-      event.headers,
-      event.pathParameters,
-      event.queryStringParameters
-    );
-
-    this.setValidator(validator);
-  }
-
-  public getOriginalData() {
-    return this.event;
   }
 }

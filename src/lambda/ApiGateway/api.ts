@@ -12,12 +12,14 @@ import {
   LambdaContext,
   LambdaInitSecretHandler,
 } from "../../util/LambdaHandler";
-import { AwsApiGatewayRequest } from "../../util/apigateway";
+import { AwsApiGatewayRequest } from "../../util/apigateway/apigateway";
 import { HandlerConfiguration, LambdaType } from "../config";
 import { log } from "../utils/logger";
 import { wrapGenericHandler } from "../Wrapper";
 import { config } from "process";
 import { create } from "lodash";
+import { Response } from "../../util/apigateway/response";
+import { Request } from "../../util/apigateway/request";
 
 /**
  * Make sure that the return format of the lambda matches what is expected from the API Gateway
@@ -35,11 +37,9 @@ export const createApiGatewayHandler = <
     AwsApiGatewayRequest<SInput extends undefined ? T : InferType<SInput>>,
     TInit,
     TSecrets,
-    Omit<APIGatewayProxyResult, "body"> & {
-      body: SOutput extends ObjectSchema<any>
-        ? InferType<SOutput>
-        : void | string;
-    }
+    Response<
+      SOutput extends ObjectSchema<any> ? InferType<SOutput> : void | string
+    >
   >,
   configuration: Omit<
     HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
@@ -49,6 +49,68 @@ export const createApiGatewayHandler = <
   type TInput = SInput extends undefined ? T : InferType<SInput>;
   type TOutput = Awaited<ReturnType<typeof handler>>;
 
+  const buildResponse = async (
+    response: TOutput
+  ): Promise<APIGatewayProxyResult> => {
+    if (!(response instanceof Response)) {
+      recordException(
+        new Error(
+          "Lambda's output is malformed. Output was: " +
+            JSON.stringify(response)
+        )
+      );
+      return {
+        statusCode: 500,
+        body: "Lambda has outputed a malformed payload. Should be of Response type",
+      };
+    }
+
+    const responseData = response.getData();
+    const headers = response.getHeaders();
+
+    if (Buffer.isBuffer(responseData)) {
+      return {
+        headers,
+        statusCode: response.getStatusCode(),
+        body: responseData.toString("base64"),
+        isBase64Encoded: true,
+      };
+    }
+
+    if (!responseData) {
+      return {
+        headers,
+        statusCode: response.getStatusCode(),
+        body: "",
+      };
+    }
+
+    if (typeof responseData === "object") {
+      try {
+        if (configuration.yupSchemaOutput) {
+          await configuration.yupSchemaOutput?.validate(responseData);
+        }
+
+        return {
+          headers,
+          statusCode: response.getStatusCode(),
+          body: JSON.stringify(responseData),
+        };
+      } catch (e) {
+        recordException(e);
+        return {
+          statusCode: 500,
+          body: "Output object not according to schema",
+        };
+      }
+    }
+
+    return {
+      headers,
+      statusCode: response.getStatusCode(),
+      body: responseData,
+    };
+  };
   const wrappedHandler = wrapGenericHandler(handler, {
     type: LambdaType.API_GATEWAY,
     ...configuration,
@@ -88,38 +150,7 @@ export const createApiGatewayHandler = <
         };
       }
 
-      if (!actualOut.statusCode) {
-        recordException(out);
-        return {
-          statusCode: 500,
-          body:
-            "Lambda has outputed a malformed API Gateway return object: \n " +
-            JSON.stringify(out, undefined, "\t "),
-        };
-      }
-
-      if (!actualOut.body) {
-        return { ...actualOut, body: "" };
-      }
-
-      if (typeof actualOut.body === "object") {
-        try {
-          if (configuration.yupSchemaOutput) {
-            await configuration.yupSchemaOutput?.validate(actualOut.body);
-          }
-
-          return {
-            ...actualOut,
-            body: JSON.stringify(actualOut.body),
-          };
-        } catch (e) {
-          return {
-            statusCode: 500,
-            body: "Output object not according to schema",
-          };
-        }
-      }
-      return actualOut;
+      return await buildResponse(actualOut);
     } catch (e) {
       // We do not rethrow the exception.
       // Exception should already be recorded by the rumtime wrapper
@@ -133,13 +164,3 @@ export const createApiGatewayHandler = <
     }
   };
 };
-
-createApiGatewayHandler<{ hello: string }>(async (request, init) => {
-  const data = await request.getData();
-  data.hello;
-
-  return {
-    statusCode: 200,
-    body: "ok",
-  };
-}, {});

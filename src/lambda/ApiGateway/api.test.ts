@@ -52,7 +52,8 @@ import { wrapTelemetryApiGateway } from "./telemetry/Wrapper";
 
 import { recordException } from "../../util/exceptions";
 import { HandlerConfiguration, LambdaType } from "../config";
-import { AwsApiGatewayRequest } from "../../util/apigateway";
+import { AwsApiGatewayRequest } from "../../util/apigateway/apigateway";
+import { Response } from "../../util/apigateway/response";
 
 const init = async () => {};
 
@@ -151,10 +152,7 @@ describe("API Gateway: Checking", () => {
       async (request) => {
         await request.getData();
 
-        return {
-          statusCode: 200,
-          body: "Ok",
-        };
+        return Response.OK("Ok");
       },
       {
         yupSchemaInput: yup.object({
@@ -194,10 +192,7 @@ describe("API Gateway: Checking", () => {
       async (request) => {
         const data = await request.getData();
 
-        return {
-          statusCode: 200,
-          body: data,
-        };
+        return Response.OK(data);
       },
       {
         yupSchemaOutput: yup.object({

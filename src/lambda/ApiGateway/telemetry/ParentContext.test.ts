@@ -13,7 +13,7 @@ import api from "@opentelemetry/api";
 import { traceContextEnvironmentKey } from "../../utils/telemetry";
 import _ from "lodash";
 import { AWSXRAY_TRACE_ID_HEADER } from "@opentelemetry/propagator-aws-xray";
-import { AwsApiGatewayRequest } from "../../../util/apigateway";
+import { AwsApiGatewayRequest } from "../../../util/apigateway/apigateway";
 
 describe("Telemetry: API Gateway parent context", function () {
   it("Fetches Lambda context", () => {

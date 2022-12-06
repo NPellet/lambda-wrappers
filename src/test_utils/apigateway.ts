@@ -1,7 +1,8 @@
 import { AWSXRAY_TRACE_ID_HEADER } from "@opentelemetry/propagator-aws-xray";
 import { APIGatewayEvent, APIGatewayProxyResult, Handler } from "aws-lambda";
 import _ from "lodash";
-import { AwsApiGatewayRequest } from "../util/apigateway";
+import { AwsApiGatewayRequest } from "../util/apigateway/apigateway";
+import { Response } from "../util/apigateway/response";
 import { LambdaInitSecretHandler } from "../util/LambdaHandler";
 import { sampledAwsHeader, testApiGatewayEvent } from "./utils";
 
@@ -56,31 +57,26 @@ export const successLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
   string,
-  APIGatewayProxyResult
+  Response<string>
 > = async (event, init, secrets, context, callback) => {
-  return {
-    statusCode: 200,
-    body: "Ok",
-  };
+  return Response.OK("Ok");
 };
 
 export const errorLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
   string,
-  APIGatewayProxyResult
+  Response<string>
 > = async (event, init, secrets, context, callback) => {
-  return {
-    statusCode: 500,
-    body: "Internal Server Error",
-  };
+  return Response.SERVER_ERROR("Internal Server Error");
+  // return "ash";//Response.SERVER_ERROR("Internal Server Error");
 };
 
 export const exceptionLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
   string,
-  APIGatewayProxyResult
+  Response<string>
 > = async (event, init, secrets, context, callback) => {
   throw new Error("Some exception");
 };
@@ -89,7 +85,7 @@ export const exceptionLHandler: LambdaInitSecretHandler<
 export const malformedLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
-  APIGatewayProxyResult
+  Response<string>
 > = async (event, init, context, callback) => {
   return "Some wrong string";
 };
@@ -98,5 +94,5 @@ export const malformedLHandler: LambdaInitSecretHandler<
 export const syncLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
-  APIGatewayProxyResult
+  Response<string>
 > = (event, init, context, callback) => {};

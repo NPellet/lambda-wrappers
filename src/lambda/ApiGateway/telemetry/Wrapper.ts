@@ -15,7 +15,7 @@ import {
 } from "@opentelemetry/semantic-conventions";
 import { flush, tracer } from "../../utils/telemetry";
 import { log } from "../../utils/logger";
-import { AwsApiGatewayRequest } from "../../../util/apigateway";
+import { AwsApiGatewayRequest } from "../../../util/apigateway/apigateway";
 
 export const wrapTelemetryApiGateway = <T>(
   handler: Handler<AwsApiGatewayRequest<T>, APIGatewayProxyResult>

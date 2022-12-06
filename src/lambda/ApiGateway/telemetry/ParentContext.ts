@@ -4,7 +4,7 @@ import otelapi, {
   TraceFlags,
 } from "@opentelemetry/api";
 import { APIGatewayEvent } from "aws-lambda";
-import { AwsApiGatewayRequest } from "../../../util/apigateway";
+import { AwsApiGatewayRequest } from "../../../util/apigateway/apigateway";
 import {
   contextPayloadGetter,
   extractCtxFromLambdaEnv,

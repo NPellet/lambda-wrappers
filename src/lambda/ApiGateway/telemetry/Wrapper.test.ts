@@ -10,7 +10,7 @@ import {
   exceptionHandler,
 } from "../../../test_utils/apigateway";
 import { flush } from "../../utils/telemetry";
-import { AwsApiGatewayRequest } from "../../../util/apigateway";
+import { AwsApiGatewayRequest } from "../../../util/apigateway/apigateway";
 
 describe("Telemetry: API Gateway wrapper handles all types of outputs", function () {
   it("Handles 200 ", async () => {
