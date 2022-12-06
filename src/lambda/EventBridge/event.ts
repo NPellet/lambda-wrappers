@@ -20,23 +20,25 @@ export const eventBridgeHandlerFactory = <
     "type"
   >
 ) => {
-  return function <T = SInput extends BaseSchema ? InferType<SInput> : any>(
-    handler: LambdaInitSecretHandler<
-      AwsEventBridgeEvent<T>,
-      TInit & {
-        originalData: EventBridgeEvent<string, T>;
-      },
-      TSecrets,
-      void
-    >
-  ) {
-    return {
-      handlerFactory: createEventBridgeHandler<T, TInit, TSecrets, SInput>(
+  return {
+    configuration,
+    handlerFactory: function <
+      T = SInput extends BaseSchema ? InferType<SInput> : any
+    >(
+      handler: LambdaInitSecretHandler<
+        AwsEventBridgeEvent<T>,
+        TInit & {
+          originalData: EventBridgeEvent<string, T>;
+        },
+        TSecrets,
+        void
+      >
+    ) {
+      return createEventBridgeHandler<T, TInit, TSecrets, SInput>(
         handler,
         configuration
-      ),
-      configuration,
-    };
+      );
+    },
   };
 };
 

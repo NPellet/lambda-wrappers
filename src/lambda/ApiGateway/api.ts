@@ -32,24 +32,25 @@ export const apiGatewayHandlerFactory = <
     "type"
   >
 ) => {
-  return function <T = SInput extends BaseSchema ? InferType<SInput> : any>(
-    handler: LambdaInitSecretHandler<
-      AwsApiGatewayRequest<T>,
-      TInit,
-      TSecrets,
-      Response<SOutput extends BaseSchema ? InferType<SOutput> : void | string>
-    >
-  ) {
-    return {
-      handlerFactory: createApiGatewayHandler<
-        T,
+  return {
+    configuration,
+    handlerFactory: function <
+      T = SInput extends BaseSchema ? InferType<SInput> : any
+    >(
+      handler: LambdaInitSecretHandler<
+        AwsApiGatewayRequest<T>,
         TInit,
         TSecrets,
-        SInput,
-        SOutput
-      >(handler, configuration),
-      configuration,
-    };
+        Response<
+          SOutput extends BaseSchema ? InferType<SOutput> : void | string
+        >
+      >
+    ) {
+      return createApiGatewayHandler<T, TInit, TSecrets, SInput, SOutput>(
+        handler,
+        configuration
+      );
+    },
   };
 };
 
