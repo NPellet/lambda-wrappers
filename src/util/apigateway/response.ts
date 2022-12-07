@@ -1,4 +1,12 @@
-export class Response<T> {
+interface Replyable<T> {
+  getData(): T;
+
+  getStatusCode(): number;
+
+  getHeaders(): Record<string, string>;
+}
+
+class HTTPResponse<T> implements Replyable<T> {
   public constructor(
     private data: T,
     private headers: Record<string, string>,
@@ -16,7 +24,13 @@ export class Response<T> {
   public getHeaders(): Record<string, string> {
     return this.headers;
   }
+}
 
+export class Response<T> extends HTTPResponse<T> {
+  public isResponse() {
+    return true;
+  }
+  public thisIsIt = true;
   public static OK<T>(
     data: T,
     headers: Record<string, string> = {}
@@ -39,7 +53,9 @@ export class Response<T> {
   }
 }
 
-export class HTTPError extends Response<string> {
+export class HTTPError extends HTTPResponse<any> {
+  public isError = true;
+
   public static CONFLICT(
     data: string,
     headers: Record<string, string> = {}

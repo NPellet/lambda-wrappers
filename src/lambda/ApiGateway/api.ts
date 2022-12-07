@@ -35,18 +35,17 @@ export const apiGatewayHandlerFactory = <
   return {
     configuration,
     handlerFactory: function <
-      T = SInput extends BaseSchema ? InferType<SInput> : any
+      T = SInput extends BaseSchema ? InferType<SInput> : any,
+      O = SOutput extends BaseSchema ? InferType<SOutput> : any
     >(
       handler: LambdaInitSecretHandler<
         AwsApiGatewayRequest<T>,
         TInit,
         TSecrets,
-        Response<
-          SOutput extends BaseSchema ? InferType<SOutput> : void | string
-        >
+        Response<O> | HTTPError
       >
     ) {
-      return createApiGatewayHandler<T, TInit, TSecrets, SInput, SOutput>(
+      return createApiGatewayHandler<T, O, TInit, TSecrets, SInput, SOutput>(
         handler,
         configuration
       );
@@ -61,6 +60,7 @@ export const apiGatewayHandlerFactory = <
  */
 export const createApiGatewayHandler = <
   T,
+  O,
   TInit = any,
   TSecrets extends string = any,
   SInput extends BaseSchema | undefined = undefined,
@@ -70,8 +70,7 @@ export const createApiGatewayHandler = <
     AwsApiGatewayRequest<SInput extends BaseSchema ? InferType<SInput> : T>,
     TInit,
     TSecrets,
-    | Response<SOutput extends BaseSchema ? InferType<SOutput> : void | string>
-    | HTTPError
+    Response<O> | HTTPError
   >,
   configuration: Omit<
     HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
@@ -84,7 +83,7 @@ export const createApiGatewayHandler = <
   const buildResponse = async (
     response: TOutput
   ): Promise<APIGatewayProxyResult> => {
-    if (!(response instanceof Response)) {
+    if (!(response instanceof Response) && !(response instanceof HTTPError)) {
       recordException(
         new Error(
           "Lambda's output is malformed. Output was: " +
@@ -148,7 +147,7 @@ export const createApiGatewayHandler = <
     return {
       headers,
       statusCode: response.getStatusCode(),
-      body: responseData,
+      body: responseData as string,
     };
   };
   const wrappedHandler = wrapGenericHandler(handler, {
@@ -181,7 +180,6 @@ export const createApiGatewayHandler = <
         callback
       );
       if (!actualOut) {
-        console.log("ERROR PROMISE");
         recordException(
           new Error("API Gateway lambda functions must return a Promise")
         );
@@ -204,11 +202,9 @@ export const createApiGatewayHandler = <
       };
     }
   };
-};
+}; /*
 
-/*
-
-const handlerWrapper = createApiGatewayHandlerFactory({
+const { handlerFactory } = apiGatewayHandlerFactory({
   secretInjection: {
     k: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
   },
@@ -220,9 +216,9 @@ const handlerWrapper = createApiGatewayHandlerFactory({
   },
 });
 
-handlerWrapper(async (event, init, secrets, context) => {
+handlerFactory<any, { a: string }>(async (event, init, secrets, context) => {
   const d = await event.getData();
   d.b;
-  return Response.OK("");
+  return Response.OK({ a: "b"});
 });
 */

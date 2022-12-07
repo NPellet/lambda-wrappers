@@ -60,7 +60,7 @@ export const errorLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
   string,
-  Response<string>
+  HTTPError
 > = async (event, init, secrets, context, callback) => {
   return HTTPError.SERVER_ERROR("Internal Server Error");
   // return "ash";//Response.SERVER_ERROR("Internal Server Error");
