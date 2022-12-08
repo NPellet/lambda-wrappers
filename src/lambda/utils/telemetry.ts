@@ -37,13 +37,13 @@ export const extractCtxFromLambdaEnv = () => {
  * @returns The instrumented lambda
  */
 export const wrapTelemetryLambda = <T, U>(
-  handler: Handler<T, U>,
-  wrapper: (handler: Handler<T, U | void>) => Handler<T, U | void>
+  handler: Handler<T, U>
+  // wrapper: (handler: Handler<T, U | void>) => Handler<T, U | void>
 ) => {
   const wrappedHandlerTelGeneric = _wrapTelemetryLambda(handler);
 
-  const wrappedHandler = wrapper(wrappedHandlerTelGeneric);
-  return wrappedHandler;
+  // const wrappedHandler = wrapper(wrappedHandlerTelGeneric);
+  return wrappedHandlerTelGeneric;
 };
 
 const _wrapTelemetryLambda = <T, U>(handler: Handler<T, U>) => {

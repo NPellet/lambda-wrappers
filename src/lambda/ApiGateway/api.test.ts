@@ -1,19 +1,19 @@
-import { AWSXRAY_TRACE_ID_HEADER } from '@opentelemetry/propagator-aws-xray';
+import { AWSXRAY_TRACE_ID_HEADER } from "@opentelemetry/propagator-aws-xray";
 import {
   APIGatewayEvent,
   APIGatewayProxyCallback,
   APIGatewayProxyResult,
   Handler,
-} from 'aws-lambda';
-import _ from 'lodash';
+} from "aws-lambda";
+import _ from "lodash";
 import {
   sampledAwsHeader,
   testApiGatewayEvent,
   LambdaContext,
   memoryExporter,
-} from '../../test_utils/utils';
-import api, { SpanKind, SpanStatusCode } from '@opentelemetry/api';
-import { SemanticAttributes } from '@opentelemetry/semantic-conventions';
+} from "../../test_utils/utils";
+import api, { SpanKind, SpanStatusCode } from "@opentelemetry/api";
+import { SemanticAttributes } from "@opentelemetry/semantic-conventions";
 import {
   successHandler,
   event,
@@ -24,40 +24,40 @@ import {
   exceptionLHandler,
   errorLHandler,
   malformedLHandler,
-} from '../../test_utils/apigateway';
-import { createApiGatewayHandler } from './api';
-import * as yup from 'yup';
+} from "../../test_utils/apigateway";
+import { createApiGatewayHandler } from "./api";
+import * as yup from "yup";
 
-jest.mock('../../util/exceptions', function () {
+jest.mock("../../util/exceptions", function () {
   return {
     recordException: jest.fn(),
   };
 });
 
-jest.mock('../Wrapper', function () {
-  const actual = jest.requireActual('../Wrapper');
+jest.mock("../Wrapper", function () {
+  const actual = jest.requireActual("../Wrapper");
   return {
     wrapGenericHandler: jest.fn(actual.wrapGenericHandler),
   };
 });
-import { wrapGenericHandler } from '../Wrapper';
+import { wrapGenericHandler } from "../Wrapper";
 
-jest.mock('./telemetry/Wrapper', function () {
-  const actual = jest.requireActual('./telemetry/Wrapper');
+jest.mock("./telemetry/Wrapper", function () {
+  const actual = jest.requireActual("./telemetry/Wrapper");
   return {
     wrapTelemetryApiGateway: jest.fn(actual.wrapTelemetryApiGateway),
   };
 });
-import { wrapTelemetryApiGateway } from './telemetry/Wrapper';
+import { wrapTelemetryApiGateway } from "./telemetry/Wrapper";
 
-import { recordException } from '../../util/exceptions';
-import { HandlerConfiguration, LambdaType } from '../config';
-import { AwsApiGatewayRequest } from '../../util/apigateway/apigateway';
-import { Response } from '../../util/apigateway/response';
+import { recordException } from "../../util/exceptions";
+import { HandlerConfiguration, LambdaType } from "../config";
+import { AwsApiGatewayRequest } from "../../util/apigateway/apigateway";
+import { Response } from "../../util/apigateway/response";
 
 const init = async () => {};
 
-describe('API Gateway. Sanitizing outputs', function () {
+describe("API Gateway. Sanitizing outputs", function () {
   const cfg: HandlerConfiguration = {
     type: LambdaType.GENERIC,
     secretInjection: {},
@@ -67,38 +67,38 @@ describe('API Gateway. Sanitizing outputs', function () {
     jest.clearAllMocks();
   });
 
-  it('Handles 200 ', async () => {
+  it("Handles 200 ", async () => {
     const handler = createApiGatewayHandler(successLHandler, cfg);
 
     expect(wrapGenericHandler).toHaveBeenCalled();
     const out = await handler(event, LambdaContext, () => {});
     expect(out.statusCode).toBe(200);
-    expect(out.body).toBe('Ok');
+    expect(out.body).toBe("Ok");
   });
 
-  it('Handles 500 ', async () => {
+  it("Handles 500 ", async () => {
     const handler = createApiGatewayHandler(errorLHandler, cfg);
     const out = await handler(event, LambdaContext, () => {});
 
     expect(out.statusCode).toBe(500);
-    expect(out.body).toBe('Internal Server Error');
+    expect(out.body).toBe("Internal Server Error");
   });
 
-  it('Handles exception ', async () => {
+  it("Handles exception ", async () => {
     const handler = createApiGatewayHandler(exceptionLHandler, cfg);
     const out = await handler(event, LambdaContext, () => {});
 
     expect(out.statusCode).toBe(500);
-    expect(out.body).toContain('The lambda execution for the API Gateway ');
+    expect(out.body).toContain("The lambda execution for the API Gateway ");
     expect(recordException).toHaveBeenCalled();
   });
 
-  it('Handles malformed output ', async () => {
+  it("Handles malformed output ", async () => {
     const handler = createApiGatewayHandler(malformedLHandler, cfg);
     const out = await handler(event, LambdaContext, () => {});
 
     expect(out.statusCode).toBe(500);
-    expect(out.body).toContain('Lambda has outputed a malformed');
+    expect(out.body).toContain("Lambda has outputed a malformed");
     expect(recordException).toHaveBeenCalled();
   });
   /*
@@ -112,8 +112,8 @@ describe('API Gateway. Sanitizing outputs', function () {
   });*/
 });
 
-describe('API Gateway: Telemetry', function () {
-  process.env.USE_OPENTELEMETRY = '1';
+describe("API Gateway: Telemetry", function () {
+  process.env.USE_OPENTELEMETRY = "1";
   const cfg: HandlerConfiguration = {
     type: LambdaType.API_GATEWAY,
     secretInjection: {},
@@ -124,7 +124,7 @@ describe('API Gateway: Telemetry', function () {
     jest.clearAllMocks();
   });
 
-  it('Creates 2 nested spans ', async () => {
+  it("Creates 2 nested spans ", async () => {
     const handler = createApiGatewayHandler(successLHandler, cfg);
 
     expect(wrapGenericHandler).toHaveBeenCalled();
@@ -144,15 +144,54 @@ describe('API Gateway: Telemetry', function () {
 
     expect(spans[0].parentSpanId).toBe(spans[1].spanContext().spanId);
   });
+
+  it("A normal HTTP Error does not create an exception, leaves the outer span status unset", async () => {
+    const handler = createApiGatewayHandler(errorLHandler, cfg);
+
+    expect(wrapGenericHandler).toHaveBeenCalled();
+    expect(wrapTelemetryApiGateway).toHaveBeenCalled();
+
+    const out = await handler(event, LambdaContext, () => {});
+    expect(out.statusCode).toBe(500);
+
+    const spans = memoryExporter.getFinishedSpans();
+
+    expect(spans.length).toBe(2);
+    expect(spans[1].events.length).toBe(0);
+    expect(spans[0].status.code).toBe(SpanStatusCode.UNSET); // Inner span
+    expect(spans[1].status.code).toBe(SpanStatusCode.UNSET);
+  });
+
+  it("A throwing error logs an exception in the inner (lambda span) and fails the outer span", async () => {
+    const handler = createApiGatewayHandler(exceptionLHandler, cfg);
+
+    expect(wrapGenericHandler).toHaveBeenCalled();
+    expect(wrapTelemetryApiGateway).toHaveBeenCalled();
+
+    const out = await handler(event, LambdaContext, () => {});
+    expect(out.statusCode).toBe(500);
+
+    const spans = memoryExporter.getFinishedSpans();
+
+    expect(spans.length).toBe(2);
+    expect(spans[0].events.length).toBe(1);
+    expect(spans[1].events.length).toBe(0);
+    expect(spans[0].status.code).toBe(SpanStatusCode.ERROR);
+    expect(spans[1].status.code).toBe(SpanStatusCode.ERROR);
+
+    expect(
+      spans[0].events[0].attributes![SemanticAttributes.EXCEPTION_STACKTRACE]
+    ).toBeDefined();
+  });
 });
 
-describe('API Gateway: Checking', () => {
-  it('Input schema validation is enforced', async () => {
+describe("API Gateway: Checking", () => {
+  it("Input schema validation is enforced", async () => {
     const handler = createApiGatewayHandler(
       async (request) => {
         request.getData();
 
-        return Response.OK('Ok');
+        return Response.OK("Ok");
       },
       {
         yupSchemaInput: yup.object({
@@ -165,16 +204,16 @@ describe('API Gateway: Checking', () => {
       handler(testApiGatewayEvent, LambdaContext, () => {})
     ).resolves.toMatchObject({
       statusCode: 500,
-      body: expect.stringContaining('Lambda input schema validation failed'),
+      body: expect.stringContaining("Lambda input schema validation failed"),
     });
 
     const wrongObjectGatewayEvent = _.cloneDeep(testApiGatewayEvent);
-    wrongObjectGatewayEvent.body = JSON.stringify({ property: 'value' });
+    wrongObjectGatewayEvent.body = JSON.stringify({ property: "value" });
     await expect(
       handler(wrongObjectGatewayEvent, LambdaContext, () => {})
     ).resolves.toMatchObject({
       statusCode: 500,
-      body: expect.stringContaining('num is a required field'),
+      body: expect.stringContaining("num is a required field"),
     });
 
     const validObjectGatewayEvent = _.cloneDeep(testApiGatewayEvent);
@@ -186,7 +225,7 @@ describe('API Gateway: Checking', () => {
     });
   });
 
-  it('Output schema validation is enforced', async () => {
+  it("Output schema validation is enforced", async () => {
     const handler = createApiGatewayHandler(
       // @ts-ignore
       async (request) => {
@@ -206,29 +245,29 @@ describe('API Gateway: Checking', () => {
     ).resolves.toMatchObject({
       statusCode: 500,
       body: expect.stringContaining(
-        'Validation error: Output object not validating'
+        "Validation error: Output object not validating"
       ), // Validating output
     });
 
     const wrongObjectGatewayEvent = _.cloneDeep(testApiGatewayEvent);
-    wrongObjectGatewayEvent.body = JSON.stringify({ property: 'value' });
+    wrongObjectGatewayEvent.body = JSON.stringify({ property: "value" });
     await expect(
       handler(wrongObjectGatewayEvent, LambdaContext, () => {})
     ).resolves.toMatchObject({
       statusCode: 500,
       body: expect.stringContaining(
-        'Validation error: Output object not validating'
+        "Validation error: Output object not validating"
       ),
     });
 
     const wrongTypeGatewayEvent = _.cloneDeep(testApiGatewayEvent);
-    wrongTypeGatewayEvent.body = JSON.stringify({ outputField: 'value' });
+    wrongTypeGatewayEvent.body = JSON.stringify({ outputField: "value" });
     await expect(
       handler(wrongTypeGatewayEvent, LambdaContext, () => {})
     ).resolves.toMatchObject({
       statusCode: 500,
       body: expect.stringContaining(
-        'Validation error: Output object not validating'
+        "Validation error: Output object not validating"
       ),
     });
 

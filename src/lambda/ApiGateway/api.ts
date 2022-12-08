@@ -4,23 +4,23 @@ import {
   APIGatewayProxyResult,
   Callback,
   Context,
-} from 'aws-lambda';
-import { BaseSchema, InferType } from 'yup';
-import { recordException } from '../../util/exceptions';
+} from "aws-lambda";
+import { BaseSchema, InferType } from "yup";
+import { recordException } from "../../util/exceptions";
 import {
   Controller,
   LambdaContext,
   LambdaInitSecretHandler,
-} from '../../util/LambdaHandler';
-import { AwsApiGatewayRequest } from '../../util/apigateway/apigateway';
-import { HandlerConfiguration, LambdaType, TInit } from '../config';
-import { log } from '../utils/logger';
-import { wrapGenericHandler } from '../Wrapper';
-import { HTTPError, Response } from '../../util/apigateway/response';
-import { Request } from '../../util/apigateway/request';
-import { SecretConfig } from '../utils/secrets_manager';
-import { createLogger } from 'winston';
-import { wrapTelemetryApiGateway } from './telemetry/Wrapper';
+} from "../../util/LambdaHandler";
+import { AwsApiGatewayRequest } from "../../util/apigateway/apigateway";
+import { HandlerConfiguration, LambdaType, TInit } from "../config";
+import { log } from "../utils/logger";
+import { wrapGenericHandler } from "../Wrapper";
+import { HTTPError, Response } from "../../util/apigateway/response";
+import { Request } from "../../util/apigateway/request";
+import { SecretConfig } from "../utils/secrets_manager";
+import { createLogger } from "winston";
+import { wrapTelemetryApiGateway } from "./telemetry/Wrapper";
 
 type ConstructorOf<T> = {
   init(secrets: Record<string, string>): T;
@@ -70,7 +70,7 @@ export const apiGatewayHandlerFactory = <
 >(
   configuration: Omit<
     HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
-    'type'
+    "type"
   >
 ) => {
   return {
@@ -115,7 +115,7 @@ export const createApiGatewayHandler = <
   >,
   configuration: Omit<
     HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
-    'type'
+    "type"
   >
 ) => {
   type TInput = SInput extends BaseSchema ? InferType<SInput> : T;
@@ -133,7 +133,7 @@ export const createApiGatewayHandler = <
       );
       return {
         statusCode: 500,
-        body: 'Lambda has outputed a malformed payload. Should be of Response type',
+        body: "Lambda has outputed a malformed payload. Should be of Response type",
       };
     }
 
@@ -152,7 +152,7 @@ export const createApiGatewayHandler = <
       return {
         headers,
         statusCode: response.getStatusCode(),
-        body: responseData.toString('base64'),
+        body: responseData.toString("base64"),
         isBase64Encoded: true,
       };
     }
@@ -161,7 +161,7 @@ export const createApiGatewayHandler = <
       return {
         headers,
         statusCode: response.getStatusCode(),
-        body: '',
+        body: "",
       };
     }
     if (configuration.yupSchemaOutput) {
@@ -171,12 +171,12 @@ export const createApiGatewayHandler = <
         recordException(e);
         return {
           statusCode: 500,
-          body: 'Validation error: Output object not validating given output schema',
+          body: "Validation error: Output object not validating given output schema",
         };
       }
     }
 
-    if (typeof responseData === 'object') {
+    if (typeof responseData === "object") {
       return {
         headers,
         statusCode: response.getStatusCode(),
@@ -225,7 +225,7 @@ export const createApiGatewayHandler = <
         return {
           statusCode: 500,
           body:
-            'Lambda input data malformed. Raw input data was ' +
+            "Lambda input data malformed. Raw input data was " +
             request.getRawData(),
         };
       }
@@ -239,7 +239,7 @@ export const createApiGatewayHandler = <
           return {
             statusCode: 500,
             body:
-              'Lambda input schema validation failed. Error was: ' + e.message,
+              "Lambda input schema validation failed. Error was: " + e.message,
           };
         }
       }
@@ -248,11 +248,11 @@ export const createApiGatewayHandler = <
 
       if (!actualOut) {
         recordException(
-          new Error('API Gateway lambda functions must return a Promise')
+          new Error("API Gateway lambda functions must return a Promise")
         );
         return {
           statusCode: 500,
-          body: 'Lambda function malformed. Expected a Promise',
+          body: "Lambda function malformed. Expected a Promise",
         };
       }
 
@@ -261,7 +261,7 @@ export const createApiGatewayHandler = <
       // We do not rethrow the exception.
       // Exception should already be recorded by the rumtime wrapper
       // recordException(e);
-      log.error('Lambda execution failed');
+      log.error("Lambda execution failed");
 
       if (e.stack) {
         log.error(e.stack);
@@ -270,8 +270,8 @@ export const createApiGatewayHandler = <
       return {
         statusCode: 500,
         body:
-          'The lambda execution for the API Gateway has failed with: \n ' +
-          (typeof e === 'string' ? e : e.message),
+          "The lambda execution for the API Gateway has failed with: \n " +
+          (typeof e === "string" ? e : e.message),
       };
     }
   };
