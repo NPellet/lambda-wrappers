@@ -57,6 +57,17 @@ type T = string | Error;
 export class HTTPError extends HTTPResponse<T> {
   public isError = true;
 
+  private _anormal: boolean = false;
+
+  public isAnormal() {
+    return this._anormal;
+  }
+
+  public anormal() {
+    this._anormal = true;
+    return this;
+  }
+
   public static CONFLICT(
     data: T,
     headers: Record<string, string> = {}
@@ -103,6 +114,6 @@ export class HTTPError extends HTTPResponse<T> {
     data: T,
     headers: Record<string, string> = {}
   ): HTTPError {
-    return new HTTPError(data, headers, 500);
+    return new HTTPError(data, headers, 500).anormal();
   }
 }

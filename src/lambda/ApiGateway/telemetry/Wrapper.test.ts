@@ -69,7 +69,7 @@ describe('Telemetry: API Gateway wrapper handles all types of outputs', function
 
     const spans = memoryExporter.getFinishedSpans();
     expect(spans.length).toBe(1);
-    expect(spans[0].status.code).toBe(SpanStatusCode.ERROR);
+    expect(spans[0].status.code).toBe(SpanStatusCode.UNSET); // By default unset, it's the inner API wrapper that sets the span to Error
   });
 
   it('Handles exception ', async () => {

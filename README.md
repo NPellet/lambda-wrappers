@@ -11,15 +11,59 @@ npm i @lendis-tech/lambda-handlers
 
 ## Usage
 
-### TL;DR
+As long as https://github.com/microsoft/TypeScript/issues/23911 is not solved, we need to make a decision: who defines the API contract. There are two ways to proceed, and the first is the de-facto method of choice (not necessarily the best).
 
-The handler definition file may look something like:
+For context, the issue is to define who mandates a contract. Normally, it should be at the API level. The controller is then mandated to implement the contract. Because of the aformentionned typescript issue, a derived class (or an implementing class) does not see his member function arguments coerced to the base class. That means an implementation can break the interface contract. This means the API handler cannot issue a base class that must be implemented by the controller. Therefore, we have two ways to proceed.
+
+### TL;DR; Controller defines contract, screw the API
+
+Define your controller as such:
+
+```typescript
+export class MyControllerImplementation extends Controller {
+  static secrets = {
+    apiKey: getAwsSecretDef('Algolia-Products', 'adminApiKey', true),
+  }; // Optional
+
+  static yupSchemaInput = validationSchemaIn; // validationSchema coming from somewhere else, optional
+  static yupSchemaOutput = validationSchemaOut; // validationSchema coming from somewhere else, optional
+
+  static init(
+    secrets: Record<keyof typeof MyControllerImplementation.secrets, string>
+  ) {
+    // Required method, taking one optional argument, and which MUST return an instance of the controller
+    return new MyControllerImplementation();
+  }
+
+  async handle(
+    // Required, taking 2 arguments: the request data and the fetched secrets
+    req: Request<ChangeAssetRequestData>,
+    secrets: Record<keyof typeof MyControllerImplementation.secrets, string>
+  ) {
+    const data = req.getData(); // Gets the data
+
+    try {
+      // Do something with it
+      return Response.OK_NO_CONTENT();
+    } catch (e) {
+      if (e instanceof SomeCustomError) {
+        return HTTPError.BAD_REQUEST(e); // Here we do not rethrow. This is "recoverable error"
+      }
+      throw e; // All other errors are rethrown, notifying Sentry and Opentelemetry
+    }
+  }
+}
+```
+
+### TL;DR: Handler specificies contract, controller must implement it
+
+A more functional approach would The handler definition file may look something like:
 
 ```typescript
 // Ran only once on a cold start. Use this method to cache data, initiate DB connection, etc...
 const init = async () => {
   return {
-    resourceKey: "value",
+    resourceKey: 'value',
   };
 };
 
@@ -35,8 +79,8 @@ const { configuration, handlerFactory } = apiGatewayHandlerFactory({
     // The secret Algolia-Products with key lwaAdminApiKey will be injected into process.env.key
     // It will only happen at cold start of after a two hour cache expiracy
     secretKeyInProcessEnv: getAwsSecretDef(
-      "Algolia-Products",
-      "lwaAdminApiKey",
+      'Algolia-Products',
+      'lwaAdminApiKey',
       false
     ),
   },
@@ -130,7 +174,7 @@ handlerFactory<{ hello: string }>(async (request, init) => {
 
   return {
     statusCode: 200,
-    body: "ok",
+    body: 'ok',
   };
 }, {});
 ```
@@ -193,7 +237,7 @@ const { configuration, handlerFactory } = XXXHandlerFactory({
     //secrets.secretKey is defined
   },
   secretInjection: {
-    secretKey: getAwsSecretDef("Algolia-Products", "adminApiKey", false),
+    secretKey: getAwsSecretDef('Algolia-Products', 'adminApiKey', false),
   },
 });
 
@@ -209,13 +253,13 @@ We provide the ability to automatically parse the secrets manager configuration 
 ```typescript
 // Trigger handler example
 const trigger = {
-  handler: "../src/path/to/file/main.handler",
+  handler: '../src/path/to/file/main.handler',
 };
 
-const lastIndexOfSlash = trigger.handler.lastIndexOf("/");
+const lastIndexOfSlash = trigger.handler.lastIndexOf('/');
 
-const fn = new Function(this, "func", {
-  functionName: "func_test",
+const fn = new Function(this, 'func', {
+  functionName: 'func_test',
   runtime: cdk.aws_lambda.Runtime.NODEJS_14_X,
   code: cdk.aws_lambda.Code.fromAsset(
     trigger.handler.substring(0, lastIndexOfSlash)
@@ -240,5 +284,14 @@ via
 
 ```typescript
 // Use v2 for CDK V2
-import { enhanceCDKLambda } from "@lendis-tech/cdk-lambda-handler-utils/dist/v1/enhanceCDKLambda";
+import { enhanceCDKLambda } from '@lendis-tech/cdk-lambda-handler-utils/dist/v1/enhanceCDKLambda';
 ```
+
+# A note on error handling in controllers
+
+Error handling is an important part of the Lambda handler logic. Here is a list of good practices
+
+- **Let the handler fail in case of unexpected errors**: We'll catch it for you and reply with an error 500 (for the API gateway at least). Same for SQS, we'll handle notifying the entry-point handler that the message processing has failed. We'll also notify Sentry and fail the span in Opentelemetry. Finally, we'll log appropriate messages.
+- **When returning error, use the class HTTPError:** It allows us to implement some extra logic when the request fails. Also, it allows you to not respect to type `T` in `Request<T>`.
+- **For errors that should be recorded, return an error like this: `return HTTPError.BAD_REQUEST( error ).anormal()`:** Any error set as "anormal" will trigger a Sentry error, register the exception in Opentelemetry and fail the tracing span.
+- **`HTTPResponse.INTERNAL_ERROR` is always `anormal` and will always register**: You do not need to call `.anormal()`

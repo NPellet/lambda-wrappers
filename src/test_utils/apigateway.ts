@@ -72,6 +72,16 @@ export const errorLHandler: LambdaInitSecretHandler<
   // return "ash";//Response.SERVER_ERROR("Internal Server Error");
 };
 
+export const unauthorizedLHandler: LambdaInitSecretHandler<
+  AwsApiGatewayRequest<any>,
+  void,
+  string,
+  HTTPError
+> = async (event, init, secrets, context, callback) => {
+  return HTTPError.UNAUTHORIZED('Unauthorized');
+  // return "ash";//Response.SERVER_ERROR("Internal Server Error");
+};
+
 export const exceptionLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
