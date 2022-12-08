@@ -4,22 +4,50 @@ import {
   APIGatewayProxyResult,
   Callback,
   Context,
-  Handler,
 } from "aws-lambda";
-import { BaseSchema, InferType, ObjectSchema } from "yup";
+import { BaseSchema, InferType } from "yup";
 import { recordException } from "../../util/exceptions";
 import {
+  Controller,
   LambdaContext,
   LambdaInitSecretHandler,
 } from "../../util/LambdaHandler";
 import { AwsApiGatewayRequest } from "../../util/apigateway/apigateway";
-import { HandlerConfiguration, LambdaType } from "../config";
+import { HandlerConfiguration, LambdaType, TInit } from "../config";
 import { log } from "../utils/logger";
 import { wrapGenericHandler } from "../Wrapper";
 import { HTTPError, Response } from "../../util/apigateway/response";
-import { TypedSchema } from "yup/lib/util/types";
-import { getAwsSecretDef } from "../utils/secrets_manager";
-import * as yup from "yup";
+import { Request } from "../../util/apigateway/request";
+import { SecretConfig } from "../utils/secrets_manager";
+
+export const apiGatewayHandlerFromController = <
+  TIn,
+  TOut,
+  TSecrets extends string
+>(
+  controller: Controller
+) => {
+  const configuration: HandlerConfiguration<
+    void,
+    typeof controller.yupSchemaInput,
+    typeof controller.yupSchemaOutput,
+    typeof controller.secrets extends undefined
+      ? never
+      : keyof typeof controller.secrets
+  > = {
+    yupSchemaInput: controller.yupSchemaInput,
+    yupSchemaOutput: controller.yupSchemaOutput,
+    initFunction: async (secrets) => controller.init(secrets),
+    secretInjection: controller.secrets,
+  };
+
+  return {
+    handler: createApiGatewayHandler(async (data, _, secrets) => {
+      return controller.handle(data, secrets);
+    }, configuration),
+    configuration,
+  };
+};
 
 export const apiGatewayHandlerFactory = <
   TInit = any,
@@ -155,7 +183,7 @@ export const createApiGatewayHandler = <
     ...configuration,
   });
 
-  return async function handleAPIGateway(
+  const apiGatewayHandler = async function handleAPIGateway(
     event: APIGatewayEvent,
     context: Context,
     callback: Callback
@@ -174,11 +202,15 @@ export const createApiGatewayHandler = <
         }
       );
 
-      actualOut = await wrappedHandler(
-        new AwsApiGatewayRequest<TInput>(event, configuration.yupSchemaInput),
-        newCtx,
-        callback
-      );
+      const request = new AwsApiGatewayRequest<TInput>(event);
+      const data = request.getData();
+
+      if (configuration.yupSchemaInput) {
+        await configuration.yupSchemaInput.validate(data);
+      }
+
+      actualOut = await wrappedHandler(request, newCtx, callback);
+
       if (!actualOut) {
         recordException(
           new Error("API Gateway lambda functions must return a Promise")
@@ -202,6 +234,9 @@ export const createApiGatewayHandler = <
       };
     }
   };
+
+  return apiGatewayHandler;
+  // return wrapAsyncStorage(apiGatewayHandler);
 }; /*
 
 const { handlerFactory } = apiGatewayHandlerFactory({
@@ -221,4 +256,20 @@ handlerFactory<any, { a: string }>(async (event, init, secrets, context) => {
   d.b;
   return Response.OK({ a: "b"});
 });
+*/
+
+/*
+class MyController
+  implements Controller<{ a: string }, { b: number }, "myKey">
+{
+  async init(secrets) {}
+
+  async handle(data, secrets) {
+    return Response.OK({ b: 12 });
+  }
+}
+
+const o = apiGatewayHandlerFromController(new MyController());
+
+
 */

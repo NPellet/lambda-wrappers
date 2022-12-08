@@ -9,7 +9,7 @@ import {
 } from "./utils/secrets_manager";
 
 export type HandlerConfiguration<
-  I = any,
+  TInit = any,
   U extends any | ObjectSchema<any> = any,
   V extends any | ObjectSchema<any> = any,
   TSecrets extends string = string
@@ -17,7 +17,7 @@ export type HandlerConfiguration<
   secretInjection?: Record<TSecrets, SecretConfig>;
   yupSchemaInput?: U;
   yupSchemaOutput?: V;
-  initFunction?: (secrets: SecretsRecord<TSecrets>) => Promise<I>;
+  initFunction?: (secrets: SecretsRecord<TSecrets>) => Promise<TInit>;
   sentry?: boolean;
   opentelemetry?: boolean;
   type?: LambdaType;

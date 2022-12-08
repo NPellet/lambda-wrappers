@@ -19,6 +19,8 @@ import { createNoopMeter } from "@opentelemetry/api";
 import { reject } from "lodash";
 import { resolve } from "path";
 import { SdkInfo } from "@sentry/serverless";
+import { ErrorBag } from "@lendis-tech/sdk";
+import { AsyncLocalStorage } from "async_hooks";
 
 export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
   handler: LambdaInitSecretHandler<U, TInit, TSecrets, V>,
@@ -37,6 +39,8 @@ export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
       if (init) initValue = await init(secrets);
       isInit = true;
     }
+
+    // const errorBag = localAsyncStorage.getStore()!.errorBag;
 
     return new Promise<V | void>((resolve, reject) => {
       const shimmedCb = function (err, out: V | void) {
@@ -110,3 +114,21 @@ const wrapRuntime = <T, U>(handler: Handler<T, U>) => {
     }
   };
 };
+/*
+export const localAsyncStorage = new AsyncLocalStorage<{
+  errorBag: ErrorBag;
+}>();
+
+export const wrapAsyncStorage = <T, U>(handler: (...args: T[]) => U) => {
+  return function (...args: T[]) {
+    return localAsyncStorage.run(
+      {
+        errorBag: new ErrorBag(),
+      },
+      () => {
+        return handler(...args);
+      }
+    );
+  };
+};
+*/

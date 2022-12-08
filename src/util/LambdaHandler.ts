@@ -1,3 +1,4 @@
+import { ErrorBag } from "@lendis-tech/sdk";
 import { init } from "@sentry/serverless/types/awslambda";
 import {
   APIGatewayEvent,
@@ -6,8 +7,10 @@ import {
   Context,
   EventBridgeEvent,
 } from "aws-lambda";
+import { BaseSchema } from "yup";
+import { HTTPError, Request, Response } from "../lambda";
 import { Event } from "../lambda/EventBridge/types/Event";
-import { SecretsRecord } from "../lambda/utils/secrets_manager";
+import { SecretConfig, SecretsRecord } from "../lambda/utils/secrets_manager";
 
 export abstract class BaseLambdaHandler<T, U> {
   public isInit: boolean = false;
@@ -31,6 +34,7 @@ export abstract class EventBridgeLambdaHandler<T> extends BaseLambdaHandler<
 }
 export type LambdaInitSecretHandler<T, TInit, TSecrets extends string, V> = (
   data: T,
+  //errorBag: ErrorBag,
   init: TInit,
   secrets: SecretsRecord<TSecrets>,
   context: Context,
@@ -45,3 +49,15 @@ export type LambdaSecretsHandler<T, TSecrets extends string, V> = (
 ) => Promise<V>;
 
 export type LambdaContext<T> = Context & { originalData: T };
+
+export abstract class Controller<TIn, TOut, TSecrets extends string = string> {
+  yupSchemaInput?: BaseSchema;
+  yupSchemaOutput?: BaseSchema;
+
+  secrets?: Record<TSecrets, SecretConfig>;
+  abstract init(secrets: Record<TSecrets, string | undefined>): Promise<void>;
+  abstract handle(
+    payload: Request<TIn>,
+    secrets: Record<TSecrets, string | undefined>
+  ): Promise<Response<TOut> | HTTPError>;
+}

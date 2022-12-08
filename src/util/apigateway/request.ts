@@ -16,7 +16,7 @@ export class Request<T> {
     return this.rawData;
   }
 
-  public async getData(): Promise<T> {
+  public getData(): T {
     if (this.data) return this.data;
 
     const contentType = this.headers["Content-Type"];
@@ -27,11 +27,6 @@ export class Request<T> {
 
     if (contentType === "application/json" && this.rawData) {
       this.data = JSON.parse(this.rawData) as T;
-    }
-
-    if (this.validator) {
-      log.debug("Trying to validate API Gateway body");
-      await this.validator.validate(this.data);
     }
 
     return this.data as T;

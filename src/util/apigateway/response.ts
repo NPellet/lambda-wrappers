@@ -45,61 +45,62 @@ export class Response<T> extends HTTPResponse<T> {
     return new Response(data, headers, 201);
   }
 
-  public static OK_NO_CONTENT<T>(
+  public static OK_NO_CONTENT(
     headers: Record<string, string> = {}
-  ): Response<T> {
+  ): Response<void> {
     // @ts-ignore
     return new Response(null, headers, 204);
   }
 }
 
-export class HTTPError extends HTTPResponse<any> {
+type T = string | Error;
+export class HTTPError extends HTTPResponse<T> {
   public isError = true;
 
   public static CONFLICT(
-    data: string,
+    data: T,
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 409);
   }
 
-  public static BAD_REQUEST<T>(
-    data: string,
+  public static BAD_REQUEST(
+    data: T,
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 400);
   }
 
-  public static UNAUTHORIZED<T>(
-    data: string,
+  public static UNAUTHORIZED(
+    data: T,
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 401);
   }
 
-  public static FORBIDDEN<T>(
-    data: string,
+  public static FORBIDDEN(
+    data: T,
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 403);
   }
 
-  public static NOT_FOUND<T>(
-    data: string,
+  public static NOT_FOUND(
+    data: T,
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 404);
   }
 
-  public static VALIDATION_FAILED<T>(
-    data: string,
+  public static VALIDATION_FAILED(
+    data: T,
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 422);
   }
 
-  public static SERVER_ERROR<T>(
-    data: string,
+  public static SERVER_ERROR(
+    data: T,
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 500);
