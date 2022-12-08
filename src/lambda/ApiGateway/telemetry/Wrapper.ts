@@ -5,19 +5,17 @@ import {
   Callback,
   Context,
   Handler,
-} from "aws-lambda";
-import { telemetryFindApiGatewayParent } from "./ParentContext";
-import { Attributes, SpanKind, SpanStatusCode } from "@opentelemetry/api";
+} from 'aws-lambda';
+import { telemetryFindApiGatewayParent } from './ParentContext';
+import { Attributes, SpanKind, SpanStatusCode } from '@opentelemetry/api';
 
-import * as otelapi from "@opentelemetry/api";
+import * as otelapi from '@opentelemetry/api';
 import {
   SemanticAttributes,
   SemanticResourceAttributes,
-} from "@opentelemetry/semantic-conventions";
-import { flush, tracer } from "../../utils/telemetry";
-import { AwsApiGatewayRequest } from "../../../util/apigateway/apigateway";
-import { HTTPError, Response } from "../../../util/apigateway/response";
-import { log } from "../../utils/logger";
+} from '@opentelemetry/semantic-conventions';
+import { flush, tracer } from '../../utils/telemetry';
+import { log } from '../../utils/logger';
 
 export const wrapTelemetryApiGateway = <T, U>(
   handler: Handler<APIGatewayProxyEvent, APIGatewayProxyResult>
@@ -92,26 +90,25 @@ export const wrapTelemetryApiGateway = <T, U>(
     try {
       const out = (await otelapi.context.with(
         otelapi.trace.setSpan(parentContext, span),
-        async () => {
-          return handler(event, context, callback);
-        }
+        () => handler(event, context, callback)
       )) as APIGatewayProxyResult;
 
       if (!out) {
         log.error(
-          "Api Gateway OTEL API wrapper should output a response, and not void"
+          'Api Gateway OTEL API wrapper should output a response, and not void'
         );
         span.setStatus({ code: SpanStatusCode.ERROR });
       }
 
       span.end();
       await flush();
-
+      log.info('API Gateway lambda execution has finished. Goodbye');
       return out;
     } catch (e) {
       span.setStatus({ code: SpanStatusCode.ERROR });
       span.end();
       await flush();
+      log.error('API Gateway lambda execution has errored. Goodbye');
       throw e;
     }
   };

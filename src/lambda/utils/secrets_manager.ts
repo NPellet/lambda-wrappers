@@ -1,14 +1,14 @@
-import { aws_secrets } from "@lendis-tech/secrets-manager-utilities";
-import { SecretsContentOf } from "@lendis-tech/secrets-manager-utilities/dist/secrets";
-import { strict } from "assert";
-import { Handler } from "aws-lambda";
+import { aws_secrets } from '@lendis-tech/secrets-manager-utilities';
+import { SecretsContentOf } from '@lendis-tech/secrets-manager-utilities/dist/secrets';
+import { strict } from 'assert';
+import { Handler } from 'aws-lambda';
 import {
   LambdaInitSecretHandler,
   LambdaSecretsHandler,
-} from "../../util/LambdaHandler";
-import { HandlerConfiguration } from "../config";
-import { log } from "./logger";
-import { fetchAwsSecret } from "./secrets_manager_aws";
+} from '../../util/LambdaHandler';
+import { HandlerConfiguration } from '../config';
+import { log } from './logger';
+import { fetchAwsSecret } from './secrets_manager_aws';
 
 const SecretCache: Map<string, { expiresOn: Date; value: string }> = new Map();
 
@@ -46,14 +46,14 @@ export const clearCache = () => {
 
 export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
   handler: LambdaSecretsHandler<T, TSecrets, U>,
-  secrets: HandlerConfiguration<any>["secretInjection"]
+  secrets: HandlerConfiguration<any>['secretInjection']
 ) => {
   const wrappedHandler: Handler<T, U | void> = async (
     event,
     context,
     callback
   ) => {
-    log.debug("Checking AWS Secrets in environment variables");
+    log.debug('Checking AWS Secrets in environment variables');
     const secretsOut: Partial<Record<TSecrets, string>> = {};
 
     if (secrets) {
@@ -74,7 +74,7 @@ export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
           secretsOut[k] = SecretCache.get(k)!.value;
           strict(
             process.env[k] !== undefined,
-            "The Secret was found in the cache, but not in process.env. This points to a bug"
+            'The Secret was found in the cache, but not in process.env. This points to a bug'
           );
         }
       }
@@ -92,19 +92,19 @@ export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
           let value: string;
           if (secret[1] === undefined) {
             strict(
-              typeof awsSecretValue === "string",
-              "Secret value for secretName " +
+              typeof awsSecretValue === 'string',
+              'Secret value for secretName ' +
                 secret[0] +
-                " is not a string. Either use [ secretName, undefined ] with a string secret [ secretName, secretKey ] for a key-value secret"
+                ' is not a string. Either use [ secretName, undefined ] with a string secret [ secretName, secretKey ] for a key-value secret'
             );
 
             value = awsSecretValue;
           } else {
             strict(
-              typeof awsSecretValue === "object",
-              "Secret value for secretName " +
+              typeof awsSecretValue === 'object',
+              'Secret value for secretName ' +
                 secret[0] +
-                " is not a string. Either use [ secretName, undefined ] with a string secret [ secretName, secretKey ] for a key-value secret"
+                ' is not a string. Either use [ secretName, undefined ] with a string secret [ secretName, secretKey ] for a key-value secret'
             );
 
             value = awsSecretValue[secret[1]];
@@ -134,7 +134,7 @@ export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
     }
     // End of secrets manager run. Move on to the handler
 
-    return await handler(
+    return handler(
       event,
       secretsOut as Record<TSecrets, string>,
       context,

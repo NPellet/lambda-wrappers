@@ -4,6 +4,7 @@ import {
   APIGatewayProxyResult,
   Callback,
   Context,
+  Handler,
 } from 'aws-lambda';
 import { BaseSchema, InferType } from 'yup';
 import { recordException } from '../../util/exceptions';
@@ -17,51 +18,10 @@ import { HandlerConfiguration, LambdaType, TInit } from '../config';
 import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
 import { HTTPError, Response } from '../../util/apigateway/response';
-import { Request } from '../../util/apigateway/request';
-import { SecretConfig } from '../utils/secrets_manager';
-import { createLogger } from 'winston';
 import { wrapTelemetryApiGateway } from './telemetry/Wrapper';
 import otelapi, { SpanStatusCode } from '@opentelemetry/api';
-type ConstructorOf<T> = {
-  init(secrets: Record<string, string>): T;
-  yupSchemaInput?: BaseSchema;
-  yupSchemaOutput?: BaseSchema;
-  secrets?: Record<string, SecretConfig>;
-};
 
-export const apiGatewayHandlerFromController = <
-  TIn,
-  TOut,
-  TSecrets extends string
->(
-  controller: ConstructorOf<Controller>
-) => {
-  const configuration: HandlerConfiguration<
-    Controller,
-    typeof controller.yupSchemaInput,
-    typeof controller.yupSchemaOutput,
-    typeof controller.secrets extends undefined
-      ? never
-      : keyof typeof controller.secrets
-  > = {
-    yupSchemaInput: controller.yupSchemaInput,
-    yupSchemaOutput: controller.yupSchemaOutput,
-    initFunction: async (secrets) => {
-      const ctrl = controller.init(secrets);
-      return ctrl;
-    },
-
-    secretInjection: controller.secrets,
-  };
-
-  return {
-    handler: createApiGatewayHandler(async (data, inited, secrets) => {
-      return inited.handle(data, secrets);
-    }, configuration),
-    configuration,
-  };
-};
-
+/*
 export const apiGatewayHandlerFactory = <
   TInit = any,
   TSecrets extends string = any,
@@ -92,7 +52,7 @@ export const apiGatewayHandlerFactory = <
       );
     },
   };
-};
+};*/
 
 /**
  * Make sure that the return format of the lambda matches what is expected from the API Gateway
@@ -125,6 +85,10 @@ export const createApiGatewayHandler = <
     response: TOutput
   ): Promise<APIGatewayProxyResult> => {
     if (!(response instanceof Response) && !(response instanceof HTTPError)) {
+      log.error(
+        'Lambda has not failed, but output is neither a Response nor an HTTPError'
+      );
+      log.debug(response);
       recordException(
         new Error(
           "Lambda's output is malformed. Output was: " +
@@ -133,6 +97,8 @@ export const createApiGatewayHandler = <
       );
       return {
         statusCode: 500,
+        isBase64Encoded: false,
+        headers: {},
         body: 'Lambda has outputed a malformed payload. Should be of Response type',
       };
     }
@@ -141,10 +107,20 @@ export const createApiGatewayHandler = <
     const headers = response.getHeaders();
 
     if (response instanceof HTTPError) {
+      log.debug('Lambda response is of type HTTPError.');
+
+      let outData: string;
+      if (responseData instanceof Error) {
+        outData = responseData.message + '\n' + responseData.stack;
+      } else {
+        outData = String(responseData);
+      }
+
       return {
         headers,
+        isBase64Encoded: false,
         statusCode: response.getStatusCode(),
-        body: responseData as string,
+        body: outData,
       };
     }
 
@@ -160,6 +136,7 @@ export const createApiGatewayHandler = <
     if (!responseData) {
       return {
         headers,
+        isBase64Encoded: false,
         statusCode: response.getStatusCode(),
         body: '',
       };
@@ -170,6 +147,8 @@ export const createApiGatewayHandler = <
       } catch (e) {
         recordException(e);
         return {
+          headers,
+          isBase64Encoded: false,
           statusCode: 500,
           body: 'Validation error: Output object not validating given output schema',
         };
@@ -179,6 +158,7 @@ export const createApiGatewayHandler = <
     if (typeof responseData === 'object') {
       return {
         headers,
+        isBase64Encoded: false,
         statusCode: response.getStatusCode(),
         body: JSON.stringify(responseData),
       };
@@ -186,6 +166,7 @@ export const createApiGatewayHandler = <
 
     return {
       headers,
+      isBase64Encoded: false,
       statusCode: response.getStatusCode(),
       body: responseData as string,
     };
@@ -224,6 +205,8 @@ export const createApiGatewayHandler = <
         recordException(e);
         return {
           statusCode: 500,
+          isBase64Encoded: false,
+          headers: {},
           body:
             'Lambda input data malformed. Raw input data was ' +
             request.getRawData(),
@@ -238,6 +221,8 @@ export const createApiGatewayHandler = <
           recordException(e);
           return {
             statusCode: 500,
+            isBase64Encoded: false,
+            headers: {},
             body:
               'Lambda input schema validation failed. Error was: ' + e.message,
           };
@@ -246,12 +231,18 @@ export const createApiGatewayHandler = <
 
       actualOut = await wrappedHandler(request, newCtx, callback);
 
+      log.debug('Lambda has successfully executed without thrown exception.');
+
       if (!actualOut) {
+        log.error('Lambda output is void. It should return data');
+
         recordException(
           new Error('API Gateway lambda functions must return a Promise')
         );
         return {
           statusCode: 500,
+          isBase64Encoded: false,
+          headers: {},
           body: 'Lambda function malformed. Expected a Promise',
         };
       }
@@ -270,6 +261,7 @@ export const createApiGatewayHandler = <
         });
       }
 
+      log.debug('Building HTTP Reponse');
       return await buildResponse(actualOut);
     } catch (e) {
       // We do not rethrow the exception.
@@ -290,6 +282,8 @@ export const createApiGatewayHandler = <
 
       return {
         statusCode: 500,
+        isBase64Encoded: false,
+        headers: {},
         body:
           'The lambda execution for the API Gateway has failed with: \n ' +
           (typeof e === 'string' ? e : e.message),

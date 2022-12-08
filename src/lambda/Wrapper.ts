@@ -36,14 +36,16 @@ export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
     callback: Callback
   ) {
     if (!isInit) {
+      log.info('Running initialization of lambda');
       if (init) initValue = await init(secrets);
       isInit = true;
     }
 
     // const errorBag = localAsyncStorage.getStore()!.errorBag;
-
     return new Promise<V | void>((resolve, reject) => {
       const shimmedCb = function (err, out: V | void) {
+        log.debug('Running shim callback of lambda');
+
         if (err) {
           return reject(err);
         } else {
@@ -77,17 +79,17 @@ export const wrapGenericHandler = <
     configuration.initFunction
   );
 
+  wrappedHandler = wrapRuntime(wrappedHandler);
+
   let wrappedHandlerWithSecrets = wrapHandlerSecretsManager(
     wrappedHandler,
     configuration?.secretInjection ?? {}
   );
 
-  wrappedHandlerWithSecrets = wrapRuntime(wrappedHandlerWithSecrets);
-
-  if (configuration.sentry) {
+  /*if (configuration.sentry) {
     wrappedHandlerWithSecrets = wrapSentry(wrappedHandlerWithSecrets);
   }
-
+*/
   if (configuration.opentelemetry) {
     wrappedHandlerWithSecrets = wrapTelemetryLambda(wrappedHandlerWithSecrets);
   }
@@ -95,11 +97,13 @@ export const wrapGenericHandler = <
   return wrappedHandlerWithSecrets;
 };
 
-const wrapRuntime = <T, U>(handler: Handler<T, U>) => {
-  return async function (event, context, callback) {
+const wrapRuntime = <T, TSecrets extends string, U>(
+  handler: LambdaSecretsHandler<T, TSecrets, U>
+) => {
+  return async function (event, secrets, context, callback) {
     try {
       log.debug('Executing innermost handler');
-      return await handler(event, context, callback);
+      return await handler(event, secrets, context, callback);
     } catch (e) {
       log.error('Innermost lambda handler function has failed');
       log.error(e);
