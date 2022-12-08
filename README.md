@@ -55,6 +55,14 @@ export class MyControllerImplementation extends Controller {
 }
 ```
 
+The handler definition is simple:
+
+```typescript
+export const { handler, configuration } = apiGatewayHandlerFromController(
+  MyControllerImplementation
+);
+```
+
 ### TL;DR: Handler specificies contract, controller must implement it
 
 A more functional approach would The handler definition file may look something like:
