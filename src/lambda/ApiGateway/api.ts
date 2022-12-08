@@ -4,31 +4,40 @@ import {
   APIGatewayProxyResult,
   Callback,
   Context,
-} from "aws-lambda";
-import { BaseSchema, InferType } from "yup";
-import { recordException } from "../../util/exceptions";
+} from 'aws-lambda';
+import { BaseSchema, InferType } from 'yup';
+import { recordException } from '../../util/exceptions';
 import {
   Controller,
   LambdaContext,
   LambdaInitSecretHandler,
-} from "../../util/LambdaHandler";
-import { AwsApiGatewayRequest } from "../../util/apigateway/apigateway";
-import { HandlerConfiguration, LambdaType, TInit } from "../config";
-import { log } from "../utils/logger";
-import { wrapGenericHandler } from "../Wrapper";
-import { HTTPError, Response } from "../../util/apigateway/response";
-import { Request } from "../../util/apigateway/request";
-import { SecretConfig } from "../utils/secrets_manager";
+} from '../../util/LambdaHandler';
+import { AwsApiGatewayRequest } from '../../util/apigateway/apigateway';
+import { HandlerConfiguration, LambdaType, TInit } from '../config';
+import { log } from '../utils/logger';
+import { wrapGenericHandler } from '../Wrapper';
+import { HTTPError, Response } from '../../util/apigateway/response';
+import { Request } from '../../util/apigateway/request';
+import { SecretConfig } from '../utils/secrets_manager';
+import { createLogger } from 'winston';
+import { wrapTelemetryApiGateway } from './telemetry/Wrapper';
+
+type ConstructorOf<T> = {
+  init(secrets: Record<string, string>): T;
+  yupSchemaInput?: BaseSchema;
+  yupSchemaOutput?: BaseSchema;
+  secrets?: Record<string, SecretConfig>;
+};
 
 export const apiGatewayHandlerFromController = <
   TIn,
   TOut,
   TSecrets extends string
 >(
-  controller: Controller
+  controller: ConstructorOf<Controller>
 ) => {
   const configuration: HandlerConfiguration<
-    void,
+    Controller,
     typeof controller.yupSchemaInput,
     typeof controller.yupSchemaOutput,
     typeof controller.secrets extends undefined
@@ -37,13 +46,17 @@ export const apiGatewayHandlerFromController = <
   > = {
     yupSchemaInput: controller.yupSchemaInput,
     yupSchemaOutput: controller.yupSchemaOutput,
-    initFunction: async (secrets) => controller.init(secrets),
+    initFunction: async (secrets) => {
+      const ctrl = controller.init(secrets);
+      return ctrl;
+    },
+
     secretInjection: controller.secrets,
   };
 
   return {
-    handler: createApiGatewayHandler(async (data, _, secrets) => {
-      return controller.handle(data, secrets);
+    handler: createApiGatewayHandler(async (data, inited, secrets) => {
+      return inited.handle(data, secrets);
     }, configuration),
     configuration,
   };
@@ -57,7 +70,7 @@ export const apiGatewayHandlerFactory = <
 >(
   configuration: Omit<
     HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
-    "type"
+    'type'
   >
 ) => {
   return {
@@ -102,7 +115,7 @@ export const createApiGatewayHandler = <
   >,
   configuration: Omit<
     HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
-    "type"
+    'type'
   >
 ) => {
   type TInput = SInput extends BaseSchema ? InferType<SInput> : T;
@@ -120,7 +133,7 @@ export const createApiGatewayHandler = <
       );
       return {
         statusCode: 500,
-        body: "Lambda has outputed a malformed payload. Should be of Response type",
+        body: 'Lambda has outputed a malformed payload. Should be of Response type',
       };
     }
 
@@ -139,7 +152,7 @@ export const createApiGatewayHandler = <
       return {
         headers,
         statusCode: response.getStatusCode(),
-        body: responseData.toString("base64"),
+        body: responseData.toString('base64'),
         isBase64Encoded: true,
       };
     }
@@ -148,28 +161,27 @@ export const createApiGatewayHandler = <
       return {
         headers,
         statusCode: response.getStatusCode(),
-        body: "",
+        body: '',
       };
     }
-
-    if (typeof responseData === "object") {
+    if (configuration.yupSchemaOutput) {
       try {
-        if (configuration.yupSchemaOutput) {
-          await configuration.yupSchemaOutput?.validate(responseData);
-        }
-
-        return {
-          headers,
-          statusCode: response.getStatusCode(),
-          body: JSON.stringify(responseData),
-        };
+        await configuration.yupSchemaOutput?.validate(responseData);
       } catch (e) {
         recordException(e);
         return {
           statusCode: 500,
-          body: "Output object not according to schema",
+          body: 'Validation error: Output object not validating given output schema',
         };
       }
+    }
+
+    if (typeof responseData === 'object') {
+      return {
+        headers,
+        statusCode: response.getStatusCode(),
+        body: JSON.stringify(responseData),
+      };
     }
 
     return {
@@ -203,21 +215,44 @@ export const createApiGatewayHandler = <
       );
 
       const request = new AwsApiGatewayRequest<TInput>(event);
-      const data = request.getData();
+      let data: TInput;
+
+      try {
+        data = request.getData();
+      } catch (e) {
+        // For example, can't parse the JSON
+        recordException(e);
+        return {
+          statusCode: 500,
+          body:
+            'Lambda input data malformed. Raw input data was ' +
+            request.getRawData(),
+        };
+      }
 
       if (configuration.yupSchemaInput) {
-        await configuration.yupSchemaInput.validate(data);
+        try {
+          await configuration.yupSchemaInput.validate(data);
+        } catch (e) {
+          // For example, can't parse the JSON
+          recordException(e);
+          return {
+            statusCode: 500,
+            body:
+              'Lambda input schema validation failed. Error was: ' + e.message,
+          };
+        }
       }
 
       actualOut = await wrappedHandler(request, newCtx, callback);
 
       if (!actualOut) {
         recordException(
-          new Error("API Gateway lambda functions must return a Promise")
+          new Error('API Gateway lambda functions must return a Promise')
         );
         return {
           statusCode: 500,
-          body: "Lambda function malformed. Expected a Promise",
+          body: 'Lambda function malformed. Expected a Promise',
         };
       }
 
@@ -226,16 +261,23 @@ export const createApiGatewayHandler = <
       // We do not rethrow the exception.
       // Exception should already be recorded by the rumtime wrapper
       // recordException(e);
+      log.error('Lambda execution failed');
+
+      if (e.stack) {
+        log.error(e.stack);
+      }
+
       return {
         statusCode: 500,
         body:
-          "The lambda execution for the API Gateway has failed with: \n " +
-          (typeof e === "string" ? e : e.message),
+          'The lambda execution for the API Gateway has failed with: \n ' +
+          (typeof e === 'string' ? e : e.message),
       };
     }
   };
 
-  return apiGatewayHandler;
+  const wrapped = wrapTelemetryApiGateway(apiGatewayHandler);
+  return wrapped;
   // return wrapAsyncStorage(apiGatewayHandler);
 }; /*
 

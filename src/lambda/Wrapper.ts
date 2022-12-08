@@ -1,26 +1,26 @@
-import { Callback, Context, Handler } from "aws-lambda";
-import { recordException } from "../util/exceptions";
+import { Callback, Context, Handler } from 'aws-lambda';
+import { recordException } from '../util/exceptions';
 import {
   LambdaInitSecretHandler,
   LambdaSecretsHandler,
-} from "../util/LambdaHandler";
+} from '../util/LambdaHandler';
 import {
   HandlerConfiguration,
   HandlerConfigurationWithType,
   LambdaTypeConfiguration,
-} from "./config";
-import { log } from "./utils/logger";
-import { wrapHandlerSecretsManager } from "./utils/secrets_manager";
-import { wrapSentry } from "./utils/sentry";
-import { wrapTelemetryLambda } from "./utils/telemetry";
-import yup, { ObjectSchema } from "yup";
-import { TypedSchema } from "yup/lib/util/types";
-import { createNoopMeter } from "@opentelemetry/api";
-import { reject } from "lodash";
-import { resolve } from "path";
-import { SdkInfo } from "@sentry/serverless";
-import { ErrorBag } from "@lendis-tech/sdk";
-import { AsyncLocalStorage } from "async_hooks";
+} from './config';
+import { log } from './utils/logger';
+import { wrapHandlerSecretsManager } from './utils/secrets_manager';
+import { wrapSentry } from './utils/sentry';
+import { wrapTelemetryLambda } from './utils/telemetry';
+import yup, { ObjectSchema } from 'yup';
+import { TypedSchema } from 'yup/lib/util/types';
+import { createNoopMeter } from '@opentelemetry/api';
+import { reject } from 'lodash';
+import { resolve } from 'path';
+import { SdkInfo } from '@sentry/serverless';
+import { ErrorBag } from '@lendis-tech/sdk';
+import { AsyncLocalStorage } from 'async_hooks';
 
 export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
   handler: LambdaInitSecretHandler<U, TInit, TSecrets, V>,
@@ -53,7 +53,7 @@ export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
 
       const out = handler(event, initValue, secrets, context, shimmedCb);
 
-      if (typeof out.then === "function") {
+      if (typeof out.then === 'function') {
         out.then(resolve).catch(reject);
       }
     });
@@ -89,11 +89,7 @@ export const wrapGenericHandler = <
   }
 
   if (configuration.opentelemetry) {
-    wrappedHandlerWithSecrets = wrapTelemetryLambda(
-      wrappedHandlerWithSecrets,
-      LambdaTypeConfiguration[configuration.type]?.opentelemetryWrapper ||
-        ((handler) => handler)
-    );
+    wrappedHandlerWithSecrets = wrapTelemetryLambda(wrappedHandlerWithSecrets);
   }
 
   return wrappedHandlerWithSecrets;
@@ -102,13 +98,13 @@ export const wrapGenericHandler = <
 const wrapRuntime = <T, U>(handler: Handler<T, U>) => {
   return async function (event, context, callback) {
     try {
-      log.debug("Executing innermost handler");
+      log.debug('Executing innermost handler');
       return await handler(event, context, callback);
     } catch (e) {
-      log.error("Innermost lambda handler function has failed");
+      log.error('Innermost lambda handler function has failed');
       log.error(e);
 
-      log.debug("Recording diagnostic information and rethrowing");
+      log.debug('Recording diagnostic information and rethrowing');
       recordException(e);
       throw e;
     }

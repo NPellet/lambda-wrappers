@@ -1,5 +1,5 @@
-import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from "yup";
-import { log } from "../../lambda/utils/logger";
+import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from 'yup';
+import { log } from '../../lambda/utils/logger';
 
 export class Request<T> {
   private validator: BaseSchema | undefined;
@@ -19,13 +19,13 @@ export class Request<T> {
   public getData(): T {
     if (this.data) return this.data;
 
-    const contentType = this.headers["Content-Type"];
+    const contentType = this.headers['Content-Type'];
 
-    if (contentType?.split("/")[0] === "text") {
+    if (contentType?.split('/')[0] === 'text') {
       this.data = this.rawData as T;
     }
 
-    if (contentType === "application/json" && this.rawData) {
+    if (contentType === 'application/json' && this.rawData) {
       this.data = JSON.parse(this.rawData) as T;
     }
 

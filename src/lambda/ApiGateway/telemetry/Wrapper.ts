@@ -1,32 +1,34 @@
 import {
   APIGatewayEvent,
+  APIGatewayProxyEvent,
   APIGatewayProxyResult,
   Callback,
   Context,
   Handler,
-} from "aws-lambda";
-import { telemetryFindApiGatewayParent } from "./ParentContext";
-import { Attributes, SpanKind, SpanStatusCode } from "@opentelemetry/api";
+} from 'aws-lambda';
+import { telemetryFindApiGatewayParent } from './ParentContext';
+import { Attributes, SpanKind, SpanStatusCode } from '@opentelemetry/api';
 
-import * as otelapi from "@opentelemetry/api";
+import * as otelapi from '@opentelemetry/api';
 import {
   SemanticAttributes,
   SemanticResourceAttributes,
-} from "@opentelemetry/semantic-conventions";
-import { flush, tracer } from "../../utils/telemetry";
-import { AwsApiGatewayRequest } from "../../../util/apigateway/apigateway";
-import { HTTPError, Response } from "../../../util/apigateway/response";
+} from '@opentelemetry/semantic-conventions';
+import { flush, tracer } from '../../utils/telemetry';
+import { AwsApiGatewayRequest } from '../../../util/apigateway/apigateway';
+import { HTTPError, Response } from '../../../util/apigateway/response';
+import { log } from '../../utils/logger';
 
 export const wrapTelemetryApiGateway = <T, U>(
-  handler: Handler<AwsApiGatewayRequest<T>, Response<U> | HTTPError>
+  handler: Handler<APIGatewayProxyEvent, APIGatewayProxyResult>
 ) => {
   return async function (
-    event: AwsApiGatewayRequest<T>,
+    event: APIGatewayProxyEvent,
     context: Context,
     callback: Callback
   ) {
     const parentContext = telemetryFindApiGatewayParent(event);
-    const eventData = event.getOriginalData();
+    const eventData = event;
     const requestContext = eventData.requestContext;
 
     let attributes: Attributes = {
@@ -88,14 +90,20 @@ export const wrapTelemetryApiGateway = <T, U>(
     );
 
     try {
-      const out = await otelapi.context.with(
+      const out = (await otelapi.context.with(
         otelapi.trace.setSpan(parentContext, span),
         async () => {
           return handler(event, context, callback);
         }
-      );
+      )) as APIGatewayProxyResult;
 
-      if (out instanceof HTTPError) {
+      if (!out) {
+        log.error(
+          'Api Gateway OTEL API wrapper should output a response, and not void'
+        );
+        span.setStatus({ code: SpanStatusCode.ERROR });
+      }
+      if (out.statusCode >= 400 && out.statusCode <= 600) {
         span.setStatus({ code: SpanStatusCode.ERROR });
       }
       span.end();

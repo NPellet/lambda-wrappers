@@ -2,17 +2,16 @@ import otelapi, {
   ROOT_CONTEXT,
   Context as OtelContext,
   TraceFlags,
-} from "@opentelemetry/api";
-import { APIGatewayEvent } from "aws-lambda";
-import { AwsApiGatewayRequest } from "../../../util/apigateway/apigateway";
+} from '@opentelemetry/api';
+import { APIGatewayEvent } from 'aws-lambda';
+import { AwsApiGatewayRequest } from '../../../util/apigateway/apigateway';
+import { AwsEventBridgeEvent } from '../../../util/eventbridge';
 import {
   contextPayloadGetter,
   extractCtxFromLambdaEnv,
-} from "../../utils/telemetry";
+} from '../../utils/telemetry';
 
-export const telemetryFindApiGatewayParent = <T>(
-  event: AwsApiGatewayRequest<T>
-) => {
+export const telemetryFindApiGatewayParent = (event: APIGatewayEvent) => {
   let ctx: OtelContext = ROOT_CONTEXT;
 
   if (ctx == ROOT_CONTEXT) {
@@ -33,7 +32,7 @@ export const telemetryFindApiGatewayParent = <T>(
   if (ctx == ROOT_CONTEXT || tryHeaders) {
     ctx = otelapi.propagation.extract(
       ROOT_CONTEXT,
-      event.getHeaders(),
+      event.headers,
       contextPayloadGetter
     );
   }

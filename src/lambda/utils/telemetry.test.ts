@@ -1,30 +1,30 @@
-import { SpanKind, SpanStatusCode } from "@opentelemetry/api";
+import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import {
   SemanticAttributes,
   SemanticResourceAttributes,
-} from "@opentelemetry/semantic-conventions";
-import { Handler } from "aws-lambda";
-import { event } from "../../test_utils/apigateway";
-import { LambdaContext, memoryExporter } from "../../test_utils/utils";
-import { flush, wrapTelemetryLambda } from "./telemetry";
+} from '@opentelemetry/semantic-conventions';
+import { Handler } from 'aws-lambda';
+import { event } from '../../test_utils/apigateway';
+import { LambdaContext, memoryExporter } from '../../test_utils/utils';
+import { flush, wrapTelemetryLambda } from './telemetry';
 
 const handler: Handler<any, any> = async () => {
-  return "Ok";
+  return 'Ok';
 };
 const failedHandler: Handler<any, any> = async () => {
-  throw new Error("Internal server error");
+  throw new Error('Internal server error');
 };
 
-describe("Telemetry: generic lambda", () => {
-  test("Lambda wrapper has been called", function () {
+describe('Telemetry: generic lambda', () => {
+  /*test('Lambda wrapper has been called', function () {
     const wrapper = jest.fn();
     wrapTelemetryLambda(handler, wrapper);
 
     expect(wrapper).toHaveBeenCalledTimes(1);
   });
-
-  test("Span is properly flushed", async () => {
-    const wrappedHandler = wrapTelemetryLambda(handler, (handler) => handler);
+*/
+  test('Span is properly flushed', async () => {
+    const wrappedHandler = wrapTelemetryLambda(handler);
 
     await wrappedHandler(event, LambdaContext, () => {});
     await flush();
@@ -42,14 +42,11 @@ describe("Telemetry: generic lambda", () => {
     );
     expect(
       spans[0].attributes[SemanticResourceAttributes.CLOUD_ACCOUNT_ID]
-    ).toBe("12345678");
+    ).toBe('12345678');
   });
 
-  test("Lambda exception is properly rethrown", async () => {
-    const wrappedHandler = wrapTelemetryLambda(
-      failedHandler,
-      (handler) => handler
-    );
+  test('Lambda exception is properly rethrown', async () => {
+    const wrappedHandler = wrapTelemetryLambda(failedHandler);
 
     await expect(
       wrappedHandler(event, LambdaContext, () => {})
