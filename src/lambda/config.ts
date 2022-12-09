@@ -1,12 +1,12 @@
-import { ObjectSchema } from "yup";
-import { getAwsFromAccountFromArn } from "../util/aws";
-import { wrapTelemetryApiGateway } from "./ApiGateway/telemetry/Wrapper";
-import { wrapTelemetryEventBridge } from "./EventBridge/telemetry/Wrapper";
+import { ObjectSchema } from 'yup';
+import { getAwsFromAccountFromArn } from '../util/aws';
+import { wrapTelemetryApiGateway } from './ApiGateway/telemetry/Wrapper';
+import { wrapTelemetryEventBridge } from './EventBridge/telemetry/Wrapper';
 import {
   getAwsSecretDef,
   SecretConfig,
   SecretsRecord,
-} from "./utils/secrets_manager";
+} from './utils/secrets_manager';
 
 export type HandlerConfiguration<
   TInit = any,
@@ -28,18 +28,18 @@ export type HandlerConfigurationWithType<
   U extends any | ObjectSchema<any> = any,
   V extends any | ObjectSchema<any> = any,
   TSecrets extends string = string
-> = Omit<HandlerConfiguration<I, U, V, TSecrets>, "type"> & {
+> = Omit<HandlerConfiguration<I, U, V, TSecrets>, 'type'> & {
   type: LambdaType;
 };
 
-export type TInit<A extends HandlerConfiguration> = A["initFunction"] extends (
+export type TInit<A extends HandlerConfiguration> = A['initFunction'] extends (
   ...args: any[]
 ) => any
-  ? Awaited<ReturnType<A["initFunction"]>>
+  ? Awaited<ReturnType<A['initFunction']>>
   : never;
 
 export type TSecrets<A extends HandlerConfiguration> =
-  keyof A["secretInjection"];
+  keyof A['secretInjection'];
 
 export const buildHandlerConfiguration = <
   I,
@@ -57,6 +57,7 @@ export const buildHandlerConfiguration = <
 
 export const enum LambdaType {
   EVENT_BRIDGE,
+
   API_GATEWAY,
   SQS,
   GENERIC,
@@ -73,6 +74,6 @@ export const LambdaTypeConfiguration = {
 
 const secrets = buildHandlerConfiguration({
   secretInjection: {
-    k: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
+    k: getAwsSecretDef('Algolia-Products', 'adminApiKey', true),
   },
 });

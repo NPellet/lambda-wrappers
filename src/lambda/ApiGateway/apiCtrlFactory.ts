@@ -93,11 +93,13 @@ export class APIHandlerControllerFactory<
 
   ready() {
     type INPUT = TOrSchema<TInput, SInput>;
+    type OUTPUT = TOrSchema<TOutput, SOutput>;
+
     abstract class BaseController {
       abstract handle(
         payload: Request<INPUT>,
         secrets?: Record<TSecrets, string | undefined>
-      ): Promise<Response<TOutput> | HTTPError>;
+      ): Promise<Response<OUTPUT> | HTTPError>;
     }
 
     const handlerFactory = (
@@ -121,12 +123,13 @@ export class APIHandlerControllerFactory<
 
       const handler = createApiGatewayHandler<
         INPUT,
-        TOutput,
+        OUTPUT,
         BaseController,
         TSecrets,
         SInput,
         SOutput
       >((event, init, secrets, c) => {
+        console.log('CALLED');
         return init.handle(event, secrets);
       }, configuration);
 

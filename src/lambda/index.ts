@@ -1,9 +1,9 @@
-export {
-  createEventBridgeHandler,
-  eventBridgeHandlerFactory,
-} from './EventBridge/event';
+export { createEventBridgeHandler } from './EventBridge/event';
 export { createApiGatewayHandler } from './ApiGateway/api';
+export { createSQSHandler } from './SQS/sqs';
 export { APIHandlerControllerFactory } from './ApiGateway/apiCtrlFactory';
+export { SQSHandlerControllerFactory } from './SQS/sqsCtrlFactory';
+export { EventBridgeHandlerControllerFactory } from './EventBridge/eventBridgetCtrlFactory';
 export { Response, HTTPError } from '../util/apigateway/response';
 export { Request } from '../util/apigateway/request';
 export { getAwsSecretDef } from '../lambda/utils/secrets_manager';

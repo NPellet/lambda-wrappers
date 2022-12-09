@@ -1,70 +1,34 @@
-import { Callback, Context, EventBridgeEvent, Handler } from "aws-lambda";
-import { HandlerConfiguration, LambdaType } from "../config";
-import {
-  LambdaContext,
-  LambdaInitSecretHandler,
-} from "../../util/LambdaHandler";
-import { log } from "../utils/logger";
-import { wrapGenericHandler } from "../Wrapper";
-
-import { BaseSchema, InferType, ObjectSchema } from "yup";
-import { AwsEventBridgeEvent } from "../../util/eventbridge";
-import { getAwsSecretDef } from "../utils/secrets_manager";
-
-export const eventBridgeHandlerFactory = <
-  TInit = any,
-  TSecrets extends string = any,
-  SInput extends BaseSchema | undefined = undefined
->(
-  configuration: Omit<
-    HandlerConfiguration<TInit, SInput, void, TSecrets>,
-    "type"
-  >
-) => {
-  return {
-    configuration,
-    handlerFactory: function <
-      T = SInput extends BaseSchema ? InferType<SInput> : any
-    >(
-      handler: LambdaInitSecretHandler<
-        AwsEventBridgeEvent<T>,
-        TInit & {
-          originalData: EventBridgeEvent<string, T>;
-        },
-        TSecrets,
-        void
-      >
-    ) {
-      return createEventBridgeHandler<T, TInit, TSecrets, SInput>(
-        handler,
-        configuration
-      );
-    },
-  };
-};
+import { Callback, Context, EventBridgeEvent, Handler } from 'aws-lambda';
+import { HandlerConfiguration, LambdaType } from '../config';
+import { LambdaInitSecretHandler } from '../../util/LambdaHandler';
+import { log } from '../utils/logger';
+import { wrapGenericHandler } from '../Wrapper';
+import { BaseSchema, InferType, ObjectSchema } from 'yup';
+import { AwsEventBridgeEvent } from '../../util/eventbridge';
+import { recordException } from '../../util/exceptions';
 
 export const createEventBridgeHandler = <
   T,
   I,
   TSecrets extends string,
-  U extends BaseSchema | undefined = undefined
+  SInput extends BaseSchema | undefined = undefined
 >(
   listener: LambdaInitSecretHandler<
-    AwsEventBridgeEvent<U extends ObjectSchema<any> ? InferType<U> : T>,
-    I & {
-      originalData: EventBridgeEvent<
-        string,
-        U extends ObjectSchema<any> ? InferType<U> : T
-      >;
-    },
+    AwsEventBridgeEvent<
+      SInput extends ObjectSchema<any> ? InferType<SInput> : T
+    >,
+    I,
     TSecrets,
     void
   >,
-  configuration: HandlerConfiguration<I, U>
+  configuration: HandlerConfiguration<I, SInput>
 ): Handler<
-  EventBridgeEvent<string, U extends ObjectSchema<any> ? InferType<U> : T>
+  EventBridgeEvent<
+    string,
+    SInput extends ObjectSchema<any> ? InferType<SInput> : T
+  >
 > => {
-  type V = U extends ObjectSchema<any> ? InferType<U> : T;
+  type V = SInput extends ObjectSchema<any> ? InferType<SInput> : T;
   const wrappedHandler = wrapGenericHandler(listener, {
     type: LambdaType.EVENT_BRIDGE,
     ...configuration,
@@ -76,15 +40,26 @@ export const createEventBridgeHandler = <
     callback: Callback
   ) => {
     log.info(
-      `Received event through EventBridge from source ${event.source} and detail-type ${event["detail-type"]}. Event content:`
+      `Received event through EventBridge from source ${event.source} and detail-type ${event['detail-type']}.`
     );
-    log.info(event.detail);
+    log.debug(event.detail);
 
-    return wrappedHandler(
-      new AwsEventBridgeEvent<V>(event, configuration.yupSchemaInput),
-      context,
-      callback
-    );
+    const _event = new AwsEventBridgeEvent<V>(event);
+
+    if (configuration.yupSchemaInput) {
+      try {
+        await configuration.yupSchemaInput.validate(_event.getData());
+      } catch (e) {
+        log.warn(
+          `Lambda's input schema failed to validate. Rethrowing to fail lambda`
+        );
+        log.debug(e);
+        recordException(e);
+        throw e;
+      }
+    }
+
+    return wrappedHandler(_event, context, callback);
   };
 
   return handler;

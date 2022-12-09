@@ -1,25 +1,13 @@
-import { AWSXRAY_TRACE_ID_HEADER } from '@opentelemetry/propagator-aws-xray';
-import {
-  APIGatewayEvent,
-  APIGatewayProxyCallback,
-  APIGatewayProxyResult,
-  Handler,
-} from 'aws-lambda';
 import _ from 'lodash';
 import {
-  sampledAwsHeader,
   testApiGatewayEvent,
   LambdaContext,
   memoryExporter,
 } from '../../test_utils/utils';
-import api, { SpanKind, SpanStatusCode } from '@opentelemetry/api';
+import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions';
 import {
-  successHandler,
   event,
-  errorHandler,
-  exceptionHandler,
-  malformedHandler,
   successLHandler,
   exceptionLHandler,
   errorLHandler,
@@ -90,6 +78,7 @@ describe('API Gateway. Sanitizing outputs', function () {
     const out = await handler(event, LambdaContext, () => {});
 
     expect(out.statusCode).toBe(500);
+    expect(typeof out.body).toBe('string');
     expect(out.body).toContain('The lambda execution for the API Gateway ');
     expect(recordException).toHaveBeenCalled();
   });

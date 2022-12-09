@@ -21,39 +21,6 @@ import { HTTPError, Response } from '../../util/apigateway/response';
 import { wrapTelemetryApiGateway } from './telemetry/Wrapper';
 import otelapi, { SpanStatusCode } from '@opentelemetry/api';
 
-/*
-export const apiGatewayHandlerFactory = <
-  TInit = any,
-  TSecrets extends string = any,
-  SInput extends BaseSchema | undefined = undefined,
-  SOutput extends BaseSchema | undefined = undefined
->(
-  configuration: Omit<
-    HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
-    'type'
-  >
-) => {
-  return {
-    configuration,
-    handlerFactory: function <
-      T = SInput extends BaseSchema ? InferType<SInput> : any,
-      O = SOutput extends BaseSchema ? InferType<SOutput> : any
-    >(
-      handler: LambdaInitSecretHandler<
-        AwsApiGatewayRequest<T>,
-        TInit,
-        TSecrets,
-        Response<O> | HTTPError
-      >
-    ) {
-      return createApiGatewayHandler<T, O, TInit, TSecrets, SInput, SOutput>(
-        handler,
-        configuration
-      );
-    },
-  };
-};*/
-
 /**
  * Make sure that the return format of the lambda matches what is expected from the API Gateway
  * @param handler
@@ -217,11 +184,13 @@ export const createApiGatewayHandler = <
         try {
           await configuration.yupSchemaInput.validate(data);
         } catch (e) {
-          // For example, can't parse the JSON
+          log.warn(
+            `Lambda's input schema failed to validate. Returning statusCode 500 to the API Gateway`
+          );
+          log.debug(e);
           recordException(e);
           return {
             statusCode: 500,
-            isBase64Encoded: false,
             headers: {},
             body:
               'Lambda input schema validation failed. Error was: ' + e.message,
@@ -291,8 +260,12 @@ export const createApiGatewayHandler = <
     }
   };
 
-  const wrapped = wrapTelemetryApiGateway(apiGatewayHandler);
-  return wrapped;
+  if (configuration.opentelemetry) {
+    const wrapped = wrapTelemetryApiGateway(apiGatewayHandler);
+    return wrapped;
+  } else {
+    return apiGatewayHandler;
+  }
   // return wrapAsyncStorage(apiGatewayHandler);
 }; /*
 
