@@ -11,248 +11,140 @@ npm i @lendis-tech/lambda-handlers
 
 ## Usage
 
-As long as https://github.com/microsoft/TypeScript/issues/23911 is not solved, we need to make a decision: who defines the API contract. There are two ways to proceed, and the first is the de-facto method of choice (not necessarily the best).
+### Background
 
-For context, the issue is to define who mandates a contract. Normally, it should be at the API level. The controller is then mandated to implement the contract. Because of the aformentionned typescript issue, a derived class (or an implementing class) does not see his member function arguments coerced to the base class. That means an implementation can break the interface contract. This means the API handler cannot issue a base class that must be implemented by the controller. Therefore, we have two ways to proceed.
+We would like the API contract to be defined by the route, and enforced at the Controller level. As opposed to letting the controller define the contract itself, which can lead to API changes that are not backwards compatible.
 
-### TL;DR; Controller defines contract, screw the API
+In this spirit, we propose a utility that can create an abstract base controller class that should be inherited from by the controller implementation. This base class brings strong type safety to the controller implementation. It is created on the fly (you can't just reference it) by the Controller Factory:
 
-Define your controller as such:
+### TL;DR;
+
+API contract
 
 ```typescript
-export class MyControllerImplementation extends Controller {
-  static secrets = {
-    apiKey: getAwsSecretDef('Algolia-Products', 'adminApiKey', true),
-  }; // Optional
+import { APIHandlerControllerFactory } from '@lendis-tech/lambda-handlers';
 
-  static yupSchemaInput = validationSchemaIn; // validationSchema coming from somewhere else, optional
-  static yupSchemaOutput = validationSchemaOut; // validationSchema coming from somewhere else, optional
+// API Route definition file
+const { BaseController, handlerFactory } = new APIHandlerControllerFactory()
+  .setTsInputType<INPUT_TYPE>() // Injects type safety, overrides yup schema
+  .setTsOutputType<OUTPUT_TYPE>() // Injects type safety, overrides yup schema
+  .setInputSchema(yupSchema) // Of type yup
+  .needsSecret('process_env_key', 'Algolia-Products', 'adminApiKey', true) // Fetches the secrets during a cold start
+  .needsSecret('process_env_other_key', 'Algolia-Products', 'apiKey', true)
+  .ready(); // Call this when you're finished setting up the controller
 
-  static init(
-    secrets: Record<keyof typeof MyControllerImplementation.secrets, string>
-  ) {
-    // Required method, taking one optional argument, and which MUST return an instance of the controller
-    return new MyControllerImplementation();
+export { BaseController, handlerFactory };
+```
+
+Lambda handler
+
+```typescript
+// API Route definition file
+const { handler, configuration } = handlerFactory(ChangeAssetsStatus);
+export { handler, configuration };
+```
+
+Controller implementation
+
+```typescript
+export class ChangeAssetsStatus extends BaseController {
+  // Alternatively:
+  // static async init( secrets: SecretsOf<typeof BaseController> )
+  static async init() {
+    // Use where the static initializer to acquire any resource you may want cached across lambda invocation
+    return new ChangeAssetsStatus();
   }
 
+  // A bit of a vodoo syntax, see https://github.com/Microsoft/TypeScript/issues/23911 for the reason why this has to be
   async handle(
-    // Required, taking 2 arguments: the request data and the fetched secrets
-    req: Request<ChangeAssetRequestData>,
-    secrets: Record<keyof typeof MyControllerImplementation.secrets, string>
+    req: RequestOf<typeof BaseController>,
+    secrets: SecretsOf<typeof BaseController>
   ) {
-    const data = req.getData(); // Gets the data
-
+    const data = req.getData(); // Data has type INPUT_TYPE
+    // It has already been checked against the input schema.
     try {
-      // Do something with it
-      return Response.OK_NO_CONTENT();
+      // Implement your business logic here
+
+      return Response.OK_NO_CONTENT(); // TS Error is OUTPUT_TYPE is not void
     } catch (e) {
       if (e instanceof SomeCustomError) {
-        return HTTPError.BAD_REQUEST(e); // Here we do not rethrow. This is "recoverable error"
+        // Maybe your logic throws an error that can be considered "known", e.g. an issue in the incoming payload that is the producer's responsibility.
+        return HTTPError.BAD_REQUEST(e);
       }
-      throw e; // All other errors are rethrown, notifying Sentry and Opentelemetry
+      // Another internal server error
+      // Do not return, let it throw.
+      throw e;
     }
   }
 }
 ```
 
-The handler definition is simple:
+## Type system
+
+When specifying a yup schema using `setInputSchema` and `setOutputSchema`, but when the corresponding `setTsInputType` and `setTsOutputType` are not set, the type of the input and output is dictated by yup's `InferType< typeof schema >`. The only way to overwrite that if - for example - yup's inferred type isn't good enough, is to override it with `setTsInputType`. This doesn't change the runtime validation, which solely depends on the presence of the schema or not.
+
+On another note, the schema validation can be asynchronous. It is verified before your handler is called.
+
+## API Gateway Requests and Responses
+
+The only major changes here compare to the current systems is that:
+
+- Error HTTP Codes should use the static constructor methods on `HTTPError`, which supports an Error or a string. This allows us to retain a stricly typed return. Therefore, the response type should be `Promise<HTTPError | Response<T>>`:
 
 ```typescript
-export const { handler, configuration } = apiGatewayHandlerFromController(
-  MyControllerImplementation
-);
+return HTTPError.BAD_REQUEST(error);
+
+// or
+return HTTPError.BAD_REQUEST('Failure !');
 ```
 
-### TL;DR: Handler specificies contract, controller must implement it
-
-A more functional approach would The handler definition file may look something like:
+- Errors can be "acceptable" or "anormal". An anormal error will be registered with Sentry and Opentelemetry, and should indicate a condition that your service shouldn't enter. If this condition is a consequence of an invalid payload, do not set the error to anormal. This is a problem with the sender of the request. To make an error anormal, just to do following
 
 ```typescript
-// Ran only once on a cold start. Use this method to cache data, initiate DB connection, etc...
-const init = async () => {
-  return {
-    resourceKey: 'value',
-  };
-};
-
-const { configuration, handlerFactory } = apiGatewayHandlerFactory({
-  yupSchemaInput: yup.object({
-    name: yup.string().required(),
-  }),
-  yupSchemaOutput: yup.object({
-    // Currently only applies to the API Gateway body output
-    age: yup.number().required(),
-  }),
-  secretInjection: {
-    // The secret Algolia-Products with key lwaAdminApiKey will be injected into process.env.key
-    // It will only happen at cold start of after a two hour cache expiracy
-    secretKeyInProcessEnv: getAwsSecretDef(
-      'Algolia-Products',
-      'lwaAdminApiKey',
-      false
-    ),
-  },
-  initFunction: init,
-  useSentry: true,
-  useOpentelemetry: true,
-});
-
-export const handler = handlerFactory(async (request, init) => {
-  // Data if of instance AwsApiGatewayRequest<T>, where T is the typed schema
-  // Init has the form of the result of the init method
-
-  // This will validate the event data against the yup schema
-  // The lambda will fail if the schema is not respected
-  const data = await request.getData();
-
-  data.name; // Ok
-  //data.inexistingProperty; // <== TS Error
-
-  init.resourceKey;
-  //init.otherResourceKey; // <== TS Error
-
-  process.env.secretKeyInProcessEnv; // The injected secret
-});
-
-export { configuration }; // Can be picked up by other tools, for example for OpenAPI or for CDK
+return HTTPError.BAD_REQUEST(error).anormal();
 ```
 
-### HandlerFactoryFactory
-
-To satisfy a strict type system, we use the pattern of factory-of-factory, where a configuration is fed into the factory-of-factory to output a strongly typed factory function called `handlerFactory`.
-
-The `handlerFactory` function is then used to wrap the application handler.
-
-One of the reason for this seemingly complex pattern is linked to the user of either yup to defined the input types, or to be able to feed your own.
-
-### API Gateway
-
-The wrapper function to call is:
-
-```typescript
-const { handlerFactory, configuration } =
-  apiGatewayHandlerFactory(_configuration);
-
-export const handler = handlerFactory(/* Your handler here */);
-export { configuration }; // Used for CDK, OpenAPI, etc.
-```
-
-The handler's first argument is an instance of `AwsApiGatewayRequest<T>` and exposes `public async getData(): Promise<T>` to fetch the data with optional validation.
-
-### Event bridge
-
-The wrapper function to call is:
-
-```typescript
-const { handlerFactory, configuration } =
-  eventBridgeHandlerFactory(_configuration);
-
-export const handler = handlerFactory(/* Your handler here */);
-export { configuration }; // Used for CDK, OpenAPI, etc.
-```
-
-The handler's first argument is an instance of `AwsEventBridgeEvent<T>` and exposes `public async getData(): Promise<T>` to fetch the data with optional validation.
-
-## Without yup validation
-
-You can opt out of the yup schema validation by omitting the entry in the configuration object. In this case, by default the underlying type (for the API Gateway `body` and for the Event Bridge `detail`) becomes any. You can still force the type using
-
-```typescript
-// Define your type as you see fit
-type T = {
-  a: string;
-  b?: number;
-};
-handlerFactory<T>(handler);
-```
-
-Obviously, in this case, no payload validation will be performed.
-
-One use case for this feature is to accept `null` as a body type. Yup does not support `null` schemas (see https://github.com/jquense/yup/issues/1851) and therefore for now cannot be validated.
-
-Example:
-
-```typescript
-handlerFactory<{ hello: string }>(async (request, init) => {
-  const data = await request.getData();
-
-  // Data is of type { hello: string }
-  // But only if the yupSchemaInput was not set
-  data.hello;
-
-  return {
-    statusCode: 200,
-    body: 'ok',
-  };
-}, {});
-```
-
-## Init method
-
-After not being triggered for a while, or after a change of configuration, the lambda runtime shuts down. At the next invocation, a "cold start" takes place, which is basically the setting up of the runtime and the acquisition of resources.
-
-Following the cold start, on subsequent invocations of the lambdas, some of its state is persisted, for example any resource set on the `global` object.
-
-You can use the `initMethod` in the configuration to perform tasks which should pre-run the lambda handler itself. In other words, tasks that would benefit from being executed only once. An example would be to open up a connection to a database and keep that connection between lambda handlers:
-
-```typescript
-declare const configuration = {
-  initFunction: async function( ) {
-    const client = // await database connection
-    return {
-      client;
-    }
-  }
-}
-
-handlerFactory(async (request, init) => {
-  // Main handler
-
-  const dbClient = init.client;
-  // Do something with dbClient
-});
-```
+- `HTTPError.INTERNAL_ERROR()` is by default internal.
 
 ### Secret injection
 
-Secrets are by default injected into environment variables, e.g. if the secret definition is
+Another cool feature of those lambda wrappers is that secrets can be inject before the handler is called.
+Secrets are fetched during a cold start, of after the cache has expired.
 
+_NB: The implementation is currently sub-optimal. Refetching the secret could be done in the lambda extension to reduce lambda latency. But this would only make a difference after the 2h cache expiracy. The cold start performance would be the same, and the warm invocation would not make a call to AWS anyways_
+
+Secrets are exposed in 2 ways
+
+- Injected into process.env
+- Available in the handler function
+
+For example, calling
+
+```typescript
+controllerFactory.needsSecret(
+  'process_env_key',
+  'Algolia-Products',
+  'adminApiKey',
+  true
+);
 ```
-{
-  key1: getAwsSecretDef('MySecretName', 'SecretKey'),
-  key2: getAwsSecretDef('MyOtherSecretName', 'OtherSecretKey'),
+
+will populate `process.env.process_env_key` with the content of the Algolia's admin API key.
+
+In addition, when implementing
+
+```typescript
+async handle(
+    req: RequestOf<typeof BaseController>,
+    secrets: SecretsOf<typeof BaseController>
+  ) {
+
+    // Secrets is of type { process_env_key: string }
+    console.log( secrets.process_env_key )
 }
 ```
 
-Will populate the environment variables
-
-```typescript
-process.env.key1;
-// and
-process.env.key2;
-```
-
-The secrets are injected during the cold start of the runtime and renewed every 2h
-
-Note that the injection in `process.env` occurs before the init function is called, so the secrets may be freely used.
-
-The record of secrets is also passed as the first argument of the `init` function:
-
-```typescript
-const { configuration, handlerFactory } = XXXHandlerFactory({
-  type: LambdaType.GENERIC,
-  initFunction: async (secrets) => {
-    //secrets.secretKey is defined
-  },
-  secretInjection: {
-    secretKey: getAwsSecretDef('Algolia-Products', 'adminApiKey', false),
-  },
-});
-
-const wrappedHandler = handlerFactory(async (event, init, secrets) => {
-  // secrets.secretKey is defined
-});
-```
+When the last parameter of the `needsSecret` method is true, the secret is required and the lambda will fail if it can't be found. When false, the method will be called, but the secret may be undefined.
 
 ## Enhancing CDK code
 
