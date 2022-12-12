@@ -1,17 +1,38 @@
 # AWS Lambda Handlers
 
+<!-- vscode-markdown-toc -->
+
+- [Installation](#Installation)
+- [Usage](#Usage)
+  - [Background](#Background)
+  - [Example](#Example)
+  - [Notes on the Wrapper Factory](#NotesontheWrapperFactory)
+  - [Other notes](#Othernotes)
+- [Implementing multiple routes in a controller](#Implementingmultipleroutesinacontroller)
+- [Type system](#Typesystem)
+- [Secret injection](#Secretinjection)
+- [API Gateway output](#APIGatewayoutput)
+- [Enhancing CDK code](#EnhancingCDKcode)
+- [A note on error handling in controllers](#Anoteonerrorhandlingincontrollers)
+
+<!-- vscode-markdown-toc-config
+	numbering=false
+	autoSave=true
+	/vscode-markdown-toc-config -->
+<!-- /vscode-markdown-toc -->
+
 This is a collection of wrapper functions that you should use to wrap your handlers, whether you are implementing an API Gateway hander or an Event Bridge handler.
 Other handlers will be supported in the future
 
-## Installation
+## <a name='Installation'></a>Installation
 
 ```bash
 npm i @lendis-tech/lambda-handlers
 ```
 
-## Usage
+## <a name='Usage'></a>Usage
 
-### Background
+### <a name='Background'></a>Background
 
 We would like the API contract to be defined by the route and enforced at the Controller level, as opposed to letting the controller define the contract itself, which can too easily lead to API changes that are not backwards compatible. In addition, we wish for the contract to be retrievable by utility tools (and not just expressed at runtime)
 
@@ -24,7 +45,7 @@ Those factories are available for
 - SQS: `SQSHandlerWrapperFactory`
 - SNS: `SNSHandlerWrapperFactory`
 
-### Example
+### <a name='Example'></a>Example
 
 ```typescript
 //====================================================================
@@ -74,7 +95,7 @@ export class MyController implements controllerInterface {
 }
 ```
 
-### Notes on the Wrapper Factory
+### <a name='NotesontheWrapperFactory'></a>Notes on the Wrapper Factory
 
 - `new APIGatewayHandlerWrapperFactory()` means you want to create a new factory for a new API Gateway route. Do this for each route you want in your service
 - `.setHandler( handlerName )` specifies the name of the handler function to be implemented in the controller. Use this to reuse a single controller for many routes
@@ -87,7 +108,7 @@ export class MyController implements controllerInterface {
 - `needsSecret( key, secretName, secretKey, required )` is used for ahead-of-execution secret injection: when a cold start occurs, the Lambda wrapper will detect if the secret has been injected into `process.env[ key ]`. If not, it will fetch it from AWS and inject it into `process.env`. It will also be made available in the handler method with strong typing.
   The `required` field can be used to outrightly fail the lambda when the secret is not found. Note that `secretName` and `secretKey` have auto-completion and will throw a TS error if you try to provide a secret that's not stored in the package `@lendis-tech/secret-manager-utilities`
 
-### Other notes
+### <a name='Othernotes'></a>Other notes
 
 Once the wrapper factory has been created, you can extract its interface type using:
 
@@ -128,7 +149,7 @@ Note also that the `init` function **MUST** be async. It allows to run async job
 
 Also note that the `init` method is **ONLY** called during a Lambda cold start. When the runtime is already warm, only the handler is called.
 
-## Implementing multiple routes in a controller
+## <a name='Implementingmultipleroutesinacontroller'></a>Implementing multiple routes in a controller
 
 Depending on your design choices, you may decide to create a single controller for multiple routes, for example when handling CRUD operations. This can be achieved like that:
 
@@ -204,34 +225,13 @@ export class MyController // The controller must now implement 4 interfaces, 1 f
 }
 ```
 
-## Type system
+## <a name='Typesystem'></a>Type system
 
 When specifying a yup schema using `setInputSchema` and `setOutputSchema`, but when the corresponding `setTsInputType` and `setTsOutputType` are not set, the type of the input and output is dictated by yup's `InferType< typeof schema >`. The only way to overwrite that if - for example - yup's inferred type isn't good enough, is to override it with `setTsInputType`. This doesn't change the runtime validation, which solely depends on the presence of the schema or not.
 
 On another note, the schema validation can be asynchronous. It is verified before your handler is called.
 
-## API Gateway Requests and Responses
-
-The only major changes here compare to the current systems is that:
-
-- Error HTTP Codes should use the static constructor methods on `HTTPError`, which supports an Error or a string. This allows us to retain a stricly typed return. Therefore, the response type should be `Promise<HTTPError | Response<T>>`:
-
-```typescript
-return HTTPError.BAD_REQUEST(error);
-
-// or
-return HTTPError.BAD_REQUEST('Failure !');
-```
-
-- Errors can be "acceptable" or "anormal". An anormal error will be registered with Sentry and Opentelemetry, and should indicate a condition that your service shouldn't enter. If this condition is a consequence of an invalid payload, do not set the error to anormal. This is a problem with the sender of the request. To make an error anormal, just to do following
-
-```typescript
-return HTTPError.BAD_REQUEST(error).anormal();
-```
-
-- `HTTPError.INTERNAL_ERROR()` is by default internal.
-
-### Secret injection
+## <a name='Secretinjection'></a>Secret injection
 
 Another cool feature of those lambda wrappers is that secrets can be inject before the handler is called.
 Secrets are fetched during a cold start, of after the cache has expired.
@@ -271,7 +271,28 @@ async handle(
 
 When the last parameter of the `needsSecret` method is true, the secret is required and the lambda will fail if it can't be found. When false, the method will be called, but the secret may be undefined.
 
-## Enhancing CDK code
+## <a name='APIGatewayoutput'></a>API Gateway output
+
+The only major changes here compare to the current systems is that:
+
+- Error HTTP Codes should use the static constructor methods on `HTTPError`, which supports an Error or a string. This allows us to retain a stricly typed return. Therefore, the response type should be `Promise<HTTPError | Response<T>>`:
+
+```typescript
+return HTTPError.BAD_REQUEST(error);
+
+// or
+return HTTPError.BAD_REQUEST('Failure !');
+```
+
+- Errors can be "acceptable" or "anormal". An anormal error will be registered with Sentry and Opentelemetry, and should indicate a condition that your service shouldn't enter. If this condition is a consequence of an invalid payload, do not set the error to anormal. This is a problem with the sender of the request. To make an error anormal, just to do following
+
+```typescript
+return HTTPError.BAD_REQUEST(error).anormal();
+```
+
+- `HTTPError.INTERNAL_ERROR()` is by default internal.
+
+## <a name='EnhancingCDKcode'></a>Enhancing CDK code
 
 We provide the ability to automatically parse the secrets manager configuration in the configuration object and use it in the CDK code. For example:
 
@@ -312,7 +333,7 @@ via
 import { enhanceCDKLambda } from '@lendis-tech/cdk-lambda-handler-utils/dist/v1/enhanceCDKLambda';
 ```
 
-# A note on error handling in controllers
+## <a name='Anoteonerrorhandlingincontrollers'></a>A note on error handling in controllers
 
 Error handling is an important part of the Lambda handler logic. Here is a list of good practices
 
