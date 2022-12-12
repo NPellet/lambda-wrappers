@@ -86,12 +86,10 @@ export class MyController implements controllerInterface {
   }
 
   // Method name Has to match the .setHandler() call
-  async handle(
-    req: PayloadOf<controllerInterface, 'handle'>, // <== Without this, no inference :(
-    _secrets: SecretsOf<controllerInterface, 'handle'>
-  ) {
-    return Response.OK_NO_CONTENT();
-  }
+  handle: IfHandler<controllerInterface> = // Without this type, req, secrets and the return value default to any
+    async (req, secrets) => {
+      return Response.OK_NO_CONTENT();
+    };
 }
 ```
 
@@ -206,22 +204,10 @@ export class MyController // The controller must now implement 4 interfaces, 1 f
     return new MyController();
   }
 
-  async create(
-    req: PayloadOf<createInterface, 'create'>,
-    _secrets: SecretsOf<createInterface, 'create'>
-  ) {}
-  async read(
-    req: PayloadOf<readInterface, 'read'>,
-    _secrets: SecretsOf<readInterface, 'create'>
-  ) {}
-  async update(
-    req: PayloadOf<updateInterface, 'create'>,
-    _secrets: SecretsOf<updateInterface, 'create'>
-  ) {}
-  async delete(
-    req: PayloadOf<deleteInterface, 'create'>,
-    _secrets: SecretsOf<deleteInterface, 'create'>
-  ) {}
+  create: IfHandler<createInterface> = async (payload, secrets) => {};
+  read: IfHandler<readInterface> = async (payload, secrets) => {};
+  update: IfHandler<updateInterface> = async (payload, secrets) => {};
+  delete: IfHandler<deleteInterface> = async (payload, secrets) => {};
 }
 ```
 

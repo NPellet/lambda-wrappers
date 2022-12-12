@@ -1,6 +1,7 @@
 import {
   EventBridgeCtrlInterface,
   EventBridgeHandlerWrapperFactory,
+  IfHandler,
   SecretsOf,
 } from '../src/lambda';
 import { PayloadOf } from '../src/util/types';
@@ -19,12 +20,9 @@ class MyController implements controllerInterface {
     return new MyController();
   }
 
-  async handle(
-    payload: PayloadOf<controllerInterface, 'handle'>,
-    secrets: SecretsOf<controllerInterface, 'handle'>
-  ) {
+  handle: IfHandler<controllerInterface> = async (payload, secrets) => {
     const data = payload.getData();
-  }
+  };
 }
 
 const handlerWrapper = handlerWrapperFactory.makeHandlerFactory();

@@ -65,3 +65,9 @@ export type ReplyOf<T, M extends string> = T extends {
 }
   ? U
   : never;
+
+export type IfHandler<T> = T extends {
+  [x: string]: (A: infer U, B: infer V) => infer W;
+}
+  ? (a: U, b: V) => W
+  : never;

@@ -1,4 +1,4 @@
-import { Response, SecretsOf } from '../src/lambda';
+import { IfHandler, Response, SecretsOf } from '../src/lambda';
 import {
   APIGatewayHandlerWrapperFactory,
   APIGatewayCtrlInterface,
@@ -33,16 +33,13 @@ class MyController implements controllerInterface {
     return new MyController();
   }
 
-  async handle(
-    payload: PayloadOf<controllerInterface, 'handle'>,
-    secrets: SecretsOf<controllerInterface, 'handle'>
-  ) {
+  handle: IfHandler<controllerInterface> = async (payload, secrets) => {
     const data = payload.getData();
 
     return Response.OK({
       a: 1,
     });
-  }
+  };
 }
 
 const handlerWrapper = handlerWrapperFactory.makeHandlerFactory();

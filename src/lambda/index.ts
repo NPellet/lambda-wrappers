@@ -29,4 +29,4 @@ export { getAwsSecretDef } from '../lambda/utils/secrets_manager';
 export { buildHandlerConfiguration } from '../lambda/config';
 export type { TInit, TSecrets } from './config';
 export { Controller } from '../util/LambdaHandler';
-export type { SecretsOf, PayloadOf, ReplyOf } from '../util/types';
+export type { SecretsOf, PayloadOf, ReplyOf, IfHandler } from '../util/types';

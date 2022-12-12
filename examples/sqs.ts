@@ -2,6 +2,7 @@ import {
   SQSCtrlInterface,
   SQSHandlerWrapperFactory,
   SecretsOf,
+  IfHandler,
 } from '../src/lambda';
 import { PayloadOf } from '../src/util/types';
 
@@ -17,12 +18,9 @@ class MyController implements controllerInterface {
     return new MyController();
   }
 
-  async handle(
-    request: PayloadOf<controllerInterface, 'handle'>,
-    secrets: SecretsOf<controllerInterface, 'handle'>
-  ) {
+  handle: IfHandler<controllerInterface> = async (request, secrets) => {
     const data = request.getData();
-  }
+  };
 }
 
 const handlerWrapper = handlerWrapperFactory.makeHandlerFactory();
