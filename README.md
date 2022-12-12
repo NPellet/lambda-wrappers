@@ -132,8 +132,9 @@ Also note that the `init` method is **ONLY** called during a Lambda cold start. 
 
 Depending on your design choices, you may decide to create a single controller for multiple routes, for example when handling CRUD operations. This can be achieved like that:
 
+Routes definitions (1 file per handler)
+
 ```typescript
-//====================================================================
 // Create.ts
 import { CreateController } from 'path/to/controller';
 
@@ -147,8 +148,9 @@ type controllerInterface = APIGatewayCtrlInterface<
 const handlerWrapper = controllerFactory.makeHandlerFactory();
 export const { handler, configuration } = handlerFactory(CreateController);
 export { controllerInterface };
+```
 
-//====================================================================
+```typescript
 // Read.ts
 import { ReadController } from 'path/to/controller';
 
@@ -165,10 +167,12 @@ export { controllerInterface };
 
 // Update.ts...
 // Delete.ts...
+```
 
-//====================================================================
-//====================================================================
-// controller.ts
+Controller implementation
+
+```typescript
+// Controller.ts
 import type { controllerInterface as createInterface } from 'path/to/create';
 import type { controllerInterface as readInterface } from 'path/to/read';
 import type { controllerInterface as updateInterface } from 'path/to/update';
