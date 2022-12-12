@@ -1,5 +1,4 @@
 import {
-  Context as OtelContext,
   SpanKind,
   propagation,
   SpanStatusCode,
@@ -12,16 +11,20 @@ import {
   SemanticAttributes,
   SemanticResourceAttributes,
 } from '@opentelemetry/semantic-conventions';
-import { getAwsFromAccountFromArn } from '../../util/aws';
+import { getAwsAccountFromArn } from '../../util/aws';
 import { AWSXRAY_TRACE_ID_HEADER } from '@opentelemetry/propagator-aws-xray';
-import { LambdaInitSecretHandler } from '../../util/LambdaHandler';
 import { log } from './logger';
+import { loggers } from 'winston';
 
 export const tracer = api.trace.getTracerProvider().getTracer('aws_lambda');
 
 export const traceContextEnvironmentKey = '_X_AMZN_TRACE_ID';
 
 export const extractCtxFromLambdaEnv = () => {
+  log.debug(
+    `Extracting Lambda parent context from env variable ${process.env[traceContextEnvironmentKey]}`
+  );
+
   return propagation.extract(
     ROOT_CONTEXT,
     { [AWSXRAY_TRACE_ID_HEADER]: process.env[traceContextEnvironmentKey] },
@@ -54,8 +57,9 @@ const _wrapTelemetryLambda = <T, U>(handler: Handler<T, U>) => {
         attributes: {
           [SemanticAttributes.FAAS_EXECUTION]: context.awsRequestId,
           [SemanticResourceAttributes.FAAS_ID]: context.invokedFunctionArn,
-          [SemanticResourceAttributes.CLOUD_ACCOUNT_ID]:
-            getAwsFromAccountFromArn(context.invokedFunctionArn),
+          [SemanticResourceAttributes.CLOUD_ACCOUNT_ID]: getAwsAccountFromArn(
+            context.invokedFunctionArn
+          ),
         },
       },
       api.context.active()

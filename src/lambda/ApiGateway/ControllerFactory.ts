@@ -24,33 +24,38 @@ import { SecretConfig, getAwsSecretDef } from '../utils/secrets_manager';
  * ==> No inheritance possible
  */
 
-export class APIHandlerControllerFactory<
+export class APIGatewayHandlerWrapperFactory<
   TInput,
   TOutput,
+  THandler extends string = 'handle',
   TSecrets extends string = string,
   SInput extends BaseSchema | undefined = undefined,
   SOutput extends BaseSchema | undefined = undefined
 > {
-  protected _inputSchema: SInput;
-  protected _outputSchema: SOutput;
-  protected _secrets: Record<TSecrets, SecretConfig>;
+  public _outputSchema: SOutput;
+  public _secrets: Record<TSecrets, SecretConfig>;
+  public _handler: THandler;
+  public _inputSchema: SInput;
+  public __shimInput: TInput;
+  public __shimOutput: TOutput;
+
   setInputSchema<U extends BaseSchema>(schema: U) {
     const constructor = this.constructor;
 
-    const api = this.fork<TInput, TOutput, TSecrets, U, SOutput>();
+    const api = this.fork<TInput, TOutput, THandler, TSecrets, U, SOutput>();
     api._inputSchema = schema;
     api._outputSchema = this._outputSchema;
     api._secrets = this._secrets;
-
+    api._handler = this._handler;
     return api;
   }
 
   setOutputSchema<U extends BaseSchema>(schema: U) {
-    const api = this.fork<TInput, TOutput, TSecrets, SInput, U>();
+    const api = this.fork<TInput, TOutput, THandler, TSecrets, SInput, U>();
     api._outputSchema = schema;
     api._inputSchema = this._inputSchema;
     api._secrets = this._secrets;
-
+    api._handler = this._handler;
     return api;
   }
 
@@ -63,6 +68,7 @@ export class APIHandlerControllerFactory<
     const api = this.fork<
       TInput,
       TOutput,
+      THandler,
       string extends TSecrets ? U : TSecrets | U,
       SInput,
       SOutput
@@ -71,42 +77,51 @@ export class APIHandlerControllerFactory<
     api._secrets[key] = getAwsSecretDef(secretName, secretKey, required);
     api._inputSchema = this._inputSchema;
     api._outputSchema = this._outputSchema;
-
+    api._handler = this._handler;
     return api;
   }
 
   setTsInputType<U>() {
-    const api = this.fork<U, TOutput, TSecrets, SInput, SOutput>();
+    const api = this.fork<U, TOutput, THandler, TSecrets, SInput, SOutput>();
     api._inputSchema = this._inputSchema;
     api._outputSchema = this._outputSchema;
     api._secrets = this._secrets;
+    api._handler = this._handler;
     return api;
   }
 
   setTsOutputType<U>() {
-    const api = this.fork<TInput, U, TSecrets, SInput, SOutput>();
+    const api = this.fork<TInput, U, THandler, TSecrets, SInput, SOutput>();
     api._inputSchema = this._inputSchema;
     api._outputSchema = this._outputSchema;
     api._secrets = this._secrets;
+    api._handler = this._handler;
     return api;
   }
 
-  ready() {
+  setHandler<T extends string>(handler: T) {
+    const api = this.fork<TInput, TOutput, T, TSecrets, SInput, SOutput>();
+    api._inputSchema = this._inputSchema;
+    api._outputSchema = this._outputSchema;
+    api._secrets = this._secrets;
+    api._handler = handler;
+    return api;
+  }
+
+  makeHandlerFactory() {
     type INPUT = TOrSchema<TInput, SInput>;
     type OUTPUT = TOrSchema<TOutput, SOutput>;
 
-    abstract class BaseController {
-      abstract handle(
+    type TInterface = {
+      [x in THandler]: (
         payload: Request<INPUT>,
         secrets?: Record<TSecrets, string | undefined>
-      ): Promise<Response<OUTPUT> | HTTPError>;
-    }
+      ) => Promise<Response<OUTPUT> | HTTPError>;
+    };
 
-    const handlerFactory = (
-      controllerFactory: ConstructorOf<BaseController>
-    ) => {
+    const handlerFactory = (controllerFactory: ConstructorOf<TInterface>) => {
       const configuration: HandlerConfiguration<
-        BaseController,
+        TInterface,
         SInput,
         SOutput,
         TSecrets
@@ -124,13 +139,12 @@ export class APIHandlerControllerFactory<
       const handler = createApiGatewayHandler<
         INPUT,
         OUTPUT,
-        BaseController,
+        TInterface,
         TSecrets,
         SInput,
         SOutput
       >((event, init, secrets, c) => {
-        console.log('CALLED');
-        return init.handle(event, secrets);
+        return init[this._handler](event, secrets);
       }, configuration);
 
       return {
@@ -139,22 +153,48 @@ export class APIHandlerControllerFactory<
       };
     };
 
-    return { handlerFactory, BaseController };
+    return handlerFactory;
   }
 
   fork<
     TInput,
     TOutput,
     TSecrets extends string = string,
+    THandler extends string = 'handle',
     SInput extends BaseSchema | undefined = undefined,
     SOutput extends BaseSchema | undefined = undefined
-  >(): APIHandlerControllerFactory<TInput, TOutput, TSecrets, SInput, SOutput> {
-    return new APIHandlerControllerFactory<
+  >(): APIGatewayHandlerWrapperFactory<
+    TInput,
+    TOutput,
+    TSecrets,
+    THandler,
+    SInput,
+    SOutput
+  > {
+    return new APIGatewayHandlerWrapperFactory<
       TInput,
       TOutput,
       TSecrets,
+      THandler,
       SInput,
       SOutput
     >();
   }
 }
+
+export type APIGatewayCtrlInterface<T> =
+  T extends APIGatewayHandlerWrapperFactory<
+    infer TInput,
+    infer TOutput,
+    infer THandler,
+    infer TSecrets,
+    infer SInput,
+    infer SOutput
+  >
+    ? {
+        [x in THandler]: (
+          payload: Request<TOrSchema<TInput, SInput>>,
+          secrets?: Record<TSecrets, string | undefined>
+        ) => Promise<Response<TOrSchema<TOutput, SOutput>> | HTTPError>;
+      }
+    : never;

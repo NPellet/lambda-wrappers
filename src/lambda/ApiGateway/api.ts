@@ -152,6 +152,7 @@ export const createApiGatewayHandler = <
     let actualOut: TOutput | void;
 
     log.info(`Received event through APIGateway on path  ${event.path}.`);
+    log.debug(event);
     try {
       //  const legacyEvent = new Event(event.detail);
       const newCtx: LambdaContext<APIGatewayEvent> = Object.assign(

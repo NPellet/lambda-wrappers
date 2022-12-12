@@ -1,8 +1,16 @@
 import _ from 'lodash';
 import { testApiGatewayEvent, LambdaContext } from '../../test_utils/utils';
 import * as yup from 'yup';
-import { APIHandlerControllerFactory } from './apiCtrlFactory';
-import { HTTPError } from '../../util/apigateway/response';
+import {
+  APIGatewayCtrlInterface,
+  APIHandlerControllerFactory,
+} from './ControllerFactory';
+import { HTTPError, Response } from '../../util/apigateway/response';
+import { RequestOf, SecretsOf, TOrSchema } from '../../util/types';
+import { Request } from '../../util/apigateway/request';
+import { init } from '@sentry/serverless/types/awslambda';
+import { IoTHandler } from 'aws-lambda';
+import { StdController } from '../../util/factory';
 
 jest.mock('../utils/secrets_manager_aws', function () {
   return {
@@ -28,19 +36,26 @@ describe('Testing API Controller factory', function () {
       return HTTPError.BAD_REQUEST('Oups');
     });
 
-    const { BaseController, handlerFactory } = new APIHandlerControllerFactory()
+    const fac = new APIHandlerControllerFactory()
       .needsSecret('abc', 'Algolia-Products', 'adminApiKey', true)
+      // .setTsInputType<{ b: number }>()
+      .setTsOutputType<{ b: number }>()
       .setInputSchema(schema)
-      .ready();
+      .setHandler('create');
 
-    class Ctrl extends BaseController {
-      static async init(secrets) {
+    const handlerFactory = fac.makeHandlerFactory();
+
+    class Ctrl
+      extends StdController
+      implements APIGatewayCtrlInterface<typeof fac>
+    {
+      static async init(secrets: SecretsOf<typeof fac>) {
         expect(secrets.abc).toBe('algoliaApiKey');
         expect(process.env.abc).toBe('algoliaApiKey');
         return new Ctrl();
       }
 
-      async handle(data, secrets) {
+      async create(data: RequestOf<typeof fac>, secrets) {
         expect(secrets.abc).toBe('algoliaApiKey');
         expect(process.env.abc).toBe('algoliaApiKey');
 

@@ -38,22 +38,3 @@ export const failSQSRecord = <T>(
     itemIdentifier: record.getMessageId(),
   };
 };
-
-export const validateSQSRecord = async <T>(
-  record: AwsSQSRecord<T>,
-  yupSchema?: BaseSchema
-) => {
-  if (yupSchema) {
-    console.log(record.getData);
-    try {
-      await yupSchema.validate(record.getData());
-    } catch (e) {
-      log.warn(
-        `Lambda's input schema failed to validate. Rethrowing to fail lambda`
-      );
-      log.debug(e);
-      recordException(e);
-      throw e;
-    }
-  }
-};

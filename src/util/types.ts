@@ -1,5 +1,7 @@
 import { BaseSchema, InferType } from 'yup';
-import { HTTPError, Response } from '../lambda';
+import { HTTPError, Request, Response } from '../lambda';
+import { AwsSNSRecord } from './sns/record';
+import { AwsSQSRecord } from './sqs/record';
 
 export type ConstructorOf<T> = {
   init(secrets?: Record<string, string>): Promise<T>;
@@ -10,20 +12,36 @@ export type TOrSchema<T, U> = unknown extends T
     : unknown
   : T;
 
-export type RequestOf<T> = T extends abstract new () => {
-  handle(a: infer U, ...args: any[]): any;
+export type RequestOf<T> = T extends {
+  _inputSchema: infer S;
+  __shimInput: infer T;
 }
-  ? U
+  ? Request<TOrSchema<T, S>>
   : never;
 
-export type ResponseOf<T> = T extends abstract new () => {
-  handle(...args: any): HTTPError | Response<infer U>;
+export type ResponseOf<T, H extends string> = T extends {
+  _inputSchema: infer S;
+  __shimInput: infer T;
 }
-  ? U
+  ? HTTPError | Response<TOrSchema<T, S>>
   : never;
 
-export type SecretsOf<T> = T extends abstract new () => {
-  handle(_: any, secrets: infer U): any;
+export type SecretsOf<T> = T extends {
+  _secrets: Record<infer U, any>;
 }
-  ? U
+  ? Record<U, string>
+  : never;
+
+export type SQSRecordOf<T> = T extends {
+  _inputSchema: infer S;
+  __shimInput: infer T;
+}
+  ? AwsSQSRecord<TOrSchema<T, S>>
+  : never;
+
+export type SNSRecordOf<T> = T extends {
+  _inputSchema: infer S;
+  __shimInput: infer T;
+}
+  ? AwsSNSRecord<TOrSchema<T, S>>
   : never;

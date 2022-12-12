@@ -1,5 +1,5 @@
 const { nodeExternalsPlugin } = require('esbuild-node-externals');
-
+const glob = require('glob');
 const path = require('path');
 
 const fs = require('fs');
@@ -11,21 +11,21 @@ if (watchMode) {
 
 require('esbuild')
   .build({
-    entryPoints: [
-      './src/v1/enhanceCDKLambda.ts',
-      './src/v2/enhanceCDKLambda.ts',
-    ],
+    entryPoints: glob.sync('**/*.ts'),
     bundle: true,
     platform: 'node',
     watch: watchMode,
+    target: 'node14',
     format: 'cjs',
-    outdir: 'dist',
+    outdir: './',
     sourcemap: true,
     external: [
       '@aws-sdk/aws-lambda',
       'aws-cdk-lib',
-      '@aws-sdk/client-sqs',
-      '@aws-sdk/client-sns',
+      '@opentelemetry/api',
+      'node-fetch',
+      '@aws-sdk/*',
+      'aws-sdk',
     ],
   })
   .catch(() => process.exit(1));

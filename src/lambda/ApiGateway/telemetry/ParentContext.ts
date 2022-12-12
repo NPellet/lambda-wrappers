@@ -4,8 +4,10 @@ import otelapi, {
   TraceFlags,
 } from '@opentelemetry/api';
 import { APIGatewayEvent } from 'aws-lambda';
+import { loggers } from 'winston';
 import { AwsApiGatewayRequest } from '../../../util/apigateway/apigateway';
 import { AwsEventBridgeEvent } from '../../../util/eventbridge';
+import { log } from '../../utils/logger';
 import {
   contextPayloadGetter,
   extractCtxFromLambdaEnv,
@@ -13,7 +15,8 @@ import {
 
 export const telemetryFindApiGatewayParent = (event: APIGatewayEvent) => {
   let ctx: OtelContext = ROOT_CONTEXT;
-
+  let tryHeaders: boolean = false;
+  /*
   if (ctx == ROOT_CONTEXT) {
     ctx = extractCtxFromLambdaEnv();
   }
@@ -28,6 +31,7 @@ export const telemetryFindApiGatewayParent = (event: APIGatewayEvent) => {
   } else {
     tryHeaders = true;
   }
+*/
 
   if (ctx == ROOT_CONTEXT || tryHeaders) {
     ctx = otelapi.propagation.extract(
@@ -37,5 +41,10 @@ export const telemetryFindApiGatewayParent = (event: APIGatewayEvent) => {
     );
   }
 
+  if (ctx === ROOT_CONTEXT) {
+    log.info(
+      "Couldn't find a parent context for this API Gateway invocation. Defaulting to ROOT_CONTEXT"
+    );
+  }
   return ctx;
 };

@@ -1,9 +1,12 @@
 import _ from 'lodash';
 import { LambdaContext } from '../../test_utils/utils';
 import * as yup from 'yup';
-import { RequestOf } from '../../util/types';
+import { RequestOf, SQSRecordOf } from '../../util/types';
 import { SQSBatchResponse, SQSRecord } from 'aws-lambda';
-import { SQSHandlerControllerFactory } from './sqsCtrlFactory';
+import {
+  SQSCtrlInterface,
+  SQSHandlerControllerFactory,
+} from './ControllerFactory';
 import { failSQSRecord } from '../../util/sqs/record';
 
 const testRecord: SQSRecord = {
@@ -28,12 +31,14 @@ describe('Testing API Controller factory', function () {
   it('Basic functionality works', async () => {
     const schema = yup.object({ a: yup.string() });
 
-    const { BaseController, handlerFactory } = new SQSHandlerControllerFactory()
+    const controllerFactory = new SQSHandlerControllerFactory()
       .setInputSchema(schema)
-      .ready();
+      .setHandler('create');
+
+    const handlerFactory = controllerFactory.makeHandlerFactory();
 
     const mockHandler = jest.fn(
-      async (data: RequestOf<typeof BaseController>, secrets) => {
+      async (data: SQSRecordOf<typeof controllerFactory>, secrets) => {
         if (data.getData().a === '1') {
           throw new Error("Didn't work");
         }
@@ -48,12 +53,12 @@ describe('Testing API Controller factory', function () {
       }
     );
 
-    class Ctrl extends BaseController {
+    class Ctrl implements SQSCtrlInterface<typeof controllerFactory> {
       static async init(secrets) {
         return new Ctrl();
       }
 
-      async handle(data: RequestOf<typeof BaseController>, secrets) {
+      async create(data: SQSRecordOf<typeof controllerFactory>, secrets) {
         return mockHandler(data, secrets);
       }
     }

@@ -1,5 +1,4 @@
 import { ObjectSchema } from 'yup';
-import { getAwsFromAccountFromArn } from '../util/aws';
 import { wrapTelemetryApiGateway } from './ApiGateway/telemetry/Wrapper';
 import { wrapTelemetryEventBridge } from './EventBridge/telemetry/Wrapper';
 import {
@@ -57,7 +56,7 @@ export const buildHandlerConfiguration = <
 
 export const enum LambdaType {
   EVENT_BRIDGE,
-
+  SNS,
   API_GATEWAY,
   SQS,
   GENERIC,

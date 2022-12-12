@@ -13,69 +13,190 @@ npm i @lendis-tech/lambda-handlers
 
 ### Background
 
-We would like the API contract to be defined by the route, and enforced at the Controller level. As opposed to letting the controller define the contract itself, which can lead to API changes that are not backwards compatible.
+We would like the API contract to be defined by the route and enforced at the Controller level, as opposed to letting the controller define the contract itself, which can too easily lead to API changes that are not backwards compatible. In addition, we wish for the contract to be retrievable by utility tools (and not just expressed at runtime)
 
-In this spirit, we propose a utility that can create an abstract base controller class that should be inherited from by the controller implementation. This base class brings strong type safety to the controller implementation. It is created on the fly (you can't just reference it) by the Controller Factory:
+This project exposes "handler wrapper factories", which are strongly typed classes that can be used to create wrapping function that interface a controller into a Lambda handler.
 
-### TL;DR;
+Those factories are available for
 
-API contract
+- The API Gateway: `APIGatewayHandlerWrapperFactory`
+- The Event Bridge: `EventBridgeHandlerWrapperFactory`
+- SQS: `SQSHandlerWrapperFactory`
+- SNS: `SNSHandlerWrapperFactory`
+
+### Example
 
 ```typescript
-import { APIHandlerControllerFactory } from '@lendis-tech/lambda-handlers';
+//====================================================================
+// route.ts
+
+import { MyController } from 'path/to/controller';
+import {
+  APIGatewayHandlerWrapperFactory,
+  APIGatewayCtrlInterface,
+} from '@lendis-tech/lambda-handlers';
 
 // API Route definition file
-const { BaseController, handlerFactory } = new APIHandlerControllerFactory()
+const handlerWrapperFactory = new APIGatewayHandlerWrapperFactory()
+  .setHandler('handle') // REQUIRED method: defined what is the name of the controller handler
   .setTsInputType<INPUT_TYPE>() // Injects type safety, overrides yup schema
   .setTsOutputType<OUTPUT_TYPE>() // Injects type safety, overrides yup schema
   .setInputSchema(yupSchema) // Of type yup
+  .setOutputSchema(yupSchema) // Of type yup
   .needsSecret('process_env_key', 'Algolia-Products', 'adminApiKey', true) // Fetches the secrets during a cold start
-  .needsSecret('process_env_other_key', 'Algolia-Products', 'apiKey', true)
-  .ready(); // Call this when you're finished setting up the controller
+  .needsSecret('process_env_other_key', 'Algolia-Products', 'apiKey', true);
 
-export { BaseController, handlerFactory };
-```
+type controllerInterface = APIGatewayCtrlInterface<
+  typeof handlerWrapperFactory
+>;
 
-Lambda handler
+const handlerWrapper = controllerFactory.makeHandlerFactory();
 
-```typescript
-// API Route definition file
-const { handler, configuration } = handlerFactory(ChangeAssetsStatus);
-export { handler, configuration };
-```
+export const { handler, configuration } = handlerFactory(MyController);
+export { controllerInterface }; // Export the type to be reimported by the route implementation
 
-Controller implementation
+//====================================================================
+// controller.ts
+import type { controllerInterface } from 'path/to/route';
 
-```typescript
-export class ChangeAssetsStatus extends BaseController {
-  // Alternatively:
-  // static async init( secrets: SecretsOf<typeof BaseController> )
+export class MyController implements controllerInterface {
   static async init() {
-    // Use where the static initializer to acquire any resource you may want cached across lambda invocation
-    return new ChangeAssetsStatus();
+    return new MyController();
   }
 
-  // A bit of a vodoo syntax, see https://github.com/Microsoft/TypeScript/issues/23911 for the reason why this has to be
+  // Method name Has to match the .setHandler() call
   async handle(
-    req: RequestOf<typeof BaseController>,
-    secrets: SecretsOf<typeof BaseController>
+    req: RequestOf<controllerInterface>, // <== Specific to API Gateway
+    _secrets: SecretsOf<controllerInterface>
   ) {
-    const data = req.getData(); // Data has type INPUT_TYPE
-    // It has already been checked against the input schema.
-    try {
-      // Implement your business logic here
-
-      return Response.OK_NO_CONTENT(); // TS Error is OUTPUT_TYPE is not void
-    } catch (e) {
-      if (e instanceof SomeCustomError) {
-        // Maybe your logic throws an error that can be considered "known", e.g. an issue in the incoming payload that is the producer's responsibility.
-        return HTTPError.BAD_REQUEST(e);
-      }
-      // Another internal server error
-      // Do not return, let it throw.
-      throw e;
-    }
+    return Response.OK_NO_CONTENT();
   }
+}
+```
+
+### Notes on the Wrapper Factory
+
+- `new APIGatewayHandlerWrapperFactory()` means you want to create a new factory for a new API Gateway route. Do this for each route you want in your service
+- `.setHandler( handlerName )` specifies the name of the handler function to be implemented in the controller. Use this to reuse a single controller for many routes
+- `.setTsInputType<T>()` informs the interface on the input type you're expected to receive. We're not talking about the raw type (e.g. `APIGatewayEvent`), but rather
+  - The `body` field for the API gateway (will be JSON.parse'd if the Content-Type is application/json)
+  - The `detail` field for the Event Bridge
+  - The `message` content for SQS and SNS
+- similarly, `.setTsOutputType<T>()` informs the type of response the controller is supposed to return (or an instance of `HTTPError` if the controller failed). Only applies to API Gateway
+- `setInputSchema<SCHEMA_TYPE>( schema )` and `setOutputSchema<SCHEMA_TYPE>( schema )` add a runtime verification of a `yup` schema. When `setTsInputType` is not defined but `setInputSchema` is, then the controller is expected to received the result of `InferType< SCHEMA_TYPE >` instead of `T`
+- `needsSecret( key, secretName, secretKey, required )` is used for ahead-of-execution secret injection: when a cold start occurs, the Lambda wrapper will detect if the secret has been injected into `process.env[ key ]`. If not, it will fetch it from AWS and inject it into `process.env`. It will also be made available in the handler method with strong typing.
+  The `required` field can be used to outrightly fail the lambda when the secret is not found. Note that `secretName` and `secretKey` have auto-completion and will throw a TS error if you try to provide a secret that's not stored in the package `@lendis-tech/secret-manager-utilities`
+
+### Other notes
+
+Once the wrapper factory has been created, you can extract its interface type using:
+
+```typescript
+type controllerInterface = APIGatewayCtrlInterface<
+  typeof handlerWrapperFactory
+>;
+```
+
+The type `controllerInterface` needs to be implemented by the controller. Note that you may decide not to directly implement the interface, as long as you respect its contract.
+
+Talking about the contract, what is it ? There are only two restrictions:
+
+```typescript
+static async init() {
+  return new MyController()
+}
+```
+
+This part is needed and super-important for the system to run. Unfortunately it is not checked by typescript. If you omit this piece of code, the lambda will fail at runtime.
+
+You may wonder why not simply use a constructor? Because with the static initalization, you may run something like
+
+```typescript
+class MyController interface IfController {
+
+  constructor( private MyResource resource, private MyOtherResource otherResource ) {}
+
+  static async init() {
+    return new MyController( new MyResource(), new MyOtherResource() )
+  }
+}
+```
+
+which means that both `resource` and `otherResource` have types `MyResource` and `MyOtherResource` and not `MyResource | undefined` and `MyOtherResource | undefined`. Indeed, the controller is the one place for dependency injection which allows the dependency to have a strictly defined type. It avoids having to check for the resource in the handler itself.
+
+Note also that the `init` function **MUST** be async. It allows to run async jobs before moving with the controller.
+
+Also note that the `init` method is **ONLY** called during a Lambda cold start. When the runtime is already warm, only the handler is called.
+
+## Implementing multiple routes in a controller
+
+Depending on your design choices, you may decide to create a single controller for CRUD operations. This can be achieved like that:
+
+```typescript
+//====================================================================
+// Create.ts
+import { CreateController } from 'path/to/controller';
+
+const createHandlerWrapperFactory =
+  new APIGatewayHandlerWrapperFactory().setHandler('create');
+
+type controllerInterface = APIGatewayCtrlInterface<
+  typeof createHandlerWrapperFactory
+>;
+
+const handlerWrapper = controllerFactory.makeHandlerFactory();
+export const { handler, configuration } = handlerFactory(CreateController);
+export { controllerInterface };
+
+//====================================================================
+// Read.ts
+import { ReadController } from 'path/to/controller';
+
+const readHandlerWrapperFactory =
+  new APIGatewayHandlerWrapperFactory().setHandler('read');
+
+type controllerInterface = APIGatewayCtrlInterface<
+  typeof readHandlerWrapperFactory
+>;
+
+const handlerWrapper = controllerFactory.makeHandlerFactory();
+export const { handler, configuration } = handlerFactory(CreateController);
+export { controllerInterface };
+
+// Update.ts...
+// Delete.ts...
+
+//====================================================================
+//====================================================================
+// controller.ts
+import type { controllerInterface as createInterface } from 'path/to/create';
+import type { controllerInterface as readInterface } from 'path/to/read';
+import type { controllerInterface as updateInterface } from 'path/to/update';
+import type { controllerInterface as deleteInterface } from 'path/to/delete';
+
+export class MyController
+  implements createInterface, readInterface, updateInterface, deleteInterface
+{
+  static async init() {
+    return new MyController();
+  }
+
+  async create(
+    req: RequestOf<createInterface>,
+    _secrets: SecretsOf<createInterface>
+  ) {}
+  async read(
+    req: RequestOf<readInterface>,
+    _secrets: SecretsOf<readInterface>
+  ) {}
+  async update(
+    req: RequestOf<updateInterface>,
+    _secrets: SecretsOf<updateInterface>
+  ) {}
+  async delete(
+    req: RequestOf<deleteInterface>,
+    _secrets: SecretsOf<deleteInterface>
+  ) {}
 }
 ```
 

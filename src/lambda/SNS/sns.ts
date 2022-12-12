@@ -1,84 +1,75 @@
 import {
   Callback,
   Context,
-  SQSBatchItemFailure,
-  SQSBatchResponse,
-  SQSEvent,
-  SQSHandler,
-  SQSRecord,
+  SNSEvent,
+  SNSEventRecord,
+  SNSHandler,
 } from 'aws-lambda';
 import { HandlerConfiguration, LambdaType } from '../config';
 import { LambdaInitSecretHandler } from '../../util/LambdaHandler';
 import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
 import { BaseSchema } from 'yup';
-import { recordException } from '../../util/exceptions';
 import { TOrSchema } from '../../util/types';
-import { AwsSQSRecord, failSQSRecord } from '../../util/sqs/record';
-import { wrapTelemetrySQS } from './Telemetry/Wrapper';
+import { wrapTelemetrySNS } from './Telemetry/Wrapper';
 import { flush } from '../utils/telemetry';
+import { AwsSNSRecord } from '../../util/sns/record';
 import { validateRecord } from '../../util/validateRecord';
 
-export const createSQSHandler = <
+export const createSNSHandler = <
   TInput,
   TInit,
   TSecrets extends string,
   SInput extends BaseSchema | undefined = undefined
 >(
   handler: LambdaInitSecretHandler<
-    AwsSQSRecord<TOrSchema<TInput, SInput>>,
+    AwsSNSRecord<TOrSchema<TInput, SInput>>,
     TInit,
     TSecrets,
-    void | SQSBatchItemFailure
+    void
   >,
   configuration: HandlerConfiguration<TInit, SInput>
-): SQSHandler => {
+): SNSHandler => {
   type V = TOrSchema<TInput, SInput>;
   const wrappedHandler = wrapGenericHandler(handler, {
-    type: LambdaType.SQS,
+    type: LambdaType.SNS,
     ...configuration,
   });
 
-  let innerLoop = async (record: SQSRecord, context: Context) => {
+  let innerLoop = async (record: SNSEventRecord, context: Context) => {
     log.debug(record);
-    const _record = new AwsSQSRecord<V>(record);
+
+    const _record = new AwsSNSRecord<V>(record);
 
     try {
       await validateRecord(_record, configuration.yupSchemaInput);
     } catch (e) {
-      return failSQSRecord(_record);
+      // Nothing more we can do !
+      return;
     }
 
     try {
       return await wrappedHandler(_record, context, () => {});
     } catch (e) {
-      return failSQSRecord(_record);
+      return;
     }
   };
 
   if (configuration.opentelemetry) {
-    innerLoop = wrapTelemetrySQS(innerLoop);
+    innerLoop = wrapTelemetrySNS(innerLoop);
   }
 
-  return async (event: SQSEvent, context: Context, callback: Callback) => {
-    log.info(`Received SQS event with  ${event.Records.length} records.`);
+  return async (event: SNSEvent, context: Context, callback: Callback) => {
+    log.info(`Received SNS event with ${event.Records.length} records.`);
 
-    const sqsErrors: SQSBatchResponse = {
-      batchItemFailures: [],
-    };
-
-    const out = (await Promise.all(
+    const out = await Promise.all(
       event.Records.map((record) => innerLoop(record, context))
-    ).then((maybeItemFailures) =>
-      maybeItemFailures.filter((o) => o !== undefined)
-    )) as SQSBatchItemFailure[];
+    );
 
     if (configuration.opentelemetry) {
       await flush();
     }
 
-    return {
-      batchItemFailures: out,
-    };
+    return;
   };
 };

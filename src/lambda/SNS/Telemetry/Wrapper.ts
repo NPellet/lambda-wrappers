@@ -1,4 +1,9 @@
-import { Context, SQSBatchItemFailure, SQSRecord } from 'aws-lambda';
+import {
+  Context,
+  SNSEventRecord,
+  SQSBatchItemFailure,
+  SQSRecord,
+} from 'aws-lambda';
 import { Attributes, SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import * as otelapi from '@opentelemetry/api';
 import {
@@ -9,34 +14,27 @@ import {
 } from '@opentelemetry/semantic-conventions';
 import { tracer } from '../../utils/telemetry';
 import { log } from '../../utils/logger';
-import { telemetryFindSQSParent } from './ParentContext';
+import { telemetryFindSNSParent } from './ParentContext';
 import { getAwsResourceFromArn } from '../../../util/aws';
 
-export const wrapTelemetrySQS = <T, U>(
-  handler: (
-    record: SQSRecord,
-    context: Context
-  ) => Promise<void | SQSBatchItemFailure>
+export const wrapTelemetrySNS = <T, U>(
+  handler: (record: SNSEventRecord, context: Context) => Promise<void>
 ) => {
-  return async function (event: SQSRecord, context: Context) {
-    const parentContext = telemetryFindSQSParent(event);
+  return async function (event: SNSEventRecord, context: Context) {
+    const parentContext = telemetryFindSNSParent(event);
     const eventData = event;
 
     let attributes: Attributes = {
       [SemanticAttributes.MESSAGE_TYPE]: MessageTypeValues.RECEIVED,
       [SemanticAttributes.FAAS_TRIGGER]: FaasTriggerValues.PUBSUB,
       [SemanticAttributes.FAAS_INVOKED_PROVIDER]: FaasInvokedProviderValues.AWS,
-      [SemanticAttributes.MESSAGING_SYSTEM]: 'SQS',
-      [SemanticAttributes.MESSAGE_ID]: event.messageId,
-      ['messaging.source']: event.eventSource,
-      ['messaging.source.arn']: event.eventSourceARN,
-      [SemanticAttributes.MESSAGE_ID]: event.messageId,
+      [SemanticAttributes.MESSAGING_SYSTEM]: event.EventSource,
+      [SemanticAttributes.MESSAGE_ID]: event.Sns.MessageId,
+      ['messaging.source']: event.EventSubscriptionArn,
     };
 
-    event.eventSource;
-
     const span = tracer.startSpan(
-      'SQS: ' + getAwsResourceFromArn(event.eventSourceARN),
+      'SNS: ' + getAwsResourceFromArn(event.Sns.TopicArn),
       {
         kind: SpanKind.SERVER,
         attributes: attributes,
@@ -49,12 +47,6 @@ export const wrapTelemetrySQS = <T, U>(
         otelapi.trace.setSpan(parentContext, span),
         () => handler(event, context)
       );
-
-      if (out) {
-        log.error('SQS wrapper reports a failed SQS message');
-        span.setStatus({ code: SpanStatusCode.ERROR });
-      }
-
       span.end();
       return out;
     } catch (e) {
