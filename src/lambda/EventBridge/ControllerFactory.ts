@@ -71,7 +71,7 @@ export class EventBridgeHandlerWrapperFactory<
     type TInterface = {
       [x in THandler]: (
         payload: AwsEventBridgeEvent<INPUT>,
-        secrets?: Record<TSecrets, string | undefined>
+        secrets: Record<TSecrets, string>
       ) => Promise<void>;
     };
 
@@ -130,9 +130,7 @@ export type EventBridgeCtrlInterface<T> =
     ? {
         [x in THandler]: (
           payload: AwsEventBridgeEvent<TOrSchema<TInput, SInput>>,
-          secrets?: Record<TSecrets, string | undefined>
+          secrets: Record<TSecrets, string>
         ) => Promise<void>;
       }
     : never;
-
-type TInterface = {};

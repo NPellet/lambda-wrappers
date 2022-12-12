@@ -66,8 +66,8 @@ export class MyController implements controllerInterface {
 
   // Method name Has to match the .setHandler() call
   async handle(
-    req: RequestOf<controllerInterface>, // <== Specific to API Gateway
-    _secrets: SecretsOf<controllerInterface>
+    req: PayloadOf<controllerInterface, 'handle'>, // <== Without this, no inference :(
+    _secrets: SecretsOf<controllerInterface, 'handle'>
   ) {
     return Response.OK_NO_CONTENT();
   }
@@ -186,20 +186,20 @@ export class MyController // The controller must now implement 4 interfaces, 1 f
   }
 
   async create(
-    req: RequestOf<createInterface>,
-    _secrets: SecretsOf<createInterface>
+    req: PayloadOf<createInterface, 'create'>,
+    _secrets: SecretsOf<createInterface, 'create'>
   ) {}
   async read(
-    req: RequestOf<readInterface>,
-    _secrets: SecretsOf<readInterface>
+    req: PayloadOf<readInterface, 'read'>,
+    _secrets: SecretsOf<readInterface, 'create'>
   ) {}
   async update(
-    req: RequestOf<updateInterface>,
-    _secrets: SecretsOf<updateInterface>
+    req: PayloadOf<updateInterface, 'create'>,
+    _secrets: SecretsOf<updateInterface, 'create'>
   ) {}
   async delete(
-    req: RequestOf<deleteInterface>,
-    _secrets: SecretsOf<deleteInterface>
+    req: PayloadOf<deleteInterface, 'create'>,
+    _secrets: SecretsOf<deleteInterface, 'create'>
   ) {}
 }
 ```

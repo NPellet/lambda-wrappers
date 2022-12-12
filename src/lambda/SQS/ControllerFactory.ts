@@ -77,7 +77,7 @@ export class SQSHandlerWrapperFactory<
               : unknown
             : TInput
         >,
-        secrets?: Record<TSecrets, string | undefined>
+        secrets: Record<TSecrets, string>
       ) => Promise<void | SQSBatchItemFailure>;
     };
 
@@ -128,7 +128,7 @@ export type SQSCtrlInterface<T> = T extends SQSHandlerWrapperFactory<
   ? {
       [x in THandler]: (
         payload: AwsSQSRecord<TOrSchema<TInput, SInput>>,
-        secrets?: Record<TSecrets, string | undefined>
+        secrets: Record<TSecrets, string>
       ) => Promise<void | SQSBatchItemFailure>;
     }
   : never;

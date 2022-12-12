@@ -115,7 +115,7 @@ export class APIGatewayHandlerWrapperFactory<
     type TInterface = {
       [x in THandler]: (
         payload: Request<INPUT>,
-        secrets?: Record<TSecrets, string | undefined>
+        secrets: Record<TSecrets, string>
       ) => Promise<Response<OUTPUT> | HTTPError>;
     };
 
@@ -194,7 +194,7 @@ export type APIGatewayCtrlInterface<T> =
     ? {
         [x in THandler]: (
           payload: Request<TOrSchema<TInput, SInput>>,
-          secrets?: Record<TSecrets, string | undefined>
+          secrets: Record<TSecrets, string>
         ) => Promise<Response<TOrSchema<TOutput, SOutput>> | HTTPError>;
       }
     : never;

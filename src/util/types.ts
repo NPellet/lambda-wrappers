@@ -1,5 +1,6 @@
 import { BaseSchema, InferType } from 'yup';
 import { HTTPError, Request, Response } from '../lambda';
+import { AwsEventBridgeEvent } from './eventbridge';
 import { AwsSNSRecord } from './sns/record';
 import { AwsSQSRecord } from './sqs/record';
 
@@ -11,7 +12,7 @@ export type TOrSchema<T, U> = unknown extends T
     ? InferType<U>
     : unknown
   : T;
-
+/*
 export type RequestOf<T> = T extends {
   _inputSchema: infer S;
   __shimInput: infer T;
@@ -26,10 +27,11 @@ export type ResponseOf<T, H extends string> = T extends {
   ? HTTPError | Response<TOrSchema<T, S>>
   : never;
 
-export type SecretsOf<T> = T extends {
-  _secrets: Record<infer U, any>;
+export type EventOf<T> = T extends {
+  _inputSchema: infer S;
+  __shimInput: infer T;
 }
-  ? Record<U, string>
+  ? AwsEventBridgeEvent<TOrSchema<T, S>>
   : never;
 
 export type SQSRecordOf<T> = T extends {
@@ -44,4 +46,22 @@ export type SNSRecordOf<T> = T extends {
   __shimInput: infer T;
 }
   ? AwsSNSRecord<TOrSchema<T, S>>
+  : never;
+*/
+export type PayloadOf<T, M extends string> = T extends {
+  [x in M]: (payload: infer U, _secrets: any) => any;
+}
+  ? U
+  : never;
+
+export type SecretsOf<T, M extends string> = T extends {
+  [x in M]: (payload: any, _secrets: infer U) => any;
+}
+  ? U
+  : never;
+
+export type ReplyOf<T, M extends string> = T extends {
+  [x in M]: (payload: any, _secrets: any) => infer U;
+}
+  ? U
   : never;

@@ -1,13 +1,14 @@
 import _ from 'lodash';
 import { LambdaContext } from '../../test_utils/utils';
 import * as yup from 'yup';
-import { RequestOf, SQSRecordOf } from '../../util/types';
 import { SQSBatchResponse, SQSRecord } from 'aws-lambda';
 import {
   SQSCtrlInterface,
-  SQSHandlerControllerFactory,
+  SQSHandlerWrapperFactory,
 } from './ControllerFactory';
 import { failSQSRecord } from '../../util/sqs/record';
+import { controllerInterface } from '../../../examples/api_gateway';
+import { PayloadOf } from '../../util/types';
 
 const testRecord: SQSRecord = {
   messageId: 'abc',
@@ -31,14 +32,15 @@ describe('Testing API Controller factory', function () {
   it('Basic functionality works', async () => {
     const schema = yup.object({ a: yup.string() });
 
-    const controllerFactory = new SQSHandlerControllerFactory()
+    const controllerFactory = new SQSHandlerWrapperFactory()
       .setInputSchema(schema)
       .setHandler('create');
 
+    type IF = SQSCtrlInterface<typeof controllerFactory>;
     const handlerFactory = controllerFactory.makeHandlerFactory();
 
     const mockHandler = jest.fn(
-      async (data: SQSRecordOf<typeof controllerFactory>, secrets) => {
+      async (data: PayloadOf<IF, 'create'>, secrets) => {
         if (data.getData().a === '1') {
           throw new Error("Didn't work");
         }
@@ -58,7 +60,7 @@ describe('Testing API Controller factory', function () {
         return new Ctrl();
       }
 
-      async create(data: SQSRecordOf<typeof controllerFactory>, secrets) {
+      async create(data: PayloadOf<IF, 'create'>, secrets) {
         return mockHandler(data, secrets);
       }
     }

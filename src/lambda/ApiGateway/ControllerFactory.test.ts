@@ -3,14 +3,10 @@ import { testApiGatewayEvent, LambdaContext } from '../../test_utils/utils';
 import * as yup from 'yup';
 import {
   APIGatewayCtrlInterface,
-  APIHandlerControllerFactory,
+  APIGatewayHandlerWrapperFactory,
 } from './ControllerFactory';
-import { HTTPError, Response } from '../../util/apigateway/response';
-import { RequestOf, SecretsOf, TOrSchema } from '../../util/types';
-import { Request } from '../../util/apigateway/request';
-import { init } from '@sentry/serverless/types/awslambda';
-import { IoTHandler } from 'aws-lambda';
-import { StdController } from '../../util/factory';
+import { HTTPError } from '../../util/apigateway/response';
+import { PayloadOf, SecretsOf } from '../../util/types';
 
 jest.mock('../utils/secrets_manager_aws', function () {
   return {
@@ -36,26 +32,26 @@ describe('Testing API Controller factory', function () {
       return HTTPError.BAD_REQUEST('Oups');
     });
 
-    const fac = new APIHandlerControllerFactory()
+    const fac = new APIGatewayHandlerWrapperFactory()
       .needsSecret('abc', 'Algolia-Products', 'adminApiKey', true)
-      // .setTsInputType<{ b: number }>()
       .setTsOutputType<{ b: number }>()
       .setInputSchema(schema)
       .setHandler('create');
 
     const handlerFactory = fac.makeHandlerFactory();
 
-    class Ctrl
-      extends StdController
-      implements APIGatewayCtrlInterface<typeof fac>
-    {
-      static async init(secrets: SecretsOf<typeof fac>) {
+    type IF = APIGatewayCtrlInterface<typeof fac>;
+    class Ctrl implements IF {
+      static async init(secrets: SecretsOf<IF, 'create'>) {
         expect(secrets.abc).toBe('algoliaApiKey');
         expect(process.env.abc).toBe('algoliaApiKey');
         return new Ctrl();
       }
 
-      async create(data: RequestOf<typeof fac>, secrets) {
+      async create(
+        data: PayloadOf<IF, 'create'>,
+        secrets: SecretsOf<IF, 'create'>
+      ) {
         expect(secrets.abc).toBe('algoliaApiKey');
         expect(process.env.abc).toBe('algoliaApiKey');
 

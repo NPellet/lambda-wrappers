@@ -4,22 +4,22 @@ export { createSQSHandler } from './SQS/sqs';
 export { createSNSHandler } from './SNS/sns';
 
 export {
-  APIGatewayHandlerWrapperFactory as APIHandlerControllerFactory,
+  APIGatewayHandlerWrapperFactory,
   APIGatewayCtrlInterface,
 } from './ApiGateway/ControllerFactory';
 
 export {
   SQSCtrlInterface,
-  SQSHandlerWrapperFactory as SQSHandlerControllerFactory,
+  SQSHandlerWrapperFactory,
 } from './SQS/ControllerFactory';
 
 export {
   SNSCtrlInterface,
-  SNSHandlerWrapperFactory as SNSHandlerControllerFactory,
+  SNSHandlerWrapperFactory,
 } from './SNS/ControllerFactory';
 
 export {
-  EventBridgeHandlerWrapperFactory as EventBridgeHandlerControllerFactory,
+  EventBridgeHandlerWrapperFactory,
   EventBridgeCtrlInterface,
 } from './EventBridge/ControllerFactory';
 
@@ -29,10 +29,4 @@ export { getAwsSecretDef } from '../lambda/utils/secrets_manager';
 export { buildHandlerConfiguration } from '../lambda/config';
 export type { TInit, TSecrets } from './config';
 export { Controller } from '../util/LambdaHandler';
-export type {
-  RequestOf,
-  ResponseOf,
-  SecretsOf,
-  SNSRecordOf,
-  SQSRecordOf,
-} from '../util/types';
+export type { SecretsOf, PayloadOf, ReplyOf } from '../util/types';
