@@ -50,9 +50,9 @@ type controllerInterface = APIGatewayCtrlInterface<
   typeof handlerWrapperFactory
 >;
 
-const handlerWrapper = controllerFactory.makeHandlerFactory();
+const handlerWrapper = handlerWrapperFactory.makeHandlerFactory();
 
-export const { handler, configuration } = handlerFactory(MyController);
+export const { handler, configuration } = handlerWrapper(MyController);
 export { controllerInterface }; // Export the type to be reimported by the route implementation
 
 //====================================================================
