@@ -139,7 +139,7 @@ Routes definitions (1 file per handler)
 import { CreateController } from 'path/to/controller';
 
 const createHandlerWrapperFactory =
-  new APIGatewayHandlerWrapperFactory().setHandler('create');
+  new APIGatewayHandlerWrapperFactory().setHandler('create'); // <= Note here handler name
 
 type controllerInterface = APIGatewayCtrlInterface<
   typeof createHandlerWrapperFactory
@@ -155,7 +155,7 @@ export { controllerInterface };
 import { ReadController } from 'path/to/controller';
 
 const readHandlerWrapperFactory =
-  new APIGatewayHandlerWrapperFactory().setHandler('read');
+  new APIGatewayHandlerWrapperFactory().setHandler('read'); // <= Note here handler name
 
 type controllerInterface = APIGatewayCtrlInterface<
   typeof readHandlerWrapperFactory
@@ -178,7 +178,7 @@ import type { controllerInterface as readInterface } from 'path/to/read';
 import type { controllerInterface as updateInterface } from 'path/to/update';
 import type { controllerInterface as deleteInterface } from 'path/to/delete';
 
-export class MyController
+export class MyController // The controller must now implement 4 interfaces, 1 for each route
   implements createInterface, readInterface, updateInterface, deleteInterface
 {
   static async init() {
