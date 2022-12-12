@@ -130,7 +130,7 @@ Also note that the `init` method is **ONLY** called during a Lambda cold start. 
 
 ## Implementing multiple routes in a controller
 
-Depending on your design choices, you may decide to create a single controller for CRUD operations. This can be achieved like that:
+Depending on your design choices, you may decide to create a single controller for multiple routes, for example when handling CRUD operations. This can be achieved like that:
 
 ```typescript
 //====================================================================
