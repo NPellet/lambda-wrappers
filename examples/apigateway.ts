@@ -1,10 +1,9 @@
-import { IfHandler, Response, SecretsOf } from '../src/lambda';
+import { IfHandler, Response } from '../src/lambda';
 import {
   APIGatewayHandlerWrapperFactory,
   APIGatewayCtrlInterface,
 } from '../src/lambda/ApiGateway/ControllerFactory';
 import yup from 'yup';
-import { PayloadOf } from '../src/util/types';
 
 // API Route definition file
 const handlerWrapperFactory = new APIGatewayHandlerWrapperFactory()

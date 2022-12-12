@@ -1,10 +1,8 @@
 import {
   SQSCtrlInterface,
   SQSHandlerWrapperFactory,
-  SecretsOf,
   IfHandler,
 } from '../src/lambda';
-import { PayloadOf } from '../src/util/types';
 
 // API Route definition file
 const handlerWrapperFactory = new SQSHandlerWrapperFactory().setHandler(
