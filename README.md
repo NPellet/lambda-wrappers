@@ -162,7 +162,7 @@ type controllerInterface = APIGatewayCtrlInterface<
 >;
 
 const handlerWrapper = readHandlerWrapperFactory.makeHandlerFactory();
-export const { handler, configuration } = handlerWrapper(CreateController);
+export const { handler, configuration } = handlerWrapper(ReadController);
 export { controllerInterface };
 
 // Update.ts...
