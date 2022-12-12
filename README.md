@@ -145,8 +145,8 @@ type controllerInterface = APIGatewayCtrlInterface<
   typeof createHandlerWrapperFactory
 >;
 
-const handlerWrapper = controllerFactory.makeHandlerFactory();
-export const { handler, configuration } = handlerFactory(CreateController);
+const handlerWrapper = createHandlerWrapperFactory.makeHandlerFactory();
+export const { handler, configuration } = handlerWrapper(CreateController);
 export { controllerInterface };
 ```
 
@@ -161,8 +161,8 @@ type controllerInterface = APIGatewayCtrlInterface<
   typeof readHandlerWrapperFactory
 >;
 
-const handlerWrapper = controllerFactory.makeHandlerFactory();
-export const { handler, configuration } = handlerFactory(CreateController);
+const handlerWrapper = readHandlerWrapperFactory.makeHandlerFactory();
+export const { handler, configuration } = handlerWrapper(CreateController);
 export { controllerInterface };
 
 // Update.ts...
