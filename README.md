@@ -173,10 +173,10 @@ Controller implementation
 
 ```typescript
 // Controller.ts
-import type { controllerInterface as createInterface } from 'path/to/create';
-import type { controllerInterface as readInterface } from 'path/to/read';
-import type { controllerInterface as updateInterface } from 'path/to/update';
-import type { controllerInterface as deleteInterface } from 'path/to/delete';
+import type { controllerInterface as createInterface } from 'path/to/create_route';
+import type { controllerInterface as readInterface } from 'path/to/read_route';
+import type { controllerInterface as updateInterface } from 'path/to/update_route';
+import type { controllerInterface as deleteInterface } from 'path/to/delete_route';
 
 export class MyController // The controller must now implement 4 interfaces, 1 for each route
   implements createInterface, readInterface, updateInterface, deleteInterface
