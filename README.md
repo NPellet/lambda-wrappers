@@ -245,14 +245,10 @@ will populate `process.env.process_env_key` with the content of the Algolia's ad
 In addition, when implementing
 
 ```typescript
-async handle(
-    req: RequestOf<typeof BaseController>,
-    secrets: SecretsOf<typeof BaseController>
-  ) {
-
-    // Secrets is of type { process_env_key: string }
-    console.log( secrets.process_env_key )
-}
+handle: IfHandler<controllerInterface> = async (req, secrets) => {
+  // Secrets is of type { process_env_key: string }
+  console.log(secrets.process_env_key);
+};
 ```
 
 When the last parameter of the `needsSecret` method is true, the secret is required and the lambda will fail if it can't be found. When false, the method will be called, but the secret may be undefined.
