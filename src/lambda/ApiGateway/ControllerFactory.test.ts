@@ -7,6 +7,7 @@ import {
 } from './ControllerFactory';
 import { HTTPError } from '../../util/apigateway/response';
 import { PayloadOf, SecretsOf } from '../../util/types';
+import { IfHandler } from '../../../dist/lambda';
 
 jest.mock('../utils/secrets_manager_aws', function () {
   return {
@@ -35,7 +36,9 @@ describe('Testing API Controller factory', function () {
     const fac = new APIGatewayHandlerWrapperFactory()
       .needsSecret('abc', 'Algolia-Products', 'adminApiKey', true)
       .setTsOutputType<{ b: number }>()
+      .setTsInputType<{ a: string }>()
       .setInputSchema(schema)
+      .setOutputSchema(yup.object({ b: yup.number() }))
       .setHandler('create');
 
     const handlerFactory = fac.makeHandlerFactory();
@@ -48,15 +51,12 @@ describe('Testing API Controller factory', function () {
         return new Ctrl();
       }
 
-      async create(
-        data: PayloadOf<IF, 'create'>,
-        secrets: SecretsOf<IF, 'create'>
-      ) {
+      create: IfHandler<IF> = async (data, secrets) => {
         expect(secrets.abc).toBe('algoliaApiKey');
         expect(process.env.abc).toBe('algoliaApiKey');
-
+        expect(data.getData().a).toBe('abc');
         return mockHandler(data, secrets);
-      }
+      };
     }
 
     const { handler, configuration } = handlerFactory(Ctrl);
@@ -67,18 +67,44 @@ describe('Testing API Controller factory', function () {
     });
 
     expect(configuration.yupSchemaInput).toStrictEqual(schema);
-
+    expect(configuration.secretInjection!.abc.required).toBe(true);
+    expect(configuration.secretInjection!.abc.secret).toStrictEqual([
+      'Algolia-Products',
+      'adminApiKey',
+    ]);
     const out = await handler(testApiGatewayEvent, LambdaContext, () => {});
     expect(out.statusCode).toBe(500);
     expect(out.body).toContain('Lambda input schema validation failed');
 
     expect(mockHandler).not.toHaveBeenCalled(); // Validation doesn't pass
     const apiGatewayEventClone = _.cloneDeep(testApiGatewayEvent);
+    apiGatewayEventClone.headers['Content-Type'] = 'application/json';
     apiGatewayEventClone.body = JSON.stringify({ a: 'abc' });
 
     const out2 = await handler(apiGatewayEventClone, LambdaContext, () => {});
 
     expect(mockHandler).toHaveBeenCalled(); // Validation doesn't pass
     expect(out2.statusCode).toBe(HTTPError.BAD_REQUEST('').getStatusCode());
+  });
+
+  it('needsSecret required param defaults to true', () => {
+    const fac = new APIGatewayHandlerWrapperFactory()
+      .needsSecret('abc', 'Algolia-Products', 'adminApiKey')
+      .setHandler('create');
+
+    const handlerFactory = fac.makeHandlerFactory();
+
+    class Ctrl {
+      static async init() {
+        return new Ctrl();
+      }
+
+      create = async (data, secrets) => {
+        return HTTPError.BAD_REQUEST('');
+      };
+    }
+
+    const { configuration } = handlerFactory(Ctrl);
+    expect(configuration.secretInjection?.abc.required).toBe(true);
   });
 });

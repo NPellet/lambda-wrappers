@@ -27,10 +27,8 @@ class HTTPResponse<T> implements Replyable<T> {
 }
 
 export class Response<T> extends HTTPResponse<T> {
-  public isResponse() {
-    return true;
-  }
-  public thisIsIt = true;
+  public isResponse = true;
+
   public static OK<T>(
     data: T,
     headers: Record<string, string> = {}

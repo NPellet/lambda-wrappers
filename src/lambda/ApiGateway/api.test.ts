@@ -13,6 +13,10 @@ import {
   errorLHandler,
   malformedLHandler,
   unauthorizedLHandler,
+  unauthorizedWithErrorLHandler,
+  bufferLHandler,
+  emptyLHandler,
+  objectLHandler,
 } from '../../test_utils/apigateway';
 import { createApiGatewayHandler } from './api';
 import * as yup from 'yup';
@@ -43,8 +47,6 @@ import { recordException } from '../../util/exceptions';
 import { HandlerConfiguration, LambdaType } from '../config';
 import { AwsApiGatewayRequest } from '../../util/apigateway/apigateway';
 import { Response } from '../../util/apigateway/response';
-
-const init = async () => {};
 
 describe('API Gateway. Sanitizing outputs', function () {
   const cfg: HandlerConfiguration = {
@@ -82,15 +84,54 @@ describe('API Gateway. Sanitizing outputs', function () {
     expect(out.body).toContain('The lambda execution for the API Gateway ');
     expect(recordException).toHaveBeenCalled();
   });
+  it('Reports stack trace when HTTPError has payload of instance Error', async () => {
+    const handler = createApiGatewayHandler(unauthorizedWithErrorLHandler, cfg);
+    const out = await handler(event, LambdaContext, () => {});
+
+    expect(out.statusCode).toBe(401);
+    expect(typeof out.body).toBe('string');
+    expect(out.body).toContain(
+      'Error: You do not have access to this resource'
+    );
+    expect(recordException).not.toHaveBeenCalled();
+  });
 
   it('Handles malformed output ', async () => {
     const handler = createApiGatewayHandler(malformedLHandler, cfg);
     const out = await handler(event, LambdaContext, () => {});
 
     expect(out.statusCode).toBe(500);
-    expect(out.body).toContain('Lambda has outputed a malformed');
+    expect(out.body).toBe('Internal Server Error');
     expect(recordException).toHaveBeenCalled();
   });
+
+  it('Handles buffer output ', async () => {
+    const handler = createApiGatewayHandler(bufferLHandler, cfg);
+    const out = await handler(event, LambdaContext, () => {});
+
+    expect(out.isBase64Encoded).toBe(true);
+  });
+
+  it('Handles empty output ', async () => {
+    const handler = createApiGatewayHandler(emptyLHandler, cfg);
+    const out = await handler(event, LambdaContext, () => {});
+
+    expect(out.isBase64Encoded).toBe(false);
+    expect(out.body).toBe('');
+  });
+  it('Handles serializes JSON output ', async () => {
+    const handler = createApiGatewayHandler(objectLHandler, cfg);
+    const out = await handler(event, LambdaContext, () => {});
+
+    expect(out.isBase64Encoded).toBe(false);
+    expect(out.body).toBe(
+      JSON.stringify({
+        key: 'value',
+      })
+    );
+    expect(typeof out.body).toBe('string');
+  });
+
   /*
   it("Handles sync handler ", async () => {
     const handler = createApiGatewayHandler(syncHandler, cfg);
@@ -192,7 +233,24 @@ describe('API Gateway: Telemetry', function () {
   });
 });
 
-describe('API Gateway: Checking', () => {
+describe('API Gateway: Checking schemas', () => {
+  it('Deserialization errors are handled', async () => {
+    const handler = createApiGatewayHandler(async (request) => {
+      return Response.OK('Ok');
+    }, {});
+
+    const wrongObjectGatewayEvent = _.cloneDeep(testApiGatewayEvent);
+    wrongObjectGatewayEvent.body = 'Wrong json[]';
+    wrongObjectGatewayEvent.headers['Content-Type'] = 'application/json';
+
+    await expect(
+      handler(wrongObjectGatewayEvent, LambdaContext, () => {})
+    ).resolves.toMatchObject({
+      statusCode: 500,
+      body: expect.stringContaining('Lambda input data malformed'),
+    });
+  });
+
   it('Input schema validation is enforced', async () => {
     const handler = createApiGatewayHandler(
       async (request) => {

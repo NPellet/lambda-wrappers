@@ -29,7 +29,7 @@ export class Request<T> {
       this.data = JSON.parse(this.rawData) as T;
     }
 
-    return this.data as T;
+    return this.rawData as T;
   }
 
   public getPathParameters(): Record<string, string | undefined> {
@@ -41,10 +41,6 @@ export class Request<T> {
   }
 
   public getHeaders(): Record<string, string | undefined> {
-    return this.headers || {};
-  }
-
-  protected setValidator(validator: BaseSchema | undefined) {
-    this.validator = validator;
+    return this.headers;
   }
 }

@@ -16,11 +16,19 @@ import {
 export const telemetryFindApiGatewayParent = (event: APIGatewayEvent) => {
   let ctx: OtelContext = ROOT_CONTEXT;
   let tryHeaders: boolean = false;
-  /*
+
+  if (ctx == ROOT_CONTEXT || tryHeaders) {
+    ctx = otelapi.propagation.extract(
+      ROOT_CONTEXT,
+      event.headers,
+      contextPayloadGetter
+    );
+  }
+
   if (ctx == ROOT_CONTEXT) {
     ctx = extractCtxFromLambdaEnv();
   }
-
+  /*
   const spanContext = otelapi.trace.getSpan(ctx)?.spanContext();
   let tryHeaders: boolean = false;
   if (
@@ -32,14 +40,6 @@ export const telemetryFindApiGatewayParent = (event: APIGatewayEvent) => {
     tryHeaders = true;
   }
 */
-
-  if (ctx == ROOT_CONTEXT || tryHeaders) {
-    ctx = otelapi.propagation.extract(
-      ROOT_CONTEXT,
-      event.headers,
-      contextPayloadGetter
-    );
-  }
 
   if (ctx === ROOT_CONTEXT) {
     log.info(

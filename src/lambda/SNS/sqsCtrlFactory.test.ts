@@ -1,13 +1,13 @@
 import _ from 'lodash';
 import { LambdaContext } from '../../test_utils/utils';
 import * as yup from 'yup';
-import { RequestOf, SQSRecordOf } from '../../util/types';
 import { SQSBatchResponse, SQSRecord } from 'aws-lambda';
+import { failSQSRecord } from '../../util/sqs/record';
 import {
   SQSCtrlInterface,
-  SQSHandlerControllerFactory,
-} from './ControllerFactory';
-import { failSQSRecord } from '../../util/sqs/record';
+  SQSHandlerWrapperFactory,
+} from '../SQS/ControllerFactory';
+import { IfHandler } from '..';
 
 const testRecord: SQSRecord = {
   messageId: 'abc',
@@ -31,36 +31,37 @@ describe('Testing API Controller factory', function () {
   it('Basic functionality works', async () => {
     const schema = yup.object({ a: yup.string() });
 
-    const controllerFactory = new SQSHandlerControllerFactory()
+    const controllerFactory = new SQSHandlerWrapperFactory()
       .setInputSchema(schema)
       .setHandler('create');
 
     const handlerFactory = controllerFactory.makeHandlerFactory();
 
-    const mockHandler = jest.fn(
-      async (data: SQSRecordOf<typeof controllerFactory>, secrets) => {
-        if (data.getData().a === '1') {
-          throw new Error("Didn't work");
-        }
-
-        if (data.getData().a === '2') {
-          return failSQSRecord(data);
-        }
-
-        if (data.getData().a === '3') {
-          return;
-        }
+    const mockHandler = jest.fn(async (data, secrets) => {
+      if (data.getData().a === '1') {
+        throw new Error("Didn't work");
       }
-    );
+
+      if (data.getData().a === '2') {
+        return failSQSRecord(data);
+      }
+
+      if (data.getData().a === '3') {
+        return;
+      }
+    }) as IfHandler<SQSCtrlInterface<typeof controllerFactory>>;
 
     class Ctrl implements SQSCtrlInterface<typeof controllerFactory> {
       static async init(secrets) {
         return new Ctrl();
       }
 
-      async create(data: SQSRecordOf<typeof controllerFactory>, secrets) {
+      create: IfHandler<SQSCtrlInterface<typeof controllerFactory>> = async (
+        data,
+        secrets
+      ) => {
         return mockHandler(data, secrets);
-      }
+      };
     }
 
     const { handler, configuration } = handlerFactory(Ctrl);

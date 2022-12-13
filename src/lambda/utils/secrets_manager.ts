@@ -48,11 +48,7 @@ export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
   handler: LambdaSecretsHandler<T, TSecrets, U>,
   secrets: HandlerConfiguration<any>['secretInjection']
 ) => {
-  const wrappedHandler: Handler<T, U | void> = async (
-    event,
-    context,
-    callback
-  ) => {
+  const wrappedHandler: Handler<T, U | void> = async (event, context) => {
     log.debug('Checking AWS Secrets in environment variables');
     const secretsOut: Partial<Record<TSecrets, string>> = {};
 
@@ -134,12 +130,7 @@ export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
     }
     // End of secrets manager run. Move on to the handler
 
-    return handler(
-      event,
-      secretsOut as Record<TSecrets, string>,
-      context,
-      callback
-    );
+    return handler(event, secretsOut as Record<TSecrets, string>, context);
   };
 
   return wrappedHandler;

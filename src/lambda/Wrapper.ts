@@ -1,26 +1,15 @@
-import { Callback, Context, Handler } from 'aws-lambda';
+import { Context } from 'aws-lambda';
 import { recordException } from '../util/exceptions';
 import {
   LambdaInitSecretHandler,
   LambdaSecretsHandler,
 } from '../util/LambdaHandler';
-import {
-  HandlerConfiguration,
-  HandlerConfigurationWithType,
-  LambdaTypeConfiguration,
-} from './config';
+import { HandlerConfigurationWithType } from './config';
 import { log } from './utils/logger';
 import { wrapHandlerSecretsManager } from './utils/secrets_manager';
 import { wrapSentry } from './utils/sentry';
 import { wrapTelemetryLambda } from './utils/telemetry';
-import yup, { ObjectSchema } from 'yup';
-import { TypedSchema } from 'yup/lib/util/types';
-import { createNoopMeter } from '@opentelemetry/api';
-import { reject } from 'lodash';
-import { resolve } from 'path';
-import { SdkInfo } from '@sentry/serverless';
-import { ErrorBag } from '@lendis-tech/sdk';
-import { AsyncLocalStorage } from 'async_hooks';
+import { ObjectSchema } from 'yup';
 
 export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
   handler: LambdaInitSecretHandler<U, TInit, TSecrets, V>,
@@ -32,8 +21,7 @@ export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
   return async function wrappedInitableHandler(
     event: U,
     secrets: Record<TSecrets, string>,
-    context: Context,
-    callback: Callback
+    context: Context
   ) {
     if (!isInit) {
       log.info('Running initialization of lambda');
@@ -55,7 +43,7 @@ export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
 
       const out = handler(event, initValue, secrets, context, shimmedCb);
 
-      if (typeof out.then === 'function') {
+      if (out && out.then) {
         out.then(resolve).catch(reject);
       }
     });
@@ -83,13 +71,13 @@ export const wrapGenericHandler = <
 
   let wrappedHandlerWithSecrets = wrapHandlerSecretsManager(
     wrappedHandler,
-    configuration?.secretInjection ?? {}
+    configuration.secretInjection ?? {}
   );
 
-  /*if (configuration.sentry) {
+  if (configuration.sentry) {
     wrappedHandlerWithSecrets = wrapSentry(wrappedHandlerWithSecrets);
   }
-*/
+
   if (configuration.opentelemetry) {
     wrappedHandlerWithSecrets = wrapTelemetryLambda(wrappedHandlerWithSecrets);
   }
@@ -100,10 +88,10 @@ export const wrapGenericHandler = <
 const wrapRuntime = <T, TSecrets extends string, U>(
   handler: LambdaSecretsHandler<T, TSecrets, U>
 ) => {
-  return async function (event, secrets, context, callback) {
+  return async function (event, secrets, context) {
     try {
       log.debug('Executing innermost handler');
-      return await handler(event, secrets, context, callback);
+      return await handler(event, secrets, context);
     } catch (e) {
       log.error('Innermost lambda handler function has failed');
       log.error(e);

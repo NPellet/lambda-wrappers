@@ -82,6 +82,51 @@ export const unauthorizedLHandler: LambdaInitSecretHandler<
   // return "ash";//Response.SERVER_ERROR("Internal Server Error");
 };
 
+export const unauthorizedWithErrorLHandler: LambdaInitSecretHandler<
+  AwsApiGatewayRequest<any>,
+  void,
+  string,
+  HTTPError
+> = async (event, init, secrets, context, callback) => {
+  try {
+    throw new Error('You do not have access to this resource', {
+      cause: 'Some cause',
+    });
+  } catch (e) {
+    return HTTPError.UNAUTHORIZED(e);
+  }
+
+  // return "ash";//Response.SERVER_ERROR("Internal Server Error");
+};
+
+export const bufferLHandler: LambdaInitSecretHandler<
+  AwsApiGatewayRequest<any>,
+  void,
+  string,
+  Response<Buffer>
+> = async (event, init, secrets, context, callback) => {
+  return Response.OK(Buffer.from('abc'));
+};
+
+export const emptyLHandler: LambdaInitSecretHandler<
+  AwsApiGatewayRequest<any>,
+  void,
+  string,
+  Response<void>
+> = async (event, init, secrets, context, callback) => {
+  return Response.OK_NO_CONTENT();
+};
+export const objectLHandler: LambdaInitSecretHandler<
+  AwsApiGatewayRequest<any>,
+  void,
+  string,
+  Response<object>
+> = async (event, init, secrets, context, callback) => {
+  return Response.OK({
+    key: 'value',
+  });
+};
+
 export const exceptionLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,

@@ -39,13 +39,12 @@ export type LambdaInitSecretHandler<T, TInit, TSecrets extends string, V> = (
   secrets: SecretsRecord<TSecrets>,
   context: Context,
   callback: Callback<any>
-) => Promise<V>;
+) => Promise<V> | void;
 
 export type LambdaSecretsHandler<T, TSecrets extends string, V> = (
   data: T,
   secrets: SecretsRecord<TSecrets>,
-  context: Context,
-  callback: Callback<any>
+  context: Context
 ) => Promise<V>;
 
 export type LambdaContext<T> = Context & { originalData: T };

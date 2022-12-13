@@ -1,6 +1,5 @@
 import { BaseSchema } from 'yup';
 import { log } from '../lambda/utils/logger';
-import { recordException } from './exceptions';
 
 export const validateRecord = async <T>(
   record: { getData(): T },
@@ -8,13 +7,16 @@ export const validateRecord = async <T>(
 ) => {
   if (yupSchema) {
     try {
-      await yupSchema.validate(record.getData());
+      await yupSchema.validate(record.getData(), {
+        abortEarly: true,
+        strict: true,
+      });
     } catch (e) {
-      log.warn(
-        `Lambda's input schema failed to validate. Rethrowing to fail lambda`
-      );
+      log.warn(`Lambda's input schema failed to validate.`);
       log.debug(e);
-      recordException(e);
+      log.debug('Input data:');
+      log.debug(record.getData());
+
       throw e;
     }
   }

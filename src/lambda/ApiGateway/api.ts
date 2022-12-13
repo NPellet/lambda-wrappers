@@ -52,21 +52,17 @@ export const createApiGatewayHandler = <
     response: TOutput
   ): Promise<APIGatewayProxyResult> => {
     if (!(response instanceof Response) && !(response instanceof HTTPError)) {
-      log.error(
-        'Lambda has not failed, but output is neither a Response nor an HTTPError'
-      );
+      const errorMessage =
+        'Lambda output not HTTPError nor Response. It should be either';
+      log.error(errorMessage);
       log.debug(response);
-      recordException(
-        new Error(
-          "Lambda's output is malformed. Output was: " +
-            JSON.stringify(response)
-        )
-      );
+      recordException(new Error(errorMessage));
+
       return {
         statusCode: 500,
         isBase64Encoded: false,
         headers: {},
-        body: 'Lambda has outputed a malformed payload. Should be of Response type',
+        body: 'Internal Server Error',
       };
     }
 
@@ -78,7 +74,11 @@ export const createApiGatewayHandler = <
 
       let outData: string;
       if (responseData instanceof Error) {
-        outData = responseData.message + '\n' + responseData.stack;
+        if (responseData.stack) {
+          outData = responseData.stack;
+        } else {
+          outData = responseData.message;
+        }
       } else {
         outData = String(responseData);
       }
@@ -173,7 +173,6 @@ export const createApiGatewayHandler = <
         recordException(e);
         return {
           statusCode: 500,
-          isBase64Encoded: false,
           headers: {},
           body:
             'Lambda input data malformed. Raw input data was ' +
@@ -202,20 +201,6 @@ export const createApiGatewayHandler = <
       actualOut = await wrappedHandler(request, newCtx, callback);
 
       log.debug('Lambda has successfully executed without thrown exception.');
-
-      if (!actualOut) {
-        log.error('Lambda output is void. It should return data');
-
-        recordException(
-          new Error('API Gateway lambda functions must return a Promise')
-        );
-        return {
-          statusCode: 500,
-          isBase64Encoded: false,
-          headers: {},
-          body: 'Lambda function malformed. Expected a Promise',
-        };
-      }
 
       // We might have caught the error
       // But if the error is deemed "anormal", then we should want to

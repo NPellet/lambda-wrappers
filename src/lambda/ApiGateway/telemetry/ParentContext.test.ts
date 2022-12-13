@@ -42,7 +42,7 @@ describe('Telemetry: API Gateway parent context', function () {
     expect(spans[0].parentSpanId).toEqual(sampledAwsSpanContextHeader.spanId);
   });
 
-  it('Fetches Lambda context over header context', () => {
+  it('Fetches Header over Lambda', () => {
     process.env[traceContextEnvironmentKey] = sampledAwsLambbda;
     const event = _.cloneDeep(testApiGatewayEvent);
     event.headers[AWSXRAY_TRACE_ID_HEADER] = sampledAwsHeader;
@@ -54,7 +54,7 @@ describe('Telemetry: API Gateway parent context', function () {
 
     const spans = memoryExporter.getFinishedSpans();
     expect(spans.length).toBe(1);
-    expect(spans[0].parentSpanId).toEqual(sampledAwsSpanContextLambbda.spanId);
+    expect(spans[0].parentSpanId).toEqual(sampledAwsSpanContextHeader.spanId);
   });
 
   it('Fetches header content over lambda content when span is not sampling', () => {

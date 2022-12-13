@@ -4,4 +4,5 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   setupFilesAfterEnv: ['./src/test_utils/setupTests.ts'],
-}
+  collectCoverage: true,
+};
