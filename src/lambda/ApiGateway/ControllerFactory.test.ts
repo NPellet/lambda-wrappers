@@ -6,7 +6,7 @@ import {
   APIGatewayHandlerWrapperFactory,
 } from './ControllerFactory';
 import { HTTPError } from '../../util/apigateway/response';
-import { PayloadOf, SecretsOf } from '../../util/types';
+import { SecretsOf } from '../../util/types';
 import { IfHandler } from '../../../dist/lambda';
 
 jest.mock('../utils/secrets_manager_aws', function () {

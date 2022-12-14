@@ -45,8 +45,7 @@ import { wrapTelemetryApiGateway } from './telemetry/Wrapper';
 
 import { recordException } from '../../util/exceptions';
 import { HandlerConfiguration, LambdaType } from '../config';
-import { AwsApiGatewayRequest } from '../../util/apigateway/apigateway';
-import { Response } from '../../util/apigateway/response';
+import { HTTPResponse } from '../../util/apigateway/response';
 
 describe('API Gateway. Sanitizing outputs', function () {
   const cfg: HandlerConfiguration = {
@@ -236,7 +235,7 @@ describe('API Gateway: Telemetry', function () {
 describe('API Gateway: Checking schemas', () => {
   it('Deserialization errors are handled', async () => {
     const handler = createApiGatewayHandler(async (request) => {
-      return Response.OK('Ok');
+      return HTTPResponse.OK('Ok');
     }, {});
 
     const wrongObjectGatewayEvent = _.cloneDeep(testApiGatewayEvent);
@@ -256,7 +255,7 @@ describe('API Gateway: Checking schemas', () => {
       async (request) => {
         request.getData();
 
-        return Response.OK('Ok');
+        return HTTPResponse.OK('Ok');
       },
       {
         yupSchemaInput: yup.object({
@@ -296,7 +295,7 @@ describe('API Gateway: Checking schemas', () => {
       async (request) => {
         const data = await request.getData();
 
-        return Response.OK(data);
+        return HTTPResponse.OK(data);
       },
       {
         yupSchemaOutput: yup.object({

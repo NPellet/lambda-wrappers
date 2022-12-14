@@ -10,8 +10,6 @@ import {
   exceptionHandler,
 } from '../../../test_utils/apigateway';
 import { flush } from '../../utils/telemetry';
-import { AwsApiGatewayRequest } from '../../../util/apigateway/apigateway';
-import { HTTPError, Response } from '../../../util/apigateway/response';
 import { APIGatewayProxyResult } from 'aws-lambda';
 
 describe('Telemetry: API Gateway wrapper handles all types of outputs', function () {

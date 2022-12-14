@@ -2,7 +2,7 @@ import { AWSXRAY_TRACE_ID_HEADER } from '@opentelemetry/propagator-aws-xray';
 import { APIGatewayEvent, APIGatewayProxyResult, Handler } from 'aws-lambda';
 import _ from 'lodash';
 import { AwsApiGatewayRequest } from '../util/apigateway/apigateway';
-import { HTTPError, Response } from '../util/apigateway/response';
+import { HTTPError, HTTPResponse } from '../util/apigateway/response';
 import { LambdaInitSecretHandler } from '../util/LambdaHandler';
 import { sampledAwsHeader, testApiGatewayEvent } from './utils';
 
@@ -57,9 +57,9 @@ export const successLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
   string,
-  Response<string>
+  HTTPResponse<string>
 > = async (event, init, secrets, context, callback) => {
-  return Response.OK('Ok');
+  return HTTPResponse.OK('Ok');
 };
 
 export const errorLHandler: LambdaInitSecretHandler<
@@ -103,26 +103,26 @@ export const bufferLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
   string,
-  Response<Buffer>
+  HTTPResponse<Buffer>
 > = async (event, init, secrets, context, callback) => {
-  return Response.OK(Buffer.from('abc'));
+  return HTTPResponse.OK(Buffer.from('abc'));
 };
 
 export const emptyLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
   string,
-  Response<void>
+  HTTPResponse<void>
 > = async (event, init, secrets, context, callback) => {
-  return Response.OK_NO_CONTENT();
+  return HTTPResponse.OK_NO_CONTENT();
 };
 export const objectLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
   string,
-  Response<object>
+  HTTPResponse<object>
 > = async (event, init, secrets, context, callback) => {
-  return Response.OK({
+  return HTTPResponse.OK({
     key: 'value',
   });
 };
@@ -131,7 +131,7 @@ export const exceptionLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
   string,
-  Response<string>
+  HTTPResponse<string>
 > = async (event, init, secrets, context, callback) => {
   throw new Error('Some exception');
 };
@@ -140,7 +140,7 @@ export const exceptionLHandler: LambdaInitSecretHandler<
 export const malformedLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
-  Response<string>
+  HTTPResponse<string>
 > = async (event, init, context, callback) => {
   return 'Some wrong string';
 };
@@ -149,5 +149,5 @@ export const malformedLHandler: LambdaInitSecretHandler<
 export const syncLHandler: LambdaInitSecretHandler<
   AwsApiGatewayRequest<any>,
   void,
-  Response<string>
+  HTTPResponse<string>
 > = (event, init, context, callback) => {};

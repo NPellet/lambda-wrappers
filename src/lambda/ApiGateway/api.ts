@@ -17,7 +17,7 @@ import { AwsApiGatewayRequest } from '../../util/apigateway/apigateway';
 import { HandlerConfiguration, LambdaType, TInit } from '../config';
 import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
-import { HTTPError, Response } from '../../util/apigateway/response';
+import { HTTPError, HTTPResponse } from '../../util/apigateway/response';
 import { wrapTelemetryApiGateway } from './telemetry/Wrapper';
 import otelapi, { SpanStatusCode } from '@opentelemetry/api';
 
@@ -38,7 +38,7 @@ export const createApiGatewayHandler = <
     AwsApiGatewayRequest<SInput extends BaseSchema ? InferType<SInput> : T>,
     TInit,
     TSecrets,
-    Response<O> | HTTPError
+    HTTPResponse<O> | HTTPError
   >,
   configuration: Omit<
     HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
@@ -51,7 +51,10 @@ export const createApiGatewayHandler = <
   const buildResponse = async (
     response: TOutput
   ): Promise<APIGatewayProxyResult> => {
-    if (!(response instanceof Response) && !(response instanceof HTTPError)) {
+    if (
+      !(response instanceof HTTPResponse) &&
+      !(response instanceof HTTPError)
+    ) {
       const errorMessage =
         'Lambda output not HTTPError nor Response. It should be either';
       log.error(errorMessage);

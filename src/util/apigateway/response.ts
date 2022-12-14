@@ -8,7 +8,7 @@ interface Replyable<T> {
   getHeaders(): Record<string, string>;
 }
 
-class HTTPResponse<T> implements Replyable<T> {
+class BaseHTTPResponse<T> implements Replyable<T> {
   public constructor(
     private data: T,
     private headers: Record<string, string>,
@@ -28,33 +28,33 @@ class HTTPResponse<T> implements Replyable<T> {
   }
 }
 
-export class Response<T> extends HTTPResponse<T> {
+export class HTTPResponse<T> extends BaseHTTPResponse<T> {
   public isResponse = true;
 
   public static OK<T>(
     data: T,
     headers: Record<string, string> = {}
-  ): Response<T> {
-    return new Response(data, headers, 200);
+  ): HTTPResponse<T> {
+    return new HTTPResponse(data, headers, 200);
   }
 
   public static CREATED<T>(
     data: T,
     headers: Record<string, string> = {}
-  ): Response<T> {
-    return new Response(data, headers, 201);
+  ): HTTPResponse<T> {
+    return new HTTPResponse(data, headers, 201);
   }
 
   public static OK_NO_CONTENT(
     headers: Record<string, string> = {}
-  ): Response<void> {
+  ): HTTPResponse<void> {
     // @ts-ignore
-    return new Response(null, headers, 204);
+    return new HTTPResponse(null, headers, 204);
   }
 }
 
 type T = string | Error;
-export class HTTPError extends HTTPResponse<T> {
+export class HTTPError extends BaseHTTPResponse<T> {
   public isError = true;
 
   private _anormal: boolean = false;
@@ -115,49 +115,49 @@ export class HTTPError extends HTTPResponse<T> {
   }
 
   public static CONFLICT(
-    data: T,
+    data: T = 'Conflict',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 409);
   }
 
   public static BAD_REQUEST(
-    data: T,
+    data: T = 'Bad Request',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 400);
   }
 
   public static UNAUTHORIZED(
-    data: T,
+    data: T = 'Unauthorized',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 401);
   }
 
   public static FORBIDDEN(
-    data: T,
+    data: T = 'Forbidden',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 403);
   }
 
   public static NOT_FOUND(
-    data: T,
+    data: T = ' Not Found',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 404);
   }
 
   public static VALIDATION_FAILED(
-    data: T,
+    data: T = 'Unprocessable Entity',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 422);
   }
 
   public static SERVER_ERROR(
-    data: T,
+    data: T = 'Internal Server Error',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 500).anormal();

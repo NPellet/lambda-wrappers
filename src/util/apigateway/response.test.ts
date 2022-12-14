@@ -1,14 +1,14 @@
-import { HTTPError, Response } from './response';
+import { HTTPError, HTTPResponse } from './response';
 
 describe('API Gateway request', () => {
   test('basic response functionality', async () => {
-    expect(Response.OK('data').getData()).toBe('data');
-    expect(Response.OK('data').getStatusCode()).toBe(200);
+    expect(HTTPResponse.OK('data').getData()).toBe('data');
+    expect(HTTPResponse.OK('data').getStatusCode()).toBe(200);
 
-    expect(Response.OK_NO_CONTENT().getData()).toBe(null);
-    expect(Response.OK_NO_CONTENT().getStatusCode()).toBe(204);
+    expect(HTTPResponse.OK_NO_CONTENT().getData()).toBe(null);
+    expect(HTTPResponse.OK_NO_CONTENT().getStatusCode()).toBe(204);
 
-    expect(Response.CREATED('data').getStatusCode()).toBe(201);
+    expect(HTTPResponse.CREATED('data').getStatusCode()).toBe(201);
   });
 
   test('basic error functionality', async () => {

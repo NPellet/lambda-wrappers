@@ -1,6 +1,6 @@
 import { BaseSchema } from 'yup';
 import { HandlerConfiguration } from '../config';
-import { HTTPError, Response } from '../../util/apigateway/response';
+import { HTTPError, HTTPResponse } from '../../util/apigateway/response';
 import { Request } from '../../util/apigateway/request';
 import { ConstructorOf, TOrSchema } from '../../util/types';
 import { createApiGatewayHandler } from './api';
@@ -116,7 +116,7 @@ export class APIGatewayHandlerWrapperFactory<
       [x in THandler]: (
         payload: Request<INPUT>,
         secrets: Record<TSecrets, string>
-      ) => Promise<Response<OUTPUT> | HTTPError>;
+      ) => Promise<HTTPResponse<OUTPUT> | HTTPError>;
     };
 
     const handlerFactory = (controllerFactory: ConstructorOf<TInterface>) => {
@@ -195,6 +195,6 @@ export type APIGatewayCtrlInterface<T> =
         [x in THandler]: (
           payload: Request<TOrSchema<TInput, SInput>>,
           secrets: Record<TSecrets, string>
-        ) => Promise<Response<TOrSchema<TOutput, SOutput>> | HTTPError>;
+        ) => Promise<HTTPResponse<TOrSchema<TOutput, SOutput>> | HTTPError>;
       }
     : never;
