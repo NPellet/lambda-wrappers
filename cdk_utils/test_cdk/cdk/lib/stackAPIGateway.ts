@@ -1,4 +1,3 @@
-import { defaultIntegrations } from '@sentry/serverless';
 import * as cdk from 'aws-cdk-lib';
 import { Function } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
@@ -28,19 +27,28 @@ export class StackAPI extends cdk.Stack {
     this.sqs = sqs;
     this.sns = sns;
 
+    const table = new cdk.aws_dynamodb.Table(this, 'table', {
+      tableName: 'test_Animals',
+      partitionKey: {
+        name: 'PK',
+        type: cdk.aws_dynamodb.AttributeType.STRING,
+      },
+    });
+
     const routeA = this.routeA(apiGateway);
     const routeB = this.routeB(apiGateway);
-    const routeC = this.routeC(apiGateway);
 
     sqs.grantSendMessages(routeA);
     sqs.grantSendMessages(routeB);
 
     sns.grantPublish(routeA);
     sns.grantPublish(routeB);
+
+    table.grantFullAccess(routeA);
   }
 
   routeA(apiGateway: cdk.aws_apigateway.RestApi) {
-    const handler = '../src/path/to/file/routeA.handler';
+    const handler = '../src/dist/AnimalService.handler';
     const lastIndexOfSlash = handler.lastIndexOf('/');
 
     const fn = new Function(this, 'API_A', {
@@ -53,20 +61,19 @@ export class StackAPI extends cdk.Stack {
       handler: handler.substr(lastIndexOfSlash + 1),
       environment: {
         LOG_LEVEL: 'debug',
-        SQS_QUEUE_URL: this.sqs.queueUrl,
-        SNS_TOPIC_ARN: this.sns.topicArn,
+        SHELTER_SERVICE_QUEUE_URL: this.sqs.queueUrl,
       },
     });
 
-    const resource = apiGateway.root.addResource('routeA');
-    resource.addMethod('GET', new cdk.aws_apigateway.LambdaIntegration(fn));
+    const resource = apiGateway.root.addResource('CreateManyAnimals');
+    resource.addMethod('POST', new cdk.aws_apigateway.LambdaIntegration(fn));
 
-    enableOpentelemetry.call(this, fn, 'test-gateway-svc');
+    enableOpentelemetry.call(this, fn, 'test-AnimalService');
     return fn;
   }
 
   routeB(apiGateway: cdk.aws_apigateway.RestApi) {
-    const handler = '../src/path/to/file/routeB.handler';
+    const handler = '../src/dist/FoodService.handler';
     const lastIndexOfSlash = handler.lastIndexOf('/');
 
     const fn = new Function(this, 'API_B', {
@@ -79,41 +86,12 @@ export class StackAPI extends cdk.Stack {
       handler: handler.substr(lastIndexOfSlash + 1),
       environment: {
         LOG_LEVEL: 'debug',
-        SQS_QUEUE_URL: this.sqs.queueUrl,
-        SNS_TOPIC_ARN: this.sns.topicArn,
       },
     });
 
-    const resource = apiGateway.root.addResource('routeB');
-    resource.addMethod('GET', new cdk.aws_apigateway.LambdaIntegration(fn));
-
-    enableOpentelemetry.call(this, fn, 'test-gateway-svc');
-    return fn;
-  }
-
-  routeC(apiGateway: cdk.aws_apigateway.RestApi) {
-    const handler = '../src/path/to/file/routeC.handler';
-    const lastIndexOfSlash = handler.lastIndexOf('/');
-
-    const fn = new Function(this, 'API_C', {
-      functionName: 'demo_otel_routec',
-      runtime: cdk.aws_lambda.Runtime.NODEJS_14_X,
-      code: cdk.aws_lambda.Code.fromAsset(
-        handler.substring(0, lastIndexOfSlash)
-      ),
-      timeout: cdk.Duration.seconds(30),
-      handler: handler.substr(lastIndexOfSlash + 1),
-      environment: {
-        LOG_LEVEL: 'debug',
-        API_URL:
-          'https://2q6qvr520d.execute-api.eu-central-1.amazonaws.com/prod/',
-      },
-    });
-
-    const resource = apiGateway.root.addResource('routeC');
-    resource.addMethod('GET', new cdk.aws_apigateway.LambdaIntegration(fn));
-
-    enableOpentelemetry.call(this, fn, 'test-gateway-svc');
+    const resource = apiGateway.root.addResource('buyFood');
+    resource.addMethod('POST', new cdk.aws_apigateway.LambdaIntegration(fn));
+    enableOpentelemetry.call(this, fn, 'test-FoodService');
     return fn;
   }
 }

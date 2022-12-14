@@ -14,7 +14,7 @@ export class StackSNSSubscribe extends cdk.Stack {
     super(scope, id, props);
 
     const trigger = {
-      handler: '../src/path/to/file/sns.handler',
+      handler: '../src/dist/NotificationService.handler',
     };
 
     const lastIndexOfSlash = trigger.handler.lastIndexOf('/');
@@ -39,6 +39,6 @@ export class StackSNSSubscribe extends cdk.Stack {
 
     fn.addEventSource(eventSource);
 
-    enableOpentelemetry.call(this, fn, 'test-sns');
+    enableOpentelemetry.call(this, fn, 'test-NotificationService');
   }
 }

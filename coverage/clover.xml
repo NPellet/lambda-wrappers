@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1670926641079" clover="3.2.0">
-  <project timestamp="1670926641079" name="All files">
-    <metrics statements="614" coveredstatements="592" conditionals="168" coveredconditionals="149" methods="132" coveredmethods="118" elements="914" coveredelements="859" complexity="0" loc="614" ncloc="614" packages="12" files="27" classes="27"/>
+<coverage generated="1670953420242" clover="3.2.0">
+  <project timestamp="1670953420242" name="All files">
+    <metrics statements="629" coveredstatements="600" conditionals="172" coveredconditionals="152" methods="133" coveredmethods="119" elements="934" coveredelements="871" complexity="0" loc="629" ncloc="629" packages="12" files="27" classes="27"/>
     <package name="lambda">
       <metrics statements="40" coveredstatements="40" conditionals="13" coveredconditionals="13" methods="7" coveredmethods="7"/>
       <file name="Wrapper.ts" path="/home/norman/Lendis/code/lambda-wrappers/src/lambda/Wrapper.ts">
@@ -49,7 +49,7 @@
       </file>
     </package>
     <package name="lambda.ApiGateway">
-      <metrics statements="120" coveredstatements="119" conditionals="41" coveredconditionals="35" methods="14" coveredmethods="14"/>
+      <metrics statements="123" coveredstatements="122" conditionals="41" coveredconditionals="35" methods="14" coveredmethods="14"/>
       <file name="ControllerFactory.ts" path="/home/norman/Lendis/code/lambda-wrappers/src/lambda/ApiGateway/ControllerFactory.ts">
         <metrics statements="49" coveredstatements="49" conditionals="3" coveredconditionals="3" methods="11" coveredmethods="11"/>
         <line num="6" count="1" type="stmt"/>
@@ -103,7 +103,7 @@
         <line num="174" count="8" type="stmt"/>
       </file>
       <file name="api.ts" path="/home/norman/Lendis/code/lambda-wrappers/src/lambda/ApiGateway/api.ts">
-        <metrics statements="71" coveredstatements="70" conditionals="38" coveredconditionals="32" methods="3" coveredmethods="3"/>
+        <metrics statements="74" coveredstatements="73" conditionals="38" coveredconditionals="32" methods="3" coveredmethods="3"/>
         <line num="10" count="2" type="stmt"/>
         <line num="16" count="2" type="stmt"/>
         <line num="18" count="2" type="stmt"/>
@@ -166,15 +166,18 @@
         <line num="213" count="1" type="cond" truecount="3" falsecount="1"/>
         <line num="219" count="16" type="stmt"/>
         <line num="220" count="16" type="stmt"/>
-        <line num="225" count="2" type="stmt"/>
-        <line num="227" count="2" type="cond" truecount="1" falsecount="0"/>
-        <line num="228" count="2" type="stmt"/>
-        <line num="233" count="2" type="cond" truecount="4" falsecount="0"/>
-        <line num="238" count="2" type="stmt"/>
-        <line num="249" count="17" type="cond" truecount="2" falsecount="0"/>
-        <line num="250" count="6" type="stmt"/>
-        <line num="251" count="6" type="stmt"/>
-        <line num="253" count="11" type="stmt"/>
+        <line num="221" count="16" type="stmt"/>
+        <line num="222" count="16" type="stmt"/>
+        <line num="224" count="16" type="stmt"/>
+        <line num="229" count="2" type="stmt"/>
+        <line num="231" count="2" type="cond" truecount="1" falsecount="0"/>
+        <line num="232" count="2" type="stmt"/>
+        <line num="237" count="2" type="cond" truecount="4" falsecount="0"/>
+        <line num="242" count="2" type="stmt"/>
+        <line num="253" count="17" type="cond" truecount="2" falsecount="0"/>
+        <line num="254" count="6" type="stmt"/>
+        <line num="255" count="6" type="stmt"/>
+        <line num="257" count="11" type="stmt"/>
       </file>
     </package>
     <package name="lambda.ApiGateway.telemetry">
@@ -293,7 +296,7 @@
       </file>
     </package>
     <package name="lambda.SQS">
-      <metrics statements="60" coveredstatements="60" conditionals="5" coveredconditionals="4" methods="16" coveredmethods="15"/>
+      <metrics statements="66" coveredstatements="63" conditionals="6" coveredconditionals="5" methods="17" coveredmethods="16"/>
       <file name="ControllerFactory.ts" path="/home/norman/Lendis/code/lambda-wrappers/src/lambda/SQS/ControllerFactory.ts">
         <metrics statements="32" coveredstatements="32" conditionals="3" coveredconditionals="2" methods="9" coveredmethods="9"/>
         <line num="6" count="2" type="stmt"/>
@@ -330,7 +333,7 @@
         <line num="118" count="8" type="stmt"/>
       </file>
       <file name="sqs.ts" path="/home/norman/Lendis/code/lambda-wrappers/src/lambda/SQS/sqs.ts">
-        <metrics statements="28" coveredstatements="28" conditionals="2" coveredconditionals="2" methods="7" coveredmethods="6"/>
+        <metrics statements="34" coveredstatements="31" conditionals="3" coveredconditionals="3" methods="8" coveredmethods="7"/>
         <line num="12" count="3" type="stmt"/>
         <line num="13" count="3" type="stmt"/>
         <line num="17" count="3" type="stmt"/>
@@ -355,10 +358,16 @@
         <line num="66" count="9" type="stmt"/>
         <line num="70" count="9" type="stmt"/>
         <line num="71" count="14" type="stmt"/>
-        <line num="73" count="14" type="stmt"/>
-        <line num="76" count="9" type="cond" truecount="1" falsecount="0"/>
-        <line num="77" count="5" type="stmt"/>
-        <line num="80" count="9" type="stmt"/>
+        <line num="73" count="9" type="stmt"/>
+        <line num="75" count="14" type="cond" truecount="1" falsecount="0"/>
+        <line num="76" count="14" type="stmt"/>
+        <line num="80" count="0" type="stmt"/>
+        <line num="83" count="0" type="stmt"/>
+        <line num="84" count="0" type="stmt"/>
+        <line num="86" count="14" type="stmt"/>
+        <line num="89" count="9" type="cond" truecount="1" falsecount="0"/>
+        <line num="90" count="5" type="stmt"/>
+        <line num="93" count="9" type="stmt"/>
       </file>
     </package>
     <package name="lambda.SQS.Telemetry">
@@ -400,7 +409,7 @@
       </file>
     </package>
     <package name="lambda.utils">
-      <metrics statements="106" coveredstatements="95" conditionals="26" coveredconditionals="23" methods="15" coveredmethods="13"/>
+      <metrics statements="112" coveredstatements="97" conditionals="27" coveredconditionals="23" methods="15" coveredmethods="13"/>
       <file name="logger.ts" path="/home/norman/Lendis/code/lambda-wrappers/src/lambda/utils/logger.ts">
         <metrics statements="3" coveredstatements="3" conditionals="4" coveredconditionals="3" methods="0" coveredmethods="0"/>
         <line num="1" count="17" type="stmt"/>
@@ -480,7 +489,7 @@
         <line num="17" count="8" type="stmt"/>
       </file>
       <file name="telemetry.ts" path="/home/norman/Lendis/code/lambda-wrappers/src/lambda/utils/telemetry.ts">
-        <metrics statements="40" coveredstatements="37" conditionals="4" coveredconditionals="3" methods="8" coveredmethods="7"/>
+        <metrics statements="46" coveredstatements="39" conditionals="5" coveredconditionals="3" methods="8" coveredmethods="7"/>
         <line num="1" count="17" type="stmt"/>
         <line num="8" count="17" type="stmt"/>
         <line num="10" count="17" type="stmt"/>
@@ -521,6 +530,12 @@
         <line num="114" count="20" type="stmt"/>
         <line num="116" count="0" type="stmt"/>
         <line num="117" count="0" type="stmt"/>
+        <line num="121" count="20" type="stmt"/>
+        <line num="123" count="20" type="cond" truecount="0" falsecount="1"/>
+        <line num="125" count="0" type="stmt"/>
+        <line num="127" count="0" type="stmt"/>
+        <line num="129" count="0" type="stmt"/>
+        <line num="130" count="0" type="stmt"/>
       </file>
     </package>
     <package name="test_utils">
@@ -657,7 +672,7 @@
       </file>
     </package>
     <package name="util.apigateway">
-      <metrics statements="45" coveredstatements="44" conditionals="26" coveredconditionals="26" methods="26" coveredmethods="25"/>
+      <metrics statements="45" coveredstatements="44" conditionals="28" coveredconditionals="28" methods="26" coveredmethods="25"/>
       <file name="apigateway.ts" path="/home/norman/Lendis/code/lambda-wrappers/src/util/apigateway/apigateway.ts">
         <metrics statements="5" coveredstatements="4" conditionals="0" coveredconditionals="0" methods="2" coveredmethods="1"/>
         <line num="3" count="2" type="stmt"/>
@@ -667,23 +682,23 @@
         <line num="16" count="0" type="stmt"/>
       </file>
       <file name="request.ts" path="/home/norman/Lendis/code/lambda-wrappers/src/util/apigateway/request.ts">
-        <metrics statements="16" coveredstatements="16" conditionals="16" coveredconditionals="16" methods="6" coveredmethods="6"/>
-        <line num="4" count="3" type="stmt"/>
-        <line num="9" count="25" type="stmt"/>
-        <line num="10" count="25" type="cond" truecount="1" falsecount="0"/>
+        <metrics statements="16" coveredstatements="16" conditionals="18" coveredconditionals="18" methods="6" coveredmethods="6"/>
+        <line num="5" count="3" type="stmt"/>
+        <line num="10" count="25" type="stmt"/>
         <line num="11" count="25" type="cond" truecount="1" falsecount="0"/>
         <line num="12" count="25" type="cond" truecount="1" falsecount="0"/>
-        <line num="16" count="1" type="stmt"/>
-        <line num="20" count="31" type="cond" truecount="1" falsecount="0"/>
-        <line num="22" count="25" type="stmt"/>
-        <line num="24" count="25" type="cond" truecount="5" falsecount="0"/>
-        <line num="25" count="21" type="stmt"/>
-        <line num="28" count="25" type="cond" truecount="3" falsecount="0"/>
-        <line num="29" count="2" type="stmt"/>
-        <line num="32" count="24" type="stmt"/>
-        <line num="36" count="3" type="cond" truecount="2" falsecount="0"/>
-        <line num="40" count="3" type="cond" truecount="2" falsecount="0"/>
-        <line num="44" count="3" type="stmt"/>
+        <line num="13" count="25" type="cond" truecount="1" falsecount="0"/>
+        <line num="17" count="1" type="stmt"/>
+        <line num="21" count="31" type="cond" truecount="1" falsecount="0"/>
+        <line num="25" count="25" type="cond" truecount="2" falsecount="0"/>
+        <line num="27" count="25" type="cond" truecount="5" falsecount="0"/>
+        <line num="28" count="21" type="stmt"/>
+        <line num="31" count="25" type="cond" truecount="3" falsecount="0"/>
+        <line num="32" count="2" type="stmt"/>
+        <line num="35" count="24" type="stmt"/>
+        <line num="39" count="3" type="cond" truecount="2" falsecount="0"/>
+        <line num="43" count="3" type="cond" truecount="2" falsecount="0"/>
+        <line num="47" count="3" type="stmt"/>
       </file>
       <file name="response.ts" path="/home/norman/Lendis/code/lambda-wrappers/src/util/apigateway/response.ts">
         <metrics statements="24" coveredstatements="24" conditionals="10" coveredconditionals="10" methods="18" coveredmethods="18"/>

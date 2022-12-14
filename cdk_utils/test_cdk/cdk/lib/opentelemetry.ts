@@ -5,9 +5,9 @@ import * as cdk from 'aws-cdk-lib';
 
 const OTEL_ENDPOINT = 'observability-staging.lendis.tech';
 const OTEL_LAYER_ARN =
-  'arn:aws:lambda:eu-central-1:441772730001:layer:opentelemetry_dev:46';
+  'arn:aws:lambda:eu-central-1:441772730001:layer:opentelemetry_dev:48';
 const NPM_LAYER_ARN =
-  'arn:aws:lambda:eu-central-1:441772730001:layer:npm-base:4';
+  'arn:aws:lambda:eu-central-1:441772730001:layer:npm-base:5';
 
 export { OTEL_ENDPOINT, OTEL_LAYER_ARN };
 

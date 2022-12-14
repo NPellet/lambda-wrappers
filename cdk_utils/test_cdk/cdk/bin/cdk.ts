@@ -9,5 +9,9 @@ const env = { account: '441772730001', region: 'eu-central-1' };
 
 const app = new cdk.App();
 const api = new StackAPI(app, 'StackAPI', { env });
-const sqs = new StackSQSConsumer(app, 'StackSQS', { sqs: api.sqs, env });
+const sqs = new StackSQSConsumer(app, 'StackSQS', {
+  sqs: api.sqs,
+  sns: api.sns,
+  env,
+});
 const sns = new StackSNSSubscribe(app, 'StackSNS', { sns: api.sns, env });

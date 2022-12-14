@@ -62,9 +62,15 @@ export const createSNSHandler = <
   return async (event: SNSEvent, context: Context, callback: Callback) => {
     log.info(`Received SNS event with ${event.Records.length} records.`);
 
-    const out = await Promise.all(
+    await Promise.allSettled(
       event.Records.map((record) => innerLoop(record, context))
-    );
+    ).then((settled) => {
+      if (settled.filter((e) => e.status == 'rejected').length > 0) {
+        throw new Error(
+          "Some SNS wrapped handlers have thrown. This shouldn't be possible."
+        );
+      }
+    });
 
     if (configuration.opentelemetry) {
       await flush();

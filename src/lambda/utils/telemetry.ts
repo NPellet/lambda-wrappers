@@ -113,7 +113,20 @@ export const flush = async () => {
       // @ts-ignore
       await provider.forceFlush();
     } catch (e) {
-      log.error('Could not flush opentelemetry');
+      log.error('Could not flush traces');
+      log.error(e);
+    }
+  }
+
+  let meterProvider = api.metrics.getMeterProvider();
+  // @ts-ignore
+  if (meterProvider.forceFlush) {
+    // @ts-ignore
+    try {
+      // @ts-ignore
+      await meterProvider.forceFlush();
+    } catch (e) {
+      log.error('Could not flush metrics');
       log.error(e);
     }
   }

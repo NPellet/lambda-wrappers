@@ -9,12 +9,13 @@ export class StackSQSConsumer extends cdk.Stack {
     id: string,
     props: {
       sqs: cdk.aws_sqs.Queue;
+      sns: cdk.aws_sns.Topic;
     } & cdk.StackProps
   ) {
     super(scope, id, props);
 
     const trigger = {
-      handler: '../src/path/to/file/sqs.handler',
+      handler: '../src/dist/ShelterService.handler',
     };
 
     const lastIndexOfSlash = trigger.handler.lastIndexOf('/');
@@ -28,10 +29,16 @@ export class StackSQSConsumer extends cdk.Stack {
       handler: trigger.handler.substr(lastIndexOfSlash + 1),
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
-      environment: { LOG_LEVEL: 'debug' },
+      environment: {
+        LOG_LEVEL: 'debug',
+        NOTIFICATION_TOPIC: props.sns.topicArn,
+        FOOD_SERVICE_URL:
+          'https://2q6qvr520d.execute-api.eu-central-1.amazonaws.com/prod',
+      },
     });
 
     props.sqs.grantConsumeMessages(fn);
+    props.sns.grantPublish(fn);
 
     const eventSource = new cdk.aws_lambda_event_sources.SqsEventSource(
       props.sqs,
@@ -43,6 +50,6 @@ export class StackSQSConsumer extends cdk.Stack {
 
     fn.addEventSource(eventSource);
 
-    enableOpentelemetry.call(this, fn, 'test-sqs');
+    enableOpentelemetry.call(this, fn, 'test-ShelterService');
   }
 }

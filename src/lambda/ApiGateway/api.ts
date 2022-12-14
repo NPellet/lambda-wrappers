@@ -216,8 +216,12 @@ export const createApiGatewayHandler = <
         });
       }
 
-      log.debug('Building HTTP Reponse');
-      return await buildResponse(actualOut);
+      log.debug('Building HTTP Reponse from actual output:');
+      log.debug(actualOut);
+      const out = await buildResponse(actualOut);
+      log.debug(out);
+
+      return out;
     } catch (e) {
       // We do not rethrow the exception.
       // Exception should already be recorded by the rumtime wrapper

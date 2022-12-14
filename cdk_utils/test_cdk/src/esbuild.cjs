@@ -11,14 +11,14 @@ if (watchMode) {
 
 require('esbuild')
   .build({
-    entryPoints: glob.sync('**/*.ts'),
+    entryPoints: glob.sync('*.ts'),
     bundle: true,
     platform: 'node',
     watch: watchMode,
     target: 'node14',
     format: 'cjs',
-    outdir: './',
-    sourcemap: true,
+    outdir: './dist',
+    sourcemap: false,
     external: [
       '@aws-sdk/aws-lambda',
       'aws-cdk-lib',

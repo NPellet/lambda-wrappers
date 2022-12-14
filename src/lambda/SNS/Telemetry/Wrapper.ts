@@ -13,7 +13,6 @@ import {
   SemanticAttributes,
 } from '@opentelemetry/semantic-conventions';
 import { tracer } from '../../utils/telemetry';
-import { log } from '../../utils/logger';
 import { telemetryFindSNSParent } from './ParentContext';
 import { getAwsResourceFromArn } from '../../../util/aws';
 
@@ -42,17 +41,11 @@ export const wrapTelemetrySNS = <T, U>(
       parentContext
     );
 
-    try {
-      const out = await otelapi.context.with(
-        otelapi.trace.setSpan(parentContext, span),
-        () => handler(event, context)
-      );
-      span.end();
-      return out;
-    } catch (e) {
-      span.setStatus({ code: SpanStatusCode.ERROR });
-      span.end();
-      throw e;
-    }
+    const out = await otelapi.context.with(
+      otelapi.trace.setSpan(parentContext, span),
+      () => handler(event, context)
+    );
+    span.end();
+    return out;
   };
 };

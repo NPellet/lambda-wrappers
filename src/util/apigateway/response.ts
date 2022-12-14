@@ -1,3 +1,5 @@
+import api from '@opentelemetry/api';
+
 interface Replyable<T> {
   getData(): T;
 
@@ -63,6 +65,52 @@ export class HTTPError extends HTTPResponse<T> {
 
   public anormal() {
     this._anormal = true;
+    return this;
+  }
+
+  #possibleUpstreamError: string | undefined = undefined;
+  public possibleUpstreamError(reason: string) {
+    api.trace
+      .getActiveSpan()
+      ?.setAttribute('io.lendis.httperror.possible_upstream_error', reason);
+    this.#possibleUpstreamError = reason;
+    return this;
+  }
+
+  #possibleDownstreamError: string | undefined = undefined;
+  public possibleDownstreamError(reason: string) {
+    api.trace
+      .getActiveSpan()
+      ?.setAttribute('io.lendis.httperror.possible_downstream_error', reason);
+    this.#possibleDownstreamError = reason;
+    return this;
+  }
+
+  #possibleDataCorruptionMessage: string | undefined = undefined;
+  public possibleDataCorruption(reason: string) {
+    api.trace
+      .getActiveSpan()
+      ?.setAttribute('io.lendis.httperror.possible_data_corruption', reason);
+    this.#possibleDataCorruptionMessage = reason;
+    return this;
+  }
+
+  #defiesLawsOfPhysicsMessage: string | undefined = undefined;
+  public defiesLawsOfPhysics(reason: string) {
+    api.trace
+      .getActiveSpan()
+      ?.setAttribute('io.lendis.httperror.defies_laws_of_physics', reason);
+    this.#defiesLawsOfPhysicsMessage = reason;
+    return this;
+  }
+
+  #whyMessage: string | undefined = undefined;
+  public whyyyyyyyyyyyyy(reason: string) {
+    api.trace
+      .getActiveSpan()
+      ?.setAttribute('io.lendis.httperror.whyyyyyyyyyyyyy', reason);
+    api;
+    this.#whyMessage = reason;
     return this;
   }
 

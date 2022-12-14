@@ -94,7 +94,7 @@ export class SNSHandlerWrapperFactory<
         };
 
       const handler = createSNSHandler<INPUT, TInterface, TSecrets, SInput>(
-        (event, init, secrets, c) => {
+        (event, init, secrets) => {
           return init[this._handler](event, secrets);
         },
         configuration
@@ -129,6 +129,6 @@ export type SNSCtrlInterface<T> = T extends SNSHandlerWrapperFactory<
       [x in THandler]: (
         payload: AwsSNSRecord<TOrSchema<TInput, SInput>>,
         secrets?: Record<TSecrets, string | undefined>
-      ) => Promise<void | SQSBatchItemFailure>;
+      ) => Promise<void>;
     }
   : never;

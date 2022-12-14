@@ -67,10 +67,23 @@ export const createSQSHandler = <
       batchItemFailures: [],
     };
 
-    const out = (await Promise.all(
+    const out = (await Promise.allSettled(
       event.Records.map((record) => innerLoop(record, context))
     ).then((maybeItemFailures) =>
-      maybeItemFailures.filter((o) => o !== undefined)
+      maybeItemFailures
+        .map((o) => {
+          if (o.status === 'fulfilled') {
+            return o.value;
+          }
+          // This is critical, as we cannot determine if the record has been processed or not
+          // But really, there should be no reason for this happening
+          log.error(
+            'Some wrapped SQS handlers have failed. This should not happen and point to a bug in the instrumentation library.'
+          );
+          log.error(o.reason);
+          throw new Error('SQS wrapped handler as failed', { cause: o.reason });
+        })
+        .filter((el) => el !== undefined)
     )) as SQSBatchItemFailure[];
 
     if (configuration.opentelemetry) {

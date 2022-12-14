@@ -1,5 +1,6 @@
 import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from 'yup';
-import { log } from '../../lambda/utils/logger';
+
+//declare const awsQuery: APIGatewayProxyEvent;
 
 export class Request<T> {
   private validator: BaseSchema | undefined;
@@ -19,7 +20,9 @@ export class Request<T> {
   public getData(): T {
     if (this.data) return this.data;
 
-    const contentType = this.headers['Content-Type'];
+    // typeis.(awsQuery, ['json']);
+    const contentType =
+      this.headers['Content-Type'] || this.headers['content-type'];
 
     if (contentType?.split('/')[0] === 'text') {
       this.data = this.rawData as T;
