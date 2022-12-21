@@ -1,17 +1,16 @@
 import { BaseSchema, InferType } from 'yup';
 import { HandlerConfiguration } from '../config';
 import { ConstructorOf, TOrSchema } from '../../util/types';
-import { aws_secrets } from '@lendis-tech/secrets-manager-utilities';
-import { SecretsContentOf } from '@lendis-tech/secrets-manager-utilities/dist/secrets';
-import { SecretConfig, getAwsSecretDef } from '../utils/secrets_manager';
+import { SecretConfig, SecretsContentOf, TSecretRef } from '../utils/secrets_manager';
 import { createSQSHandler } from './sqs';
 import { AwsSQSRecord } from '../../util/sqs/record';
 import { SQSBatchItemFailure } from 'aws-lambda';
 
 export class SQSHandlerWrapperFactory<
-  TInput,
-  THandler extends string,
+  TInput,  
+  TSecretList extends TSecretRef,
   TSecrets extends string = string,
+  THandler extends string = "handle",
   SInput extends BaseSchema | undefined = undefined
 > {
   public _inputSchema: SInput;
@@ -22,35 +21,39 @@ export class SQSHandlerWrapperFactory<
   setInputSchema<U extends BaseSchema>(schema: U) {
     const constructor = this.constructor;
 
-    const api = this.fork<TInput, THandler, TSecrets, U>();
+    const api = this.fork<TInput, TSecrets,THandler, U>();
     api._inputSchema = schema;
     api._secrets = this._secrets;
 
     return api;
   }
 
-  needsSecret<U extends string, T extends keyof typeof aws_secrets>(
+  
+  needsSecret<U extends string, T extends keyof TSecretList>(
     key: U,
     secretName: T,
-    secretKey: SecretsContentOf<T> | undefined,
+    secretKey: SecretsContentOf<T, TSecretList> | undefined,
     required: boolean = true
   ) {
     const api = this.fork<
       TInput,
-      THandler,
       string extends TSecrets ? U : TSecrets | U,
+      THandler,
       SInput
     >();
     api._secrets = api._secrets || {};
-    api._secrets[key] = getAwsSecretDef(secretName, secretKey, required);
-    api._inputSchema = this._inputSchema;
+    api._secrets[key] = {
+      "secret": secretName as string,
+      "secretKey": secretKey as string | undefined,
+      required };
+          api._inputSchema = this._inputSchema;
     api._handler = this._handler;
 
     return api;
   }
 
   setHandler<T extends string>(handler: T) {
-    const api = this.fork<TInput, T, TSecrets, SInput>();
+    const api = this.fork<TInput, TSecrets, T, SInput>();
     api._inputSchema = this._inputSchema;
     api._secrets = this._secrets;
     api._handler = handler;
@@ -58,7 +61,7 @@ export class SQSHandlerWrapperFactory<
   }
 
   setTsInputType<U>() {
-    const api = this.fork<U, THandler, TSecrets, SInput>();
+    const api = this.fork<U, TSecrets, THandler, SInput>();
     api._inputSchema = this._inputSchema;
     api._secrets = this._secrets;
     api._handler = this._handler;
@@ -111,18 +114,19 @@ export class SQSHandlerWrapperFactory<
 
   fork<
     TInput,
-    THandler extends string,
     TSecrets extends string = string,
+    THandler extends string = "handle",
     SInput extends BaseSchema | undefined = undefined
-  >(): SQSHandlerWrapperFactory<TInput, THandler, TSecrets, SInput> {
-    return new SQSHandlerWrapperFactory<TInput, THandler, TSecrets, SInput>();
+  >() {
+    return new SQSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler, SInput>();
   }
 }
 
 export type SQSCtrlInterface<T> = T extends SQSHandlerWrapperFactory<
   infer TInput,
-  infer THandler,
+  any,
   infer TSecrets,
+  infer THandler,
   infer SInput
 >
   ? {

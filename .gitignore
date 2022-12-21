@@ -2,3 +2,7 @@ node_modules
 dist
 notes.txt
 .vscode
+
+cdk_utils
+coverage
+*.bk.md

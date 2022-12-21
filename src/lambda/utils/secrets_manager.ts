@@ -1,37 +1,27 @@
-import { aws_secrets } from '@lendis-tech/secrets-manager-utilities';
-import { SecretsContentOf } from '@lendis-tech/secrets-manager-utilities/dist/secrets';
 import { strict } from 'assert';
 import { Handler } from 'aws-lambda';
 import {
-  LambdaInitSecretHandler,
   LambdaSecretsHandler,
 } from '../../util/LambdaHandler';
 import { HandlerConfiguration } from '../config';
 import { log } from './logger';
 import { fetchAwsSecret } from './secrets_manager_aws';
 
+export type TSecretRef = Record<string, Record<string, any>>;
+export type SecretsContentOf<T extends keyof U, U extends Record<string, Record<string, any>>> = keyof U[T] | undefined;
+
 const SecretCache: Map<string, { expiresOn: Date; value: string }> = new Map();
 
-export type SecretTuple = {
-  [K in keyof typeof aws_secrets]: [K, SecretsContentOf<K>];
-}[keyof typeof aws_secrets];
+export type SecretTuple<U extends Record<string, object>> = {
+  [K in keyof U]: [K, SecretsContentOf<K, U>];
+}[keyof U];
 
 export type SecretsRecord<TSecrets extends string> = Record<TSecrets, string>;
 
 export type SecretConfig = {
-  secret: SecretTuple;
+  secret: string,
+  secretKey: string | undefined;
   required: boolean;
-};
-
-export const getAwsSecretDef = <T extends keyof typeof aws_secrets>(
-  secretName: T,
-  secretKey: SecretsContentOf<T> | undefined,
-  required: boolean = true
-): SecretConfig => {
-  return {
-    secret: [secretName, secretKey] as SecretTuple,
-    required,
-  };
 };
 
 export const modifyCacheExpiracy = (key: string, newDate: Date) => {

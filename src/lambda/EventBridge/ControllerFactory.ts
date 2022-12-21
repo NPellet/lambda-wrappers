@@ -1,17 +1,15 @@
 import { BaseSchema } from 'yup';
 import { HandlerConfiguration } from '../config';
 import { ConstructorOf, TOrSchema } from '../../util/types';
-import { aws_secrets } from '@lendis-tech/secrets-manager-utilities';
-import { SecretsContentOf } from '@lendis-tech/secrets-manager-utilities/dist/secrets';
-import { SecretConfig, getAwsSecretDef } from '../utils/secrets_manager';
-import { EventBridgeEvent } from 'aws-lambda';
+import { SecretConfig, SecretsContentOf, TSecretRef } from '../utils/secrets_manager';
 import { createEventBridgeHandler } from './event';
 import { AwsEventBridgeEvent } from '../../util/eventbridge';
 
 export class EventBridgeHandlerWrapperFactory<
   TInput,
-  THandler extends string,
+  TSecretList extends TSecretRef,
   TSecrets extends string = string,
+  THandler extends string = 'handle',
   SInput extends BaseSchema | undefined = undefined
 > {
   public _inputSchema: SInput;
@@ -22,7 +20,7 @@ export class EventBridgeHandlerWrapperFactory<
   setInputSchema<U extends BaseSchema>(schema: U) {
     const constructor = this.constructor;
 
-    const api = this.fork<TInput, THandler, TSecrets, U>();
+    const api = this.fork<TInput, TSecrets, THandler, U>();
     api._inputSchema = schema;
     api._secrets = this._secrets;
     api._handler = this._handler;
@@ -30,27 +28,32 @@ export class EventBridgeHandlerWrapperFactory<
     return api;
   }
 
-  needsSecret<U extends string, T extends keyof typeof aws_secrets>(
+  needsSecret<U extends string, T extends keyof TSecretList>(
     key: U,
     secretName: T,
-    secretKey: SecretsContentOf<T> | undefined,
+    secretKey: SecretsContentOf<T, TSecretList> | undefined,
     required: boolean = true
   ) {
     const api = this.fork<
       TInput,
-      THandler,
       string extends TSecrets ? U : TSecrets | U,
+
+      THandler,
       SInput
     >();
     api._secrets = api._secrets || {};
-    api._secrets[key] = getAwsSecretDef(secretName, secretKey, required);
-    api._inputSchema = this._inputSchema;
+    api._secrets[key] = {
+      "secret": secretName as string,
+      "secretKey": secretKey as string | undefined,
+      required };
+      
+      api._inputSchema = this._inputSchema;
     api._handler = this._handler;
     return api;
   }
 
   setTsInputType<U>() {
-    const api = this.fork<U, THandler, TSecrets, SInput>();
+    const api = this.fork<U, TSecrets, THandler, SInput>();
     api._inputSchema = this._inputSchema;
     api._secrets = this._secrets;
     api._handler = this._handler;
@@ -58,7 +61,7 @@ export class EventBridgeHandlerWrapperFactory<
   }
 
   setHandler<T extends string>(handler: T) {
-    const api = this.fork<TInput, T, TSecrets, SInput>();
+    const api = this.fork<TInput, TSecrets, T, SInput>();
     api._inputSchema = this._inputSchema;
     api._secrets = this._secrets;
     api._handler = handler;
@@ -107,14 +110,15 @@ export class EventBridgeHandlerWrapperFactory<
 
   fork<
     TInput,
+    TSecrets extends string,
     THandler extends string,
-    TSecrets extends string = string,
     SInput extends BaseSchema | undefined = undefined
   >() {
     return new EventBridgeHandlerWrapperFactory<
       TInput,
-      THandler,
+    TSecretList,
       TSecrets,
+      THandler,
       SInput
     >();
   }
@@ -123,8 +127,9 @@ export class EventBridgeHandlerWrapperFactory<
 export type EventBridgeCtrlInterface<T> =
   T extends EventBridgeHandlerWrapperFactory<
     infer TInput,
-    infer THandler,
+    any,
     infer TSecrets,
+    infer THandler,
     infer SInput
   >
     ? {

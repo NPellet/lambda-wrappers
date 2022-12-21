@@ -1,5 +1,5 @@
 {
-  "name": "@lendis-tech/lambda-handlers-cdk",
+  "name": "aws-lambda-wrappers-cdk",
   "version": "1.0.0",
   "description": "",
   "repository": "git@github.com:lendis-tech/lambda-wrappers.git",
@@ -12,7 +12,6 @@
   "dependencies": {
     "@aws-sdk/client-sns": "^3.226.0",
     "@aws-sdk/client-sqs": "^3.226.0",
-    "@lendis-tech/secrets-manager-infrastructure": "^2.0.9",
     "aws-cdk": "^2.53.0",
     "node-fetch": "^2.6.7"
   },

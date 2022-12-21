@@ -7,6 +7,8 @@ import { AwsSQSRecord } from './sqs/record';
 export type ConstructorOf<T> = {
   init(secrets?: Record<string, string>): Promise<T>;
 };
+
+export type InstanceOf<T> = T extends ConstructorOf<infer U> ? U : never 
 export type TOrSchema<T, U> = unknown extends T
   ? U extends BaseSchema
     ? InferType<U>

@@ -1,16 +1,11 @@
-import { ErrorBag } from '@lendis-tech/sdk';
-import { init } from '@sentry/serverless/types/awslambda';
 import {
   APIGatewayEvent,
   APIGatewayProxyResult,
   Callback,
   Context,
-  EventBridgeEvent,
 } from 'aws-lambda';
-import { BaseSchema } from 'yup';
 import { HTTPError, Request, Response } from '../lambda';
-import { Event } from '../lambda/EventBridge/types/Event';
-import { SecretConfig, SecretsRecord } from '../lambda/utils/secrets_manager';
+import { SecretsRecord } from '../lambda/utils/secrets_manager';
 
 export abstract class BaseLambdaHandler<T, U> {
   public isInit: boolean = false;

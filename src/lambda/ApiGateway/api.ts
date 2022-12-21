@@ -260,39 +260,4 @@ export const createApiGatewayHandler = <
     return apiGatewayHandler;
   }
   // return wrapAsyncStorage(apiGatewayHandler);
-}; /*
-
-const { handlerFactory } = apiGatewayHandlerFactory({
-  secretInjection: {
-    k: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
-  },
-  yupSchemaInput: yup.object({
-    b: yup.string(),
-  }),
-  initFunction: async () => {
-    return { k: "ugf" };
-  },
-});
-
-handlerFactory<any, { a: string }>(async (event, init, secrets, context) => {
-  const d = await event.getData();
-  d.b;
-  return Response.OK({ a: "b"});
-});
-*/
-
-/*
-class MyController
-  implements Controller<{ a: string }, { b: number }, "myKey">
-{
-  async init(secrets) {}
-
-  async handle(data, secrets) {
-    return Response.OK({ b: 12 });
-  }
-}
-
-const o = apiGatewayHandlerFromController(new MyController());
-
-
-*/
+}; 

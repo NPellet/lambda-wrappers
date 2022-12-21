@@ -1,19 +1,29 @@
-# AWS Lambda Handlers
+# AWS Lambda Wrappers
+
+Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup
+
 
 <!-- vscode-markdown-toc -->
 
-- [Installation](#Installation)
-- [Usage](#Usage)
-  - [Background](#Background)
-  - [Example](#Example)
-  - [Notes on the Wrapper Factory](#NotesontheWrapperFactory)
-  - [Other notes](#Othernotes)
-- [Implementing multiple routes in a controller](#Implementingmultipleroutesinacontroller)
-- [Type system](#Typesystem)
-- [Secret injection](#Secretinjection)
-- [API Gateway output](#APIGatewayoutput)
-- [Enhancing CDK code](#EnhancingCDKcode)
-- [A note on error handling in controllers](#Anoteonerrorhandlingincontrollers)
+- [AWS Lambda Wrappers](#aws-lambda-wrappers)
+  - [Installation](#installation)
+  - [Installation](#installation-1)
+  - [Usage](#usage)
+    - [Create a project (or organisation-wide) manager](#create-a-project-or-organisation-wide-manager)
+  - [Implementing a controller](#implementing-a-controller)
+  - [Usage](#usage-1)
+    - [Background](#background)
+    - [Example](#example)
+    - [Notes on the Wrapper Factory](#notes-on-the-wrapper-factory)
+    - [Other notes](#other-notes)
+  - [Implementing multiple routes / events in a controller](#implementing-multiple-routes--events-in-a-controller)
+  - [Type system](#type-system)
+  - [Secret injection](#secret-injection)
+    - [Dealing with Key-Value Secrets](#dealing-with-key-value-secrets)
+    - [Dealing with String Secrets](#dealing-with-string-secrets)
+    - [Providing a secret list to the manager](#providing-a-secret-list-to-the-manager)
+  - [API Gateway output](#api-gateway-output)
+  - [A note on error handling in controllers](#a-note-on-error-handling-in-controllers)
 
 <!-- vscode-markdown-toc-config
 	numbering=false
@@ -21,14 +31,130 @@
 	/vscode-markdown-toc-config -->
 <!-- /vscode-markdown-toc -->
 
-This is a collection of wrapper functions that you should use to wrap your handlers, whether you are implementing an API Gateway hander or an Event Bridge handler.
-Other handlers will be supported in the future
+Features:
+
+- Provides a controller interface to be implemented by a controller
+- Strong type checking
+- Input and output schema validation (leveraging yup)
+- Sentry wrappers
+- Opentelementry wrappers
+- AWS Secrets manager injection
+- Cold start initialisation method
 
 ## <a name='Installation'></a>Installation
 
 ```bash
-npm i @lendis-tech/lambda-handlers
+npm i aws-lambda-wrappers
 ```
+
+
+## <a name='Installation'></a>Installation
+
+
+## Usage
+
+### Create a project (or organisation-wide) manager
+
+Start by sharing a wrapper manager across all your lambda functions. This is useful to share configuration across your organisation.
+
+Currently, this is only useful for the list of usable secrets, but it may be extended in the future.
+
+```typescript
+import { LambdaFactoryManager } from 'aws-lambda-wrappers'
+const mgr = new LambdaFactoryManager();
+
+// We'll import the manager later on !
+export default mgr;
+```
+
+
+To use the manager in a handler file, import the manager you just exported into a new file (the one that will use by AWS to handle your function):
+
+```typescript
+
+import manager from './path/to/manager'
+
+const wrapperFactory = manager.apiGatewayWrapperFactory( "handler_name" );
+
+```
+
+Wrapper factory constructors are available for
+
+- API Gateway
+- Event Bridge
+- SNS
+- SQS
+
+The string parameter passed to the constructor function defines which method must be implemented by the constructor:
+
+```typescript
+type HandlerIf = APIGatewayCtrlInterface<wrapperFactory>
+
+/* HandlerIf is of type
+{
+  handler_name: ( data: APIGatewayData<unknown>, secrets: Record<string, string> ): Promise<HTTPResponse<unknown> | HTTPError>
+}
+*/
+```
+
+The handler can be further composed to enhance the type safety and runtime safety of the controller:
+
+```typescript
+
+const wrapperFactory = manager
+  .apiGatewayWrapperFactory( "handler_name" )
+  .setTsInputType<Animal>()
+  .setOutputSchema( yup.object( {
+    handled: yup.boolean()
+  }));
+
+export type InterfaceHandler = APIGatewayCtrlInterface< typeof wrapperFactory >
+
+// Creating the handler and the configuration
+
+import Controller from './path/to/controller'
+export const { handler, configuration } = wrapperFactory.createWrapper( Controller )
+```
+
+## Implementing a controller
+
+Based on the interface provided by the route, we can now implement our controller, which has two requirements:
+
+- Provide a static async initializer, called `static async init`
+- Provide the method mandated by the route
+
+```typescript
+
+import { InterfaceHandler } from './path/to/interface'
+
+export class Controller implements InterfaceHandler {
+
+  constructor( private myResource: MyResource) {
+
+  }
+
+  static async init() {
+    // Acquires MyResource only during a cold start
+    return new Controller( new MyResource() );
+  }
+
+  // Inherits the method parameter types and return type from the interface. See for details
+  handler_name: IfHandler<InterfaceHandler> = async ( data, secrets ) => {
+    return HTTPResponse.OK_NOT_CONTENT();
+  }
+}
+```
+
+Note on the following:
+
+- The static initialisation is only called during an initial cold start. During the subsequent lambda invocations, the same controller instance will be reused without re-initialisation. The constructor is not used directly by the wrapper. The static init is used because of the following benefits:
+  - Asynchronous initialisation
+  - Type safety in the controller (`myResource` is of type `MyResource`, and not of type `MyResource | undefined`)
+- You may therefore use the static init method to perform any required initialisation you may desire, for which state should per persisted across invocation
+- The IfHandler<> utility is provided because by default, implemented methods to do infer their parameter types from the implemented interface.
+- Several routes can be implemented using `implements IfOfRouteA, IfOfRouteB, ...``
+
+
 
 ## <a name='Usage'></a>Usage
 
@@ -52,28 +178,25 @@ Those factories are available for
 // route.ts
 
 import { MyController } from 'path/to/controller';
+import{ manager}from 'path/to/manager'
 import {
-  APIGatewayHandlerWrapperFactory,
   APIGatewayCtrlInterface,
 } from '@lendis-tech/lambda-handlers';
 
 // API Route definition file
-const handlerWrapperFactory = new APIGatewayHandlerWrapperFactory()
-  .setHandler('handle') // REQUIRED method: defined what is the name of the controller handler
+const handlerWrapperFactory = manager.apiGatewayWrapperFactory('handle')
   .setTsInputType<INPUT_TYPE>() // Injects type safety, overrides yup schema
   .setTsOutputType<OUTPUT_TYPE>() // Injects type safety, overrides yup schema
   .setInputSchema(yupSchema) // Of type yup
   .setOutputSchema(yupSchema) // Of type yup
-  .needsSecret('process_env_key', 'Algolia-Products', 'adminApiKey', true) // Fetches the secrets during a cold start
-  .needsSecret('process_env_other_key', 'Algolia-Products', 'apiKey', true);
+  .needsSecret('process_env_key', 'SecretName', 'adminApiKey', true) // Fetches the secrets during a cold start
+  .needsSecret('process_env_other_key', 'SecretName', 'apiKey', true);
 
 type controllerInterface = APIGatewayCtrlInterface<
   typeof handlerWrapperFactory
 >;
 
-const handlerWrapper = handlerWrapperFactory.makeHandlerFactory();
-
-export const { handler, configuration } = handlerWrapper(MyController);
+export const { handler, configuration } = handlerWrapperFactory.wrapHandler(MyController);
 export { controllerInterface }; // Export the type to be reimported by the route implementation
 
 //====================================================================
@@ -95,7 +218,7 @@ export class MyController implements controllerInterface {
 
 ### <a name='NotesontheWrapperFactory'></a>Notes on the Wrapper Factory
 
-- `new APIGatewayHandlerWrapperFactory()` means you want to create a new factory for a new API Gateway route. Do this for each route you want in your service
+- `manager.apiGatewayWrapperFactory()` (and similarly for all other event sources) is to be done for every lambda that you wish to create
 - `.setHandler( handlerName )` specifies the name of the handler function to be implemented in the controller. Use this to reuse a single controller for many routes
 - `.setTsInputType<T>()` informs the interface on the input type you're expected to receive. We're not talking about the raw type (e.g. `APIGatewayEvent`), but rather
   - The `body` field for the API gateway (will be JSON.parse'd if the Content-Type is application/json)
@@ -111,43 +234,30 @@ export class MyController implements controllerInterface {
 Once the wrapper factory has been created, you can extract its interface type using:
 
 ```typescript
+// API Gateway handler
 type controllerInterface = APIGatewayCtrlInterface<
   typeof handlerWrapperFactory
 >;
+
+// Event bridge handler
+type controllerInterface = EventBridgeCtrlInterface<
+  typeof handlerWrapperFactory
+>;
+
+// SNS handler
+type controllerInterface = SNSCtrlInterface<
+  typeof handlerWrapperFactory
+>;
+
+// SQS handler
+type controllerInterface = SQSCtrlInterface<
+  typeof handlerWrapperFactory
+>;
+
 ```
 
-The type `controllerInterface` needs to be implemented by the controller. Note that you may decide not to directly implement the interface, as long as you respect its contract.
 
-Talking about the contract, what is it ? There are only two restrictions:
-
-```typescript
-static async init() {
-  return new MyController()
-}
-```
-
-This part is needed and super-important for the system to run. Unfortunately it is not checked by typescript. If you omit this piece of code, the lambda will fail at runtime.
-
-You may wonder why not simply use a constructor? Because with the static initalization, you may run something like
-
-```typescript
-class MyController interface IfController {
-
-  constructor( private MyResource resource, private MyOtherResource otherResource ) {}
-
-  static async init() {
-    return new MyController( new MyResource(), new MyOtherResource() )
-  }
-}
-```
-
-which means that both `resource` and `otherResource` have types `MyResource` and `MyOtherResource` and not `MyResource | undefined` and `MyOtherResource | undefined`. Indeed, the controller is the one place for dependency injection which allows the dependency to have a strictly defined type. It avoids having to check for the resource in the handler itself.
-
-Note also that the `init` function **MUST** be async. It allows to run async jobs before moving with the controller.
-
-Also note that the `init` method is **ONLY** called during a Lambda cold start. When the runtime is already warm, only the handler is called.
-
-## <a name='Implementingmultipleroutesinacontroller'></a>Implementing multiple routes in a controller
+## <a name='Implementingmultipleroutesinacontroller'></a>Implementing multiple routes / events in a controller
 
 Depending on your design choices, you may decide to create a single controller for multiple routes, for example when handling CRUD operations. This can be achieved like that:
 
@@ -157,15 +267,13 @@ Routes definitions (1 file per handler)
 // Create.ts
 import { CreateController } from 'path/to/controller';
 
-const createHandlerWrapperFactory =
-  new APIGatewayHandlerWrapperFactory().setHandler('create'); // <= Note here handler name
-
+const createHandlerWrapperFactory = manager.apiGatewayWrapperFactory('create');
+  
 type controllerInterface = APIGatewayCtrlInterface<
   typeof createHandlerWrapperFactory
 >;
 
-const handlerWrapper = createHandlerWrapperFactory.makeHandlerFactory();
-export const { handler, configuration } = handlerWrapper(CreateController);
+export const { handler, configuration } = createHandlerWrapperFactory.wrapHandler(CreateController);
 export { controllerInterface };
 ```
 
@@ -173,15 +281,13 @@ export { controllerInterface };
 // Read.ts
 import { ReadController } from 'path/to/controller';
 
-const readHandlerWrapperFactory =
-  new APIGatewayHandlerWrapperFactory().setHandler('read'); // <= Note here handler name
+const readHandlerWrapperFactory = manager.apiGatewayWrapperFactory('read');
 
 type controllerInterface = APIGatewayCtrlInterface<
   typeof readHandlerWrapperFactory
 >;
 
-const handlerWrapper = readHandlerWrapperFactory.makeHandlerFactory();
-export const { handler, configuration } = handlerWrapper(ReadController);
+export const { handler, configuration } = readHandlerWrapperFactory.wrapHandler(ReadController);
 export { controllerInterface };
 
 // Update.ts...
@@ -222,36 +328,98 @@ On another note, the schema validation can be asynchronous. It is verified befor
 Another cool feature of those lambda wrappers is that secrets can be inject before the handler is called.
 Secrets are fetched during a cold start, of after the cache has expired.
 
-_NB: The implementation is currently sub-optimal. Refetching the secret could be done in the lambda extension to reduce lambda latency. But this would only make a difference after the 2h cache expiracy. The cold start performance would be the same, and the warm invocation would not make a call to AWS anyways_
-
 Secrets are exposed in 2 ways
 
 - Injected into process.env
-- Available in the handler function
-
-For example, calling
+- Available in the controller method (the 2nd argument)
 
 ```typescript
 controllerFactory.needsSecret(
+  'key',
+  'SecretName',
+  'SecretKey',
+  true
+);
+
+class Controller implements RouteHandler {
+
+  handler: IfHandler<RouteHandler> = async ( data, secrets ) => {
+
+    // secrets.key is available as "string"
+    // process.env.key is also available for use
+  }
+}
+```
+
+### Dealing with Key-Value Secrets
+
+AWS Secrets can be of JSON type. It is pretty common to store a simple key-value structure in AWS, which we support for retrieval:
+```typescript
+controllerFactory.needsSecret(
   'process_env_key',
-  'Algolia-Products',
-  'adminApiKey',
+  'SecretName',
+  'SecretKey',
   true
 );
 ```
 
-will populate `process.env.process_env_key` with the content of the Algolia's admin API key.
+Note that the lambda will fail if the provided secret is NOT JSON-valid.
 
-In addition, when implementing
+### Dealing with String Secrets
+
+By setting `undefined` as the second parameter, the string version of the JSON:
 
 ```typescript
-handle: IfHandler<controllerInterface> = async (req, secrets) => {
-  // Secrets is of type { process_env_key: string }
-  console.log(secrets.process_env_key);
-};
+controllerFactory.needsSecret(
+  'process_env_key',
+  'SecretName',
+  undefined,
+  true
+);
 ```
 
+
+
 When the last parameter of the `needsSecret` method is true, the secret is required and the lambda will fail if it can't be found. When false, the method will be called, but the secret may be undefined.
+
+### Providing a secret list to the manager
+
+Imagine an object `aws_secrets` contains the list of all available secrets in the format
+
+```typescript
+
+enum ENUM_OF_SECRET_NAME {
+  "SecretKey",
+  "SecretOtherKey"
+}
+
+export const aws_secrets = {
+  secretName: ENUM_OF_SECRET_NAME,
+  otherSecretName: ENUM_OF_OTHER_SECRET_NAME
+}
+```
+(This format can automatically be generated using the package `aws-secrets-manager-aot`)
+
+By setting the secret list into the manager, they can provide type safety when calling `needsSecret`:
+
+```typescript
+import { LambdaFactoryManager } from 'aws-lambda-wrappers'
+const mgr = new LambdaFactoryManager().setSecrets( aws_secrets );
+// Imagine a list of secrets, indexed by secret name on the first level, and secret key (for key-value secrets) on the second level
+
+export default mgr
+
+///
+
+mgr.apiGatewayWrapperFactory('read').needsSecret("key", "secretName", "SecretKey");
+```
+
+Autocompletion of the secret name:
+![Autocompletion](./doc/secret_autocompletion.png)
+
+Autocompletion of the secret key:
+![Autocompletion](./doc/secret_key_autocompletion.png)
+
 
 ## <a name='APIGatewayoutput'></a>API Gateway output
 
@@ -274,46 +442,6 @@ return HTTPError.BAD_REQUEST(error).anormal();
 
 - `HTTPError.INTERNAL_ERROR()` is by default internal.
 
-## <a name='EnhancingCDKcode'></a>Enhancing CDK code
-
-We provide the ability to automatically parse the secrets manager configuration in the configuration object and use it in the CDK code. For example:
-
-```typescript
-// Trigger handler example
-const trigger = {
-  handler: '../src/path/to/file/main.handler',
-};
-
-const lastIndexOfSlash = trigger.handler.lastIndexOf('/');
-
-const fn = new Function(this, 'func', {
-  functionName: 'func_test',
-  runtime: cdk.aws_lambda.Runtime.NODEJS_14_X,
-  code: cdk.aws_lambda.Code.fromAsset(
-    trigger.handler.substring(0, lastIndexOfSlash)
-  ),
-  handler: trigger.handler.substr(lastIndexOfSlash + 1),
-  timeout: cdk.Duration.minutes(1),
-  memorySize: 512,
-  environment: {},
-});
-
-// Use path.resolve to get an absolute path to the file
-enhanceCDKLambda(fn, resolve(trigger.handler));
-```
-
-The function `fn` will automatically receive the IAM grants to fetch the secrets at runtime.
-
-Note that we expect the configuration object to be exported with the name `configuration`, otherwise this will not work.
-
-The function `enhanceCDKLambda` is available in package `@lendis-tech/lambda-handlers-cdk`
-
-via
-
-```typescript
-// Use v2 for CDK V2
-import { enhanceCDKLambda } from '@lendis-tech/cdk-lambda-handler-utils/dist/v1/enhanceCDKLambda';
-```
 
 ## <a name='Anoteonerrorhandlingincontrollers'></a>A note on error handling in controllers
 
