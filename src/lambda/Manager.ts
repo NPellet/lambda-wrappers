@@ -52,17 +52,17 @@ export class LambdaFactoryManager<T extends TSecretRef> {
 	}
 
 	public eventBridgeWrapperFactory<U extends string>( handler: U ) {
-		const wrapper = new EventBridgeHandlerWrapperFactory<any, T, string, U, undefined>();
+		const wrapper = new EventBridgeHandlerWrapperFactory<any, T, string, U, undefined>( this );
 		return wrapper.setHandler( handler );
 	}
 
 	public sqsWrapperFactory<U extends string>( handler: U ) {
-		const wrapper = new SQSHandlerWrapperFactory<any, T, string, U, undefined>();
+		const wrapper = new SQSHandlerWrapperFactory<any, T, string, U, undefined>( this );
 		return wrapper.setHandler( handler );
 	}
 
 	public snsWrapperFactory<U extends string>( handler: U ) {
-		const wrapper = new SNSHandlerWrapperFactory<any, T, string, U, undefined>();
+		const wrapper = new SNSHandlerWrapperFactory<any, T, string, U, undefined>( this );
 		return wrapper.setHandler( handler );
 	}
 }

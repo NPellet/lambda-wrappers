@@ -22,6 +22,7 @@ Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic
     - [Implementing multiple routes / events in a controller](#implementing-multiple-routes--events-in-a-controller)
   - [Type system](#type-system)
   - [Using Sentry](#using-sentry)
+    - [Disabling Sentry](#disabling-sentry)
   - [Secret injection](#secret-injection)
     - [Dealing with Key-Value Secrets](#dealing-with-key-value-secrets)
     - [Dealing with String Secrets](#dealing-with-string-secrets)
@@ -352,6 +353,8 @@ On another note, the schema validation can be asynchronous. It is validated befo
 ## Using Sentry
 
 Sentry's configuration is likely to be used across your organisation's microservices, save for its DSN, which is likely to be one per service.
+You may compose a manager using `.configureSentry( opts: Sentry.NodeOptions, expand: boolean )` (see [@sentry/node]{https://www.npmjs.com/package/@sentry/node}), and compose it as many times as you see fit (Note that the configuration is mutable, i.e. the `configureSentry` method does not return a new manager)
+
 The way to configure Sentry is to do it on the manager level:
 
 ```typescript
@@ -366,17 +369,17 @@ const mgr = new LambdaFactoryManager()
 export default mgr;
 ```
 
-The method `configureSentry` takes an object of type `NodeOptions` (see package @sentry/node) and an `expand` boolean to indicate whether the current configuration should be expanded (with Object.assign) or replaced.
-
-It would be a common pattern to have a shared Sentry configuration for your whole service mesh, and then overwrite the DSN for each service's manager:
+It would be a common pattern to have a shared Sentry configuration for your whole organisation, used across all services, and then overwrite the DSN in each service:
 
 ```typescript
+// Import an org-wide manager
 import manager from '@myorg/my-lambda-manager' // Image you published your utility manager there
 const myNewManager = manager.configureSentryDSN( MY_SENTRY_DSN )
-export default myNewManager
+export default myNewManager // Optional
 ```
+Because the configuration is mutable, lambda handlers can still reference `@myorg/my-lambda-manager` and inherit the correct DSN.
 
-And reuse this service-specific manager for all the lambdas in this service.
+### Disabling Sentry
 
 Additionally, Sentry can be disabled on a per-lambda basis using
 

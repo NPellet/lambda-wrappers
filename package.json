@@ -1,6 +1,6 @@
 {
   "name": "aws-lambda-handlers",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/lambda/index.d.ts",
@@ -9,7 +9,7 @@
     "test": "jest"
   },
   "author": "Norman Pellet",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@opentelemetry/semantic-conventions": "^1.8.0",
     "@sentry/serverless": "^7.23.0",
