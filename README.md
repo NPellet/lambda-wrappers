@@ -299,11 +299,11 @@ Note on the following:
 
 Depending on your design choices, you may decide to create a single controller for multiple routes, for example when handling CRUD operations. This can be achieved like that:
 
-Routes definitions (1 file per handler)
+Routes definitions (1 file per handler, or more, but then you'd have to rename all symbols)
 
 ```typescript
 // Create.ts
-import { CreateController } from 'path/to/controller';
+import Controller from 'path/to/controller';
 
 const createHandlerWrapperFactory = manager.apiGatewayWrapperFactory('create');
   
@@ -311,13 +311,13 @@ type controllerInterface = APIGatewayCtrlInterface<
   typeof createHandlerWrapperFactory
 >;
 
-export const { handler, configuration } = createHandlerWrapperFactory.wrapHandler(CreateController);
+export const { handler, configuration } = createHandlerWrapperFactory.wrapHandler(Controller);
 export { controllerInterface };
 ```
 
 ```typescript
 // Read.ts
-import { ReadController } from 'path/to/controller';
+import Controller from 'path/to/controller';
 
 const readHandlerWrapperFactory = manager.apiGatewayWrapperFactory('read');
 
@@ -325,7 +325,7 @@ type controllerInterface = APIGatewayCtrlInterface<
   typeof readHandlerWrapperFactory
 >;
 
-export const { handler, configuration } = readHandlerWrapperFactory.wrapHandler(ReadController);
+export const { handler, configuration } = readHandlerWrapperFactory.wrapHandler(Controller);
 export { controllerInterface };
 
 // Update.ts...
@@ -341,11 +341,11 @@ import type { controllerInterface as readInterface } from 'path/to/read_route';
 import type { controllerInterface as updateInterface } from 'path/to/update_route';
 import type { controllerInterface as deleteInterface } from 'path/to/delete_route';
 
-export class MyController // The controller must now implement 4 interfaces, 1 for each route
+export class Controller // The controller must now implement 4 interfaces, 1 for each route
   implements createInterface, readInterface, updateInterface, deleteInterface
 {
   static async init() {
-    return new MyController();
+    return new Controller();
   }
 
   create: IfHandler<createInterface> = async (payload, secrets) => {};

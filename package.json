@@ -1,6 +1,6 @@
 {
   "name": "aws-lambda-handlers",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/lambda/index.d.ts",
