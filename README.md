@@ -25,7 +25,6 @@ This package provides an opiniated stack to insert additional logic in handling 
     - [3. Create a controller](#3-create-a-controller)
   - [Details](#details)
     - [Wrapper available for AWS sources:](#wrapper-available-for-aws-sources)
-- [\<\<\<\<\<\<\< HEAD](#-head)
     - [Handler method name](#handler-method-name)
   - [Detailed Usage](#detailed-usage)
     - [Complete example](#complete-example)
@@ -139,10 +138,6 @@ Wrapper factory constructors are available for
   ```typescript
     manager.snsWrapperFactory( handler: string );
   ```
-<<<<<<< HEAD
-=======
-
->>>>>>> 5a053b49910c68b470f0462bd04f25536d7ac026
 
 ### Handler method name
 The string parameter passed to the constructor function defines which method must be implemented by the constructor:
