@@ -112,11 +112,11 @@ export const testEventBridgeEvent: EventBridgeEvent<string, any> = {
 export const testApiGatewayEvent: APIGatewayEvent = {
   body: 'Request body',
   headers: {
-    'Content-Type': 'text/plan',
+    'Content-Type': 'text/plain',
   },
   httpMethod: 'GET',
   multiValueHeaders: {
-    'Content-Type': ['text/plan'],
+    'Content-Type': ['text/plain'],
   },
   path: '/path/to/resource',
   pathParameters: { a: 'b' },

@@ -1,4 +1,5 @@
 import { SQSRecord } from 'aws-lambda';
+import { MessageType } from '../../types';
 import { AwsSQSRecord, failSQSRecord } from './record';
 
 const testRecord: SQSRecord = {
@@ -21,18 +22,18 @@ const testRecord: SQSRecord = {
 
 describe('Testing SQS Record', () => {
   test('Output batch id matches message id', async () => {
-    expect(failSQSRecord(new AwsSQSRecord(testRecord))).toMatchObject({
+    expect(failSQSRecord(new AwsSQSRecord(testRecord,MessageType.Object))).toMatchObject({
       itemIdentifier: testRecord.messageId,
     });
   });
 
   test('getMessageId works', async () => {
-    const record = new AwsSQSRecord(testRecord);
+    const record = new AwsSQSRecord(testRecord,MessageType.Object);
     expect(record.getMessageId()).toBe(testRecord.messageId);
   });
 
   test('Fails parsing when bad json', async () => {
-    const record = new AwsSQSRecord({ ...testRecord, body: 'bad_json' });
+    const record = new AwsSQSRecord({ ...testRecord, body: 'bad_json' }, MessageType.Object);
 
     expect(() => {
       record.getData();
@@ -40,53 +41,21 @@ describe('Testing SQS Record', () => {
   });
 
   test('Returns raw string with message attribute', async () => {
-    const record = new AwsSQSRecord({
-      ...testRecord,
-      messageAttributes: {
-        type: {
-          stringValue: 'string',
-          dataType: 'string',
-        },
-      },
-    });
+    const record = new AwsSQSRecord(testRecord, MessageType.String);
 
     expect(record.getData()).toBe(testRecord.body);
-  });
-
-  test('Does not fails parsing when body is a string but message attribute type is string', async () => {
-    const _record = {
-      ...testRecord,
-      body: 'bad_json',
-      messageAttributes: {
-        type: {
-          stringValue: 'string',
-          dataType: 'string',
-        },
-      },
-    };
-
-    const record = new AwsSQSRecord(_record);
-
-    expect(record.getRawRecord()).toBe(_record);
-
     expect(() => {
       record.getData();
     }).not.toThrow();
 
-    expect(record.getData()).toBe('bad_json');
   });
 
   test('Getting binary data', async () => {
     const record = new AwsSQSRecord<Buffer>({
       ...testRecord,
       body: 'YSBzdHJpbmc=',
-      messageAttributes: {
-        type: {
-          stringValue: 'binary',
-          dataType: 'string',
-        },
-      },
-    });
+      
+    }, MessageType.Binary);
 
     expect(record.getData()).toBeInstanceOf(Buffer);
     expect(record.getData().toString('ascii')).toBe('a string');

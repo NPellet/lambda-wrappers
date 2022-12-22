@@ -1,12 +1,8 @@
 import otelapi, {
   ROOT_CONTEXT,
   Context as OtelContext,
-  TraceFlags,
 } from '@opentelemetry/api';
 import { APIGatewayEvent } from 'aws-lambda';
-import { loggers } from 'winston';
-import { AwsApiGatewayRequest } from '../../../util/apigateway/apigateway';
-import { AwsEventBridgeEvent } from '../../../util/eventbridge';
 import { log } from '../../utils/logger';
 import {
   contextPayloadGetter,

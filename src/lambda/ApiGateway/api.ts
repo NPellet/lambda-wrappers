@@ -11,13 +11,14 @@ import {
   LambdaContext,
   LambdaInitSecretHandler,
 } from '../../util/LambdaHandler';
-import { AwsApiGatewayRequest } from '../../util/apigateway/apigateway';
 import { HandlerConfiguration, LambdaType } from '../config';
 import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
-import { HTTPError, HTTPResponse } from '../../util/apigateway/response';
+import { HTTPError, HTTPResponse } from '../../util/records/apigateway/response';
 import { wrapTelemetryApiGateway } from './telemetry/Wrapper';
 import otelapi, { SpanStatusCode } from '@opentelemetry/api';
+import { Request } from '../../util/records/apigateway/request';
+import { config } from 'process';
 
 /**
  * Make sure that the return format of the lambda matches what is expected from the API Gateway
@@ -33,7 +34,7 @@ export const createApiGatewayHandler = <
   SOutput extends BaseSchema | undefined = undefined
 >(
   handler: LambdaInitSecretHandler<
-    AwsApiGatewayRequest<SInput extends BaseSchema ? InferType<SInput> : T>,
+    Request<SInput extends BaseSchema ? InferType<SInput> : T>,
     TInit,
     TSecrets,
     HTTPResponse<O> | HTTPError
@@ -149,7 +150,6 @@ export const createApiGatewayHandler = <
     context: Context,
     callback: Callback
   ) {
-    let out: APIGatewayProxyEvent;
     let actualOut: TOutput | void;
 
     log.info(`Received event through APIGateway on path  ${event.path}.`);
@@ -164,7 +164,7 @@ export const createApiGatewayHandler = <
         }
       );
 
-      const request = new AwsApiGatewayRequest<TInput>(event);
+      const request = new Request<TInput>(event, configuration.messageType);
       let data: TInput;
 
       try {
@@ -176,14 +176,14 @@ export const createApiGatewayHandler = <
           statusCode: 500,
           headers: {},
           body:
-            'Lambda input data malformed. Raw input data was ' +
-            request.getRawData(),
+            `Lambda input data malformed. Raw input data was "${request.getBody()}. Error was: ${e}`
         };
       }
-
+console.log( configuration.yupSchemaInput );
       if (configuration.yupSchemaInput) {
         try {
           await configuration.yupSchemaInput.validate(data);
+          console.log("Valid !");
         } catch (e) {
           log.warn(
             `Lambda's input schema failed to validate. Returning statusCode 500 to the API Gateway`
@@ -258,5 +258,5 @@ export const createApiGatewayHandler = <
     return apiGatewayHandler;
   }
   // return wrapAsyncStorage(apiGatewayHandler);
-}; 
+};
 

@@ -5,7 +5,7 @@ import {
   APIGatewayCtrlInterface,
   APIGatewayHandlerWrapperFactory,
 } from './ControllerFactory';
-import { HTTPError } from '../../util/apigateway/response';
+import { HTTPError } from '../../util/records/apigateway/response';
 import { SecretsOf } from '../../util/types';
 import { IfHandler } from '../../../dist/lambda';
 import { LambdaFactoryManager } from '../Manager';
@@ -28,7 +28,7 @@ jest.mock('../utils/secrets_manager_aws', function () {
 
 describe('Testing API Controller factory', function () {
   it('Basic functionality works', async () => {
-    const schema = yup.object({ a: yup.string() });
+    const schema = yup.object({ a: yup.string().required() });
 
     const mockHandler = jest.fn(async (data, secrets) => {
       return HTTPError.BAD_REQUEST('Oups');
@@ -74,7 +74,12 @@ describe('Testing API Controller factory', function () {
     );
     expect(configuration.secretInjection!.abc.secretKey).toStrictEqual(      'adminApiKey',
     );
-    const out = await handler(testApiGatewayEvent, LambdaContext, () => {});
+
+
+    const clonedTest = _.cloneDeep( testApiGatewayEvent );
+    clonedTest.body = JSON.stringify({"wrongInput": "c"})
+
+    const out = await handler(clonedTest, LambdaContext, () => {});
     expect(out.statusCode).toBe(500);
     expect(out.body).toContain('Lambda input schema validation failed');
 

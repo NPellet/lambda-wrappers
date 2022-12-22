@@ -6,9 +6,9 @@ import {
   SQSCtrlInterface,
   SQSHandlerWrapperFactory,
 } from './ControllerFactory';
-import { failSQSRecord } from '../../util/sqs/record';
 import { PayloadOf } from '../../util/types';
 import { LambdaFactoryManager } from '../Manager';
+import { failSQSRecord } from '../../util/records/sqs/record';
 
 const testRecord: SQSRecord = {
   messageId: 'abc',

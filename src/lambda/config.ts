@@ -1,4 +1,5 @@
 import { ObjectSchema } from 'yup';
+import { MessageType } from '../util/types';
 import { wrapTelemetryApiGateway } from './ApiGateway/telemetry/Wrapper';
 import { wrapTelemetryEventBridge } from './EventBridge/telemetry/Wrapper';
 import {
@@ -19,6 +20,7 @@ export type HandlerConfiguration<
   sentry?: boolean;
   opentelemetry?: boolean;
   type?: LambdaType;
+  messageType: MessageType
 };
 
 export type HandlerConfigurationWithType<

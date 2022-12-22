@@ -3,6 +3,7 @@ import { Handler } from "aws-lambda";
 import { event } from "../../test_utils/apigateway";
 import { LambdaContext } from "../../test_utils/utils";
 import { LambdaSecretsHandler } from "../../util/LambdaHandler";
+import { MessageType } from "../../util/types";
 import { LambdaType } from "../config";
 import { wrapGenericHandler } from "../Wrapper";
 
@@ -206,6 +207,8 @@ describe("Secret manager", () => {
     const wrappedHandler = wrapGenericHandler(handler, {
       type: LambdaType.GENERIC,
       initFunction: init,
+
+      messageType: MessageType.Object,
       secretInjection: {
 
         secret: { 
@@ -230,6 +233,8 @@ describe("Secret manager", () => {
         initFunction: async (secrets) => {
           expect(secrets.secret).toBe("algoliaApiKey");
         },
+
+      messageType: MessageType.Object,
         secretInjection: {
           secret: { 
             "required": false,

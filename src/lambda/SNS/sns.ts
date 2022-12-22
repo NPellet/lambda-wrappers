@@ -13,7 +13,7 @@ import { BaseSchema } from 'yup';
 import { TOrSchema } from '../../util/types';
 import { wrapTelemetrySNS } from './Telemetry/Wrapper';
 import { flush } from '../utils/telemetry';
-import { AwsSNSRecord } from '../../util/sns/record';
+import { AwsSNSRecord } from '../../util/records/sns/record';
 import { validateRecord } from '../../util/validateRecord';
 
 export const createSNSHandler = <
@@ -39,7 +39,7 @@ export const createSNSHandler = <
   let innerLoop = async (record: SNSEventRecord, context: Context) => {
     log.debug(record);
 
-    const _record = new AwsSNSRecord<V>(record);
+    const _record = new AwsSNSRecord<V>(record, configuration.messageType );
 
     try {
       await validateRecord(_record, configuration.yupSchemaInput);

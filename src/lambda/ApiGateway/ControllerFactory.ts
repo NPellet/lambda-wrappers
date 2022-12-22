@@ -1,11 +1,12 @@
 import { BaseSchema } from 'yup';
 import { HandlerConfiguration } from '../config';
-import { HTTPError, HTTPResponse } from '../../util/apigateway/response';
-import { Request } from '../../util/apigateway/request';
-import { ConstructorOf, TOrSchema } from '../../util/types';
+import { HTTPError, HTTPResponse } from '../../util/records/apigateway/response';
+import { Request } from '../../util/records/apigateway/request';
+import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import { createApiGatewayHandler } from './api';
-import { SecretConfig, SecretsContentOf, TSecretRef} from '../utils/secrets_manager';
+import { SecretConfig, SecretsContentOf, TSecretRef } from '../utils/secrets_manager';
 import { BaseWrapperFactory } from '../BaseWrapperFactory';
+import { MessageTypeValues } from '@opentelemetry/semantic-conventions';
 
 export class APIGatewayHandlerWrapperFactory<
   TInput,
@@ -30,6 +31,9 @@ export class APIGatewayHandlerWrapperFactory<
     api._outputSchema = this._outputSchema;
     api._secrets = this._secrets;
     api._handler = this._handler;
+    api.setMessageTypeFromSchema( schema );
+
+    
     return api;
   }
 
@@ -42,7 +46,7 @@ export class APIGatewayHandlerWrapperFactory<
     return api;
   }
 
-  needsSecret<U extends string, T extends  keyof TSecretList>(
+  needsSecret<U extends string, T extends keyof TSecretList>(
     key: U,
     secretName: T,
     secretKey: SecretsContentOf<T, TSecretList> | undefined,
@@ -60,8 +64,9 @@ export class APIGatewayHandlerWrapperFactory<
     api._secrets[key] = {
       "secret": secretName as string,
       "secretKey": secretKey as string | undefined,
-      required };
-      
+      required
+    };
+
     api._inputSchema = this._inputSchema;
     api._outputSchema = this._outputSchema;
     api._handler = this._handler;
@@ -70,12 +75,39 @@ export class APIGatewayHandlerWrapperFactory<
 
   setTsInputType<U>() {
     const api = this.fork<U, TOutput, TSecrets, THandler, SInput, SOutput>();
-    api._inputSchema = this._inputSchema;
-    api._outputSchema = this._outputSchema;
-    api._secrets = this._secrets;
-    api._handler = this._handler;
+    api._messageType = MessageType.Object
+    this.copyAll(api);
     return api;
   }
+
+  setStringInputType() {
+    const api = this.setTsInputType<string>();
+    api._messageType = MessageType.String;
+    return api;
+  }
+
+  setNumberInputType() {
+    const api = this.setTsInputType<number>();
+    api._messageType = MessageType.Number;
+    return api;
+  }
+
+  setBinaryInputType() {
+    const api = this.setTsInputType<Buffer>();
+    api._messageType = MessageType.Binary;
+    return api;
+  }
+
+  private copyAll(
+    newObj: APIGatewayHandlerWrapperFactory<any, any, TSecretList, TSecrets, THandler, SInput, SOutput>
+  ) {
+    newObj._inputSchema = this._inputSchema;
+    newObj._outputSchema = this._outputSchema;
+    newObj._secrets = this._secrets;
+    newObj._handler = this._handler;
+  }
+
+
 
   setTsOutputType<U>() {
     const api = this.fork<TInput, U, TSecrets, THandler, SInput, SOutput>();
@@ -87,61 +119,63 @@ export class APIGatewayHandlerWrapperFactory<
   }
 
   setHandler<T extends string>(handler: T) {
-    const api = this.fork<TInput, TOutput, TSecrets, T,  SInput, SOutput>();
+    const api = this.fork<TInput, TOutput, TSecrets, T, SInput, SOutput>();
     api._inputSchema = this._inputSchema;
     api._outputSchema = this._outputSchema;
     api._secrets = this._secrets;
     api._handler = handler;
+
     return api;
   }
 
-  createHandler( controllerFactory: ConstructorOf<
+  createHandler(controllerFactory: ConstructorOf<
     APIGatewayCtrlInterface<typeof this>
-> ) {
-      type IF = {
+  >) {
+    type IF = {
+      [x in THandler]: (
+        payload: Request<TOrSchema<TInput, SInput>>,
+        secrets: Record<TSecrets, string>
+      ) => Promise<HTTPResponse<TOrSchema<TOutput, SOutput>> | HTTPError>;
+    };
+
+    const configuration: HandlerConfiguration<
+      IF,
+      SInput,
+      SOutput,
+      TSecrets
+    > = {
+      opentelemetry: true,
+      sentry: true,
+      yupSchemaInput: this._inputSchema,
+      yupSchemaOutput: this._outputSchema,
+      secretInjection: this._secrets,
+      initFunction: async (secrets) => {
+        return controllerFactory.init(secrets);
+      },
+      messageType: this._messageType
+    };
+
+    const handler = createApiGatewayHandler<
+      TOrSchema<TInput, SInput>,
+      TOrSchema<TOutput, SOutput>,
+      {
         [x in THandler]: (
           payload: Request<TOrSchema<TInput, SInput>>,
           secrets: Record<TSecrets, string>
         ) => Promise<HTTPResponse<TOrSchema<TOutput, SOutput>> | HTTPError>;
-      };
+      }, TSecrets,
+      SInput,
+      SOutput
+    >(async (event, init, secrets, c) => {
+      await this.init();
+      return init[this._handler](event, secrets);
+    }, configuration);
 
-      const configuration: HandlerConfiguration<
-       IF,
-        SInput,
-        SOutput,
-        TSecrets
-      > = {
-        opentelemetry: true,
-        sentry: true,
-        yupSchemaInput: this._inputSchema,
-        yupSchemaOutput: this._outputSchema,
-        secretInjection: this._secrets,
-        initFunction: async (secrets) => {
-          return controllerFactory.init(secrets);
-        },
-      };
+    return {
+      handler,
+      configuration,
+    };
 
-      const handler = createApiGatewayHandler<
-        TOrSchema<TInput, SInput>,
-        TOrSchema<TOutput, SOutput>,
-        {
-          [x in THandler]: (
-            payload: Request<TOrSchema<TInput, SInput>>,
-            secrets: Record<TSecrets, string>
-          ) => Promise<HTTPResponse<TOrSchema<TOutput, SOutput>> | HTTPError>;
-        },        TSecrets,
-        SInput,
-        SOutput
-      >(async (event, init, secrets, c) => {
-        await this.init();
-        return init[this._handler](event, secrets);
-      }, configuration);
-
-      return {
-        handler,
-        configuration,
-      };
-    
 
   }
 
@@ -153,7 +187,7 @@ export class APIGatewayHandlerWrapperFactory<
     SInput extends BaseSchema | undefined = undefined,
     SOutput extends BaseSchema | undefined = undefined
   >() {
-    return new APIGatewayHandlerWrapperFactory<
+    const n = new APIGatewayHandlerWrapperFactory<
       TInput,
       TOutput,
       TSecretList,
@@ -161,7 +195,11 @@ export class APIGatewayHandlerWrapperFactory<
       THandler,
       SInput,
       SOutput
-    >( this.mgr );
+    >(this.mgr);
+
+    
+    super.fork(n);
+    return n;
   }
 }
 
@@ -175,11 +213,11 @@ export type APIGatewayCtrlInterface<T> =
     infer SInput,
     infer SOutput
   >
-    ? {
-        [x in THandler]: (
-          payload: Request<TOrSchema<TInput, SInput>>,
-          secrets: Record<TSecrets, string>
-        ) => Promise<HTTPResponse<TOrSchema<TOutput, SOutput>> | HTTPError>;
-      }
-    : never;
+  ? {
+    [x in THandler]: (
+      payload: Request<TOrSchema<TInput, SInput>>,
+      secrets: Record<TSecrets, string>
+    ) => Promise<HTTPResponse<TOrSchema<TOutput, SOutput>> | HTTPError>;
+  }
+  : never;
 

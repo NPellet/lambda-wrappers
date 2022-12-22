@@ -45,12 +45,14 @@ import { wrapTelemetryApiGateway } from './telemetry/Wrapper';
 
 import { recordException } from '../../util/exceptions';
 import { HandlerConfiguration, LambdaType } from '../config';
-import { HTTPResponse } from '../../util/apigateway/response';
+import { HTTPResponse } from '../../util/records/apigateway/response';
+import { MessageType } from '../../util/types';
 
 describe('API Gateway. Sanitizing outputs', function () {
   const cfg: HandlerConfiguration = {
     type: LambdaType.GENERIC,
     secretInjection: {},
+    messageType: MessageType.Number
   };
 
   afterEach(() => {
@@ -148,6 +150,7 @@ describe('API Gateway: Telemetry', function () {
     type: LambdaType.API_GATEWAY,
     secretInjection: {},
     opentelemetry: true,
+    messageType: MessageType.Number
   };
 
   afterEach(() => {
@@ -236,11 +239,12 @@ describe('API Gateway: Checking schemas', () => {
   it('Deserialization errors are handled', async () => {
     const handler = createApiGatewayHandler(async (request) => {
       return HTTPResponse.OK('Ok');
-    }, {});
+    }, {
+      messageType: MessageType.Object,});
 
     const wrongObjectGatewayEvent = _.cloneDeep(testApiGatewayEvent);
     wrongObjectGatewayEvent.body = 'Wrong json[]';
-    wrongObjectGatewayEvent.headers['Content-Type'] = 'application/json';
+  //  wrongObjectGatewayEvent.headers['Content-Type'] = 'application/json';
 
     await expect(
       handler(wrongObjectGatewayEvent, LambdaContext, () => {})
@@ -261,11 +265,14 @@ describe('API Gateway: Checking schemas', () => {
         yupSchemaInput: yup.object({
           num: yup.number().required(),
         }),
+        messageType: MessageType.Object,
       }
     );
 
+    const clonedTest = _.cloneDeep( testApiGatewayEvent );
+    clonedTest.body = JSON.stringify({"b": "c"})
     await expect(
-      handler(testApiGatewayEvent, LambdaContext, () => {})
+      handler(clonedTest, LambdaContext, () => {})
     ).resolves.toMatchObject({
       statusCode: 500,
       body: expect.stringContaining('Lambda input schema validation failed'),
@@ -298,6 +305,8 @@ describe('API Gateway: Checking schemas', () => {
         return HTTPResponse.OK(data);
       },
       {
+
+      messageType: MessageType.String,
         yupSchemaOutput: yup.object({
           outputField: yup.number().required(),
         }),

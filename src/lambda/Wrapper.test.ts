@@ -1,4 +1,5 @@
 import { LambdaContext } from '../test_utils/utils';
+import { MessageType } from '../util/types';
 import { LambdaType } from './config';
 
 jest.mock('./utils/secrets_manager', () => {
@@ -54,6 +55,7 @@ describe('Testing runtime wrapper', () => {
     wrapGenericHandler(async (event, init, secrets, context, callback) => {}, {
       secretInjection: secretInj,
       type: LambdaType.GENERIC,
+      messageType: MessageType.Object
     });
 
     expect(wrapHandlerSecretsManager).toHaveBeenCalledWith(
@@ -65,6 +67,7 @@ describe('Testing runtime wrapper', () => {
   it('Calls the secrets manager with empty object when not defined', async () => {
     wrapGenericHandler(async (event, init, secrets, context, callback) => {}, {
       type: LambdaType.GENERIC,
+      messageType: MessageType.Binary,
     });
 
     expect(wrapHandlerSecretsManager).toHaveBeenCalledWith(
@@ -80,6 +83,7 @@ describe('Testing runtime wrapper', () => {
       {
         sentry: true,
         type: LambdaType.GENERIC,
+        messageType: MessageType.Binary,
       }
     );
 
@@ -88,6 +92,7 @@ describe('Testing runtime wrapper', () => {
     wrapGenericHandler(async (event, init, secrets, context, callback) => {}, {
       sentry: false,
       type: LambdaType.GENERIC,
+      messageType: MessageType.Binary,
     });
     // No more invocations
     expect(wrapSentry).toHaveBeenCalledTimes(1);

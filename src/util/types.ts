@@ -10,6 +10,16 @@ export type TOrSchema<T, U> = unknown extends T
     ? InferType<U>
     : unknown
   : T;
+
+
+export enum MessageType {
+  Object,
+  String,
+  Number, 
+  Binary
+}
+
+
 /*
 export type RequestOf<T> = T extends {
   _inputSchema: infer S;

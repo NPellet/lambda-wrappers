@@ -1,25 +1,34 @@
-import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from 'yup';
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import { MessageType } from '../../types';
+import { GenericRecord } from '../generic';
 
 //declare const awsQuery: APIGatewayProxyEvent;
 
-export class Request<T> {
-  private validator: BaseSchema | undefined;
+export class Request<T> extends GenericRecord<T, string> {
   private data: T | undefined;
 
   public constructor(
-    private rawData: string | null,
-    private headers: Record<string, string | undefined> = {},
-    private pathParameters: Record<string, string | undefined> | null = {},
-    private queryParameters: Record<string, unknown> | null = {}
-  ) {}
+    private rawData: APIGatewayProxyEvent,
+    messageType: MessageType
+  ) {
 
-  public getRawData(): string | null {
-    return this.rawData;
+    super( messageType )
   }
 
+  public getBody(): string {
+    return this.rawData.body || ""
+  }
+
+
   public getData(): T {
+
+    
     if (this.data) return this.data;
 
+    this.data = this.parse();
+    return this.data;
+
+    /*
     // typeis.(awsQuery, ['json']);
     const contentType =
       this.headers['Content-Type'] || this.headers['content-type'];
@@ -33,17 +42,18 @@ export class Request<T> {
     }
 
     return this.rawData as T;
+    */
   }
 
   public getPathParameters(): Record<string, string | undefined> {
-    return this.pathParameters || {};
+    return this.rawData.pathParameters || {};
   }
 
   public getQueryParameters(): Record<string, unknown> {
-    return this.queryParameters || {};
+    return this.rawData.queryStringParameters || {};
   }
 
   public getHeaders(): Record<string, string | undefined> {
-    return this.headers;
+    return this.rawData.headers;
   }
 }

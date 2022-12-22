@@ -14,10 +14,10 @@ import { wrapGenericHandler } from '../Wrapper';
 import { BaseSchema } from 'yup';
 import { recordException } from '../../util/exceptions';
 import { TOrSchema } from '../../util/types';
-import { AwsSQSRecord, failSQSRecord } from '../../util/sqs/record';
 import { wrapTelemetrySQS } from './Telemetry/Wrapper';
 import { flush } from '../utils/telemetry';
 import { validateRecord } from '../../util/validateRecord';
+import { AwsSQSRecord, failSQSRecord } from '../../util/records/sqs/record';
 
 export const createSQSHandler = <
   TInput,
@@ -41,7 +41,7 @@ export const createSQSHandler = <
 
   let innerLoop = async (record: SQSRecord, context: Context) => {
     log.debug(record);
-    const _record = new AwsSQSRecord<V>(record);
+    const _record = new AwsSQSRecord<V>(record, configuration.messageType);
 
     try {
       await validateRecord(_record, configuration.yupSchemaInput);

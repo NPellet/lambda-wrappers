@@ -1,10 +1,10 @@
 import { AWSXRAY_TRACE_ID_HEADER } from '@opentelemetry/propagator-aws-xray';
 import { APIGatewayEvent, APIGatewayProxyResult, Handler } from 'aws-lambda';
 import _ from 'lodash';
-import { AwsApiGatewayRequest } from '../util/apigateway/apigateway';
-import { HTTPError, HTTPResponse } from '../util/apigateway/response';
+import { HTTPError, HTTPResponse } from '../util/records/apigateway/response';
 import { LambdaInitSecretHandler } from '../util/LambdaHandler';
 import { sampledAwsHeader, testApiGatewayEvent } from './utils';
+import { Request } from '../lambda';
 
 const event = _.cloneDeep(testApiGatewayEvent);
 event.headers[AWSXRAY_TRACE_ID_HEADER] = sampledAwsHeader;
@@ -54,7 +54,7 @@ export const syncHandler: Handler<APIGatewayEvent, APIGatewayProxyResult> = (
 ) => {};
 
 export const successLHandler: LambdaInitSecretHandler<
-  AwsApiGatewayRequest<any>,
+Request<any>,
   void,
   string,
   HTTPResponse<string>
@@ -63,7 +63,7 @@ export const successLHandler: LambdaInitSecretHandler<
 };
 
 export const errorLHandler: LambdaInitSecretHandler<
-  AwsApiGatewayRequest<any>,
+Request<any>,
   void,
   string,
   HTTPError
@@ -73,7 +73,7 @@ export const errorLHandler: LambdaInitSecretHandler<
 };
 
 export const unauthorizedLHandler: LambdaInitSecretHandler<
-  AwsApiGatewayRequest<any>,
+Request<any>,
   void,
   string,
   HTTPError
@@ -83,7 +83,7 @@ export const unauthorizedLHandler: LambdaInitSecretHandler<
 };
 
 export const unauthorizedWithErrorLHandler: LambdaInitSecretHandler<
-  AwsApiGatewayRequest<any>,
+Request<any>,
   void,
   string,
   HTTPError
@@ -100,7 +100,7 @@ export const unauthorizedWithErrorLHandler: LambdaInitSecretHandler<
 };
 
 export const bufferLHandler: LambdaInitSecretHandler<
-  AwsApiGatewayRequest<any>,
+Request<any>,
   void,
   string,
   HTTPResponse<Buffer>
@@ -109,7 +109,7 @@ export const bufferLHandler: LambdaInitSecretHandler<
 };
 
 export const emptyLHandler: LambdaInitSecretHandler<
-  AwsApiGatewayRequest<any>,
+Request<any>,
   void,
   string,
   HTTPResponse<void>
@@ -117,7 +117,7 @@ export const emptyLHandler: LambdaInitSecretHandler<
   return HTTPResponse.OK_NO_CONTENT();
 };
 export const objectLHandler: LambdaInitSecretHandler<
-  AwsApiGatewayRequest<any>,
+Request<any>,
   void,
   string,
   HTTPResponse<object>
@@ -128,7 +128,7 @@ export const objectLHandler: LambdaInitSecretHandler<
 };
 
 export const exceptionLHandler: LambdaInitSecretHandler<
-  AwsApiGatewayRequest<any>,
+  Request<any>,
   void,
   string,
   HTTPResponse<string>
@@ -138,7 +138,7 @@ export const exceptionLHandler: LambdaInitSecretHandler<
 
 // @ts-ignore On purpose wrong type output
 export const malformedLHandler: LambdaInitSecretHandler<
-  AwsApiGatewayRequest<any>,
+Request<any>,
   void,
   HTTPResponse<string>
 > = async (event, init, context, callback) => {
@@ -147,7 +147,7 @@ export const malformedLHandler: LambdaInitSecretHandler<
 
 // @ts-ignore
 export const syncLHandler: LambdaInitSecretHandler<
-  AwsApiGatewayRequest<any>,
+Request<any>,
   void,
   HTTPResponse<string>
 > = (event, init, context, callback) => {};

@@ -1,9 +1,9 @@
 import { BaseSchema, InferType } from 'yup';
 import { HandlerConfiguration } from '../config';
-import { ConstructorOf, TOrSchema } from '../../util/types';
+import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import { SecretConfig, SecretsContentOf, TSecretRef } from '../utils/secrets_manager';
 import { createSNSHandler } from './sns';
-import { AwsSNSRecord } from '../../util/sns/record';
+import { AwsSNSRecord } from '../../util/records/sns/record';
 import { BaseWrapperFactory } from '../BaseWrapperFactory';
 
 export class SNSHandlerWrapperFactory<
@@ -17,6 +17,7 @@ export class SNSHandlerWrapperFactory<
   public _secrets: Record<TSecrets, SecretConfig>;
   public __shimInput: TInput;
   public _handler: THandler;
+  protected _messageType: MessageType = MessageType.String;
 
   setInputSchema<U extends BaseSchema>(schema: U) {
     const constructor = this.constructor;
@@ -24,6 +25,7 @@ export class SNSHandlerWrapperFactory<
     const api = this.fork<TInput, TSecrets,THandler, U>();
     api._inputSchema = schema;
     api._secrets = this._secrets;
+    api.setMessageTypeFromSchema( schema );
 
     return api;
   }
@@ -61,13 +63,40 @@ export class SNSHandlerWrapperFactory<
     return api;
   }
 
+
+  private copyAll (
+    newObj: SNSHandlerWrapperFactory<any,TSecretList, TSecrets, THandler, SInput>
+  ) {
+    newObj._inputSchema = this._inputSchema;
+    newObj._secrets = this._secrets;
+    newObj._handler = this._handler;
+  }
+
   setTsInputType<U>() {
     const api = this.fork<U, TSecrets, THandler, SInput>();
-    api._inputSchema = this._inputSchema;
-    api._secrets = this._secrets;
-    api._handler = this._handler;
+    api._messageType = MessageType.Object;
+    this.copyAll( api );
     return api;
   }
+
+  setStringInputType() {
+    const api = this.setTsInputType<string>();
+    api._messageType = MessageType.String;
+    return api;
+  }
+
+  setNumberInputType() {
+    const api = this.setTsInputType<number>();
+    api._messageType = MessageType.Number;
+    return api;
+  }
+
+  setBinaryInputType() {
+    const api = this.setTsInputType<Buffer>();
+    api._messageType = MessageType.Binary;
+    return api;
+  }
+
 
   makeHandlerFactory() {
     type INPUT = TOrSchema<TInput, SInput>;
@@ -95,6 +124,7 @@ export class SNSHandlerWrapperFactory<
           initFunction: async (secrets) => {
             return controllerFactory.init(secrets);
           },
+          messageType: this._messageType
         };
 
       const handler = createSNSHandler<INPUT, TInterface, TSecrets, SInput>(
@@ -120,7 +150,10 @@ export class SNSHandlerWrapperFactory<
     THandler extends string,
     SInput extends BaseSchema | undefined = undefined
   >(): SNSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler,  SInput> {
-    return new SNSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler, SInput>( this.mgr );
+    const n = new SNSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler, SInput>( this.mgr );
+  
+    super.fork(n);
+    return n;
   }
 }
 

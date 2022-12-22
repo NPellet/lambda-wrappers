@@ -6,7 +6,7 @@ Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic
 
 Lambda's are a great tool, but they're pretty raw. For example, it'd be pretty useful to:
 
-- wrap the handlers with Sentry (you could also use a lambda layer for that)
+- Wrap the handlers with Sentry (you could also use a lambda layer for that)
 - Sanitize API Gateway's responses and SQS failed batch items
 - Pre-fetch a bunch of secrets from the secret manager (do not put secrets in the env variables !)
 - Have static type safety as well as runtime payload validation
@@ -33,6 +33,7 @@ This package provides an opiniated stack to insert additional logic in handling 
     - [Implementing a controller](#implementing-a-controller)
     - [Implementing multiple routes / events in a controller](#implementing-multiple-routes--events-in-a-controller)
   - [Type system](#type-system)
+  - [JSON, String, Number or Buffer ?](#json-string-number-or-buffer-)
   - [Using Sentry](#using-sentry)
     - [Disabling Sentry](#disabling-sentry)
   - [Secret injection](#secret-injection)
@@ -361,6 +362,24 @@ When specifying `setTsInputType` (and `setTsOutputType` for the API Gateway), th
 When specifying a yup schema using `setInputSchema` and `setOutputSchema`, but when the corresponding `setTsInputType` and `setTsOutputType` are not set, the type of the input and output is dictated by yup's `InferType< typeof schema >`. The only way to overwrite that if - for example - yup's inferred type isn't good enough, is to override it with `setTsInputType`. This doesn't change the runtime validation, which solely depends on the presence of the schema or not.
 
 On another note, the schema validation can be asynchronous. It is validated before your handler is called and its validation is finished before your handler is executed. If the validation fails, your wrapped handler will not be executed.
+
+
+## JSON, String, Number or Buffer ?
+
+The API Gateway, SNS and SQS pass the message body (or request as a string), and we need to make some guesswork to determine if it should be JSON parsed, base64 parsed, number parsed or not parsed at all.
+
+Here are the rules we generally apply:
+
+- When calling `setInputSchema`, we look at the schema type:
+  - If it's an `ObjectSchema`, we run JSON.parse before validation
+  - If it's a `StringSchema`, we run no parsing before validation
+  - If it's a `NumberSchema`, we run parseFloat before validation
+
+- If the schema is not set, but `setTsInputType` is set, then we used JSON.parse
+- If `setNumberInputType`, `setStringInputType` or `setBinaryInputType` are used instead of `setTsInputType`, then we parse a float, nothing and a base64 buffer, respectively
+
+- If nothing is called, there will do no parsing and the type will unknown anyway. In other words, you will get a string for API Gateway, SQS and SNS, and potentially a JSON for the Event Bridge.
+
 
 ## Using Sentry
 

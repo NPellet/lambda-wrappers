@@ -13,6 +13,7 @@ jest.mock('../../util/exceptions', function () {
 
 import { recordException } from '../../util/exceptions';
 import { SpanStatusCode } from '@opentelemetry/api';
+import { MessageType } from '../../util/types';
 
 const testRecord: SQSRecord = {
   messageId: 'abc',
@@ -38,7 +39,10 @@ describe('Testing SQS Handler wrapper', function () {
   });
 
   it('Basic functionality works', async () => {
-    const handler = createSQSHandler(async (data, init, secrets) => {}, {});
+    const handler = createSQSHandler(async (data, init, secrets) => {}, {
+
+      messageType: MessageType.Object,
+    });
 
     await expect(
       handler(
@@ -51,10 +55,13 @@ describe('Testing SQS Handler wrapper', function () {
     ).resolves.toMatchObject({ batchItemFailures: [] });
   });
 
-  it('When body is not a JSON, fails', async () => {
+  it('When body is not a JSON and a JSON is expected, fails', async () => {
     const handler = createSQSHandler(async (data, init, secrets) => {
       data.getData(); // <== Makes it fail
-    }, {});
+    }, {
+
+      messageType: MessageType.Object,
+    });
 
     await expect(
       handler(
@@ -79,6 +86,8 @@ describe('Testing SQS Handler wrapper', function () {
         requiredInputString: yup.string().required(),
         aNumber: yup.number(),
       }),
+
+      messageType: MessageType.Binary,
     });
 
     await expect(
@@ -103,7 +112,10 @@ describe('Testing SQS Handler wrapper', function () {
   it('Failed handler outputs a batchItemFailure', async () => {
     const handler = createSQSHandler(async (data, init, secrets) => {
       throw new Error("Couldn't process !");
-    }, {});
+    }, {
+
+      messageType: MessageType.Object,
+    });
 
     await expect(
       handler(
@@ -128,6 +140,8 @@ describe('Testing SQS Opentelemetry', function () {
   it('Properly wraps open telemetry', async () => {
     const handler = createSQSHandler(async (data, init, secrets) => {}, {
       opentelemetry: true,
+
+      messageType: MessageType.Object,
     });
 
     await expect(
@@ -155,6 +169,8 @@ describe('Testing SQS Opentelemetry', function () {
       },
       {
         opentelemetry: true,
+
+      messageType: MessageType.Object,
       }
     );
 
@@ -185,6 +201,8 @@ describe('Testing SQS Opentelemetry', function () {
           requiredInputString: yup.string().required(),
           aNumber: yup.number(),
         }),
+
+      messageType: MessageType.Object,
       }
     );
 

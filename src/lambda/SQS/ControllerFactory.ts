@@ -1,11 +1,11 @@
-import { BaseSchema, InferType } from 'yup';
+import { BaseSchema, InferType, NumberSchema, ObjectSchema, StringSchema } from 'yup';
 import { HandlerConfiguration } from '../config';
-import { ConstructorOf, TOrSchema } from '../../util/types';
+import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import { SecretConfig, SecretsContentOf, TSecretRef } from '../utils/secrets_manager';
 import { createSQSHandler } from './sqs';
-import { AwsSQSRecord } from '../../util/sqs/record';
 import { SQSBatchItemFailure } from 'aws-lambda';
 import { BaseWrapperFactory } from '../BaseWrapperFactory';
+import { AwsSQSRecord } from '../../util/records/sqs/record';
 
 export class SQSHandlerWrapperFactory<
   TInput,  
@@ -18,6 +18,7 @@ export class SQSHandlerWrapperFactory<
   public _secrets: Record<TSecrets, SecretConfig>;
   public __shimInput: TInput;
   public _handler: THandler;
+  protected _messageType: MessageType = MessageType.String;
 
   
   setInputSchema<U extends BaseSchema>(schema: U) {
@@ -26,6 +27,7 @@ export class SQSHandlerWrapperFactory<
     const api = this.fork<TInput, TSecrets,THandler, U>();
     api._inputSchema = schema;
     api._secrets = this._secrets;
+    api.setMessageTypeFromSchema( schema );
 
     return api;
   }
@@ -62,13 +64,42 @@ export class SQSHandlerWrapperFactory<
     return api;
   }
 
+
+
+  private copyAll (
+    newObj: SQSHandlerWrapperFactory<any,TSecretList, TSecrets, THandler, SInput>
+  ) {
+    newObj._inputSchema = this._inputSchema;
+    newObj._secrets = this._secrets;
+    newObj._handler = this._handler;
+  }
+
   setTsInputType<U>() {
     const api = this.fork<U, TSecrets, THandler, SInput>();
-    api._inputSchema = this._inputSchema;
-    api._secrets = this._secrets;
-    api._handler = this._handler;
+    api._messageType = MessageType.Object;
+    this.copyAll( api );
     return api;
   }
+
+  setStringInputType() {
+    const api = this.setTsInputType<string>();
+    api._messageType = MessageType.String;
+    return api;
+  }
+
+  setNumberInputType() {
+    const api = this.setTsInputType<number>();
+    api._messageType = MessageType.Number;
+    return api;
+  }
+
+  setBinaryInputType() {
+    const api = this.setTsInputType<Buffer>();
+    api._messageType = MessageType.Binary;
+    return api;
+  }
+
+
 
   makeHandlerFactory() {
     type INPUT = TOrSchema<TInput, SInput>;
@@ -96,6 +127,7 @@ export class SQSHandlerWrapperFactory<
           initFunction: async (secrets) => {
             return controllerFactory.init(secrets);
           },
+          messageType: this._messageType
         };
 
       const handler = createSQSHandler<INPUT, TInterface, TSecrets, SInput>(
@@ -121,7 +153,9 @@ export class SQSHandlerWrapperFactory<
     THandler extends string = "handle",
     SInput extends BaseSchema | undefined = undefined
   >() {
-    return new SQSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler, SInput>( this.mgr );
+    const n = new SQSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler, SInput>( this.mgr );
+    super.fork(n);
+    return n;
   }
 }
 

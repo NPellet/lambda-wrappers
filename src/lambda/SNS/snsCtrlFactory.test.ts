@@ -2,7 +2,7 @@ import _ from 'lodash';
 import { LambdaContext } from '../../test_utils/utils';
 import * as yup from 'yup';
 import { SQSBatchResponse, SQSRecord } from 'aws-lambda';
-import { failSQSRecord } from '../../util/sqs/record';
+import { failSQSRecord } from '../../util/records/sqs/record';
 import {
   SQSCtrlInterface,
   SQSHandlerWrapperFactory,

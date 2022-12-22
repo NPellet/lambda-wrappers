@@ -9,6 +9,7 @@ import { AWSXRAY_TRACE_ID_HEADER } from "@opentelemetry/propagator-aws-xray";
 import { createEventBridgeHandler } from "./event";
 import { LambdaType } from "../config";
 import * as yup from "yup";
+import { MessageType } from "../../util/types";
 
 const mockInit = jest.fn(async () => {});
 
@@ -19,6 +20,8 @@ describe("Event bridge handler", function () {
     const handler = createEventBridgeHandler(mockHandler, {
       initFunction: mockInit,
       type: LambdaType.GENERIC,
+
+      messageType: MessageType.Binary,
       secretInjection: {},
     });
 
@@ -44,6 +47,8 @@ describe("Event bridge handler", function () {
       },
       {
         initFunction: init,
+
+        messageType: MessageType.Binary,
         yupSchemaInput: yup.object({
           field: yup.number().required(),
         }),

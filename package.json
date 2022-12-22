@@ -6,7 +6,7 @@
   "types": "dist/lambda/index.d.ts",
   "scripts": {
     "build": "node esbuild.cjs && npx tsc",
-    "test": "jest"
+    "test": "npx jest"
   },
   "repository": "git@github.com:NPellet/lambda-wrappers",
   "author": "Norman Pellet",
