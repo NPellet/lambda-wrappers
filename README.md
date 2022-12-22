@@ -15,9 +15,8 @@ Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic
     - [Wrapper available for AWS sources:](#wrapper-available-for-aws-sources)
     - [Handler method name](#handler-method-name)
   - [Implementing a controller](#implementing-a-controller)
-  - [Usage](#usage-1)
-    - [Background](#background)
-    - [Example](#example)
+  - [Detailed Usage](#detailed-usage)
+    - [Complete example](#complete-example)
     - [Notes on the Wrapper Factory](#notes-on-the-wrapper-factory)
     - [Other notes](#other-notes)
   - [Implementing multiple routes / events in a controller](#implementing-multiple-routes--events-in-a-controller)
@@ -61,7 +60,6 @@ Currently, this is only useful for the list of usable secrets, but it may be ext
 
 ```typescript
 // path/to/manager.ts
-
 import { LambdaFactoryManager } from 'aws-lambda-wrappers'
 const mgr = new LambdaFactoryManager();
 // We'll import the manager later on !
@@ -69,12 +67,13 @@ export default mgr;
 ```
 
 ### 2. Create a route / event handler using the manager
-To use the manager in a handler file, import the manager you just exported into a new file (the one that will use by AWS to handle your function):
+It is good practice to separate the logic (a controller) from the lambda itself (exposing the handler to AWS), which would allow you to swap out controllers or implement multiple lambdas in a single controller. 
+
+Start by the handler file: import the manager you just exported into a new file (the one that will use by AWS to handle your function) and either start an API Gateway wrapper, and Event Bridge wrapper, an SNS wrapper or an SQS wrapper
 
 ```typescript
 // path/to/route.ts
-
-import manager from './path/to/manager'
+import manager from './path/to/manager' // You can also use an npm module to share the mgr across your org
 const wrapperFactory = manager.apiGatewayWrapperFactory( "handler_name" ).setTsInputType<string>();
 
 import { Controller } from './path/to/controller'
@@ -100,7 +99,7 @@ class Controller implements Interface {
 ```
 
 And that's it for the most basic implementation !
-Use `path/to/route.hanlder` as a Lambda entry-point.
+Use `path/to/route.handler` as a Lambda entry-point.
 
 We've added a lot of stuff, which may not really make sense and seems burdensome. Let's now move to the real added value of this setup.
 
@@ -199,22 +198,9 @@ Note on the following:
 
 
 
-## <a name='Usage'></a>Usage
+## Detailed Usage
 
-### <a name='Background'></a>Background
-
-We would like the API contract to be defined by the route and enforced at the Controller level, as opposed to letting the controller define the contract itself, which can too easily lead to API changes that are not backwards compatible. In addition, we wish for the contract to be retrievable by utility tools (and not just expressed at runtime)
-
-This project exposes "handler wrapper factories", which are strongly typed classes that can be used to create wrapping function that interface a controller into a Lambda handler.
-
-Those factories are available for
-
-- The API Gateway: `APIGatewayHandlerWrapperFactory`
-- The Event Bridge: `EventBridgeHandlerWrapperFactory`
-- SQS: `SQSHandlerWrapperFactory`
-- SNS: `SNSHandlerWrapperFactory`
-
-### <a name='Example'></a>Example
+### Complete example
 
 ```typescript
 //====================================================================
@@ -261,8 +247,7 @@ export class MyController implements controllerInterface {
 
 ### <a name='NotesontheWrapperFactory'></a>Notes on the Wrapper Factory
 
-- `manager.apiGatewayWrapperFactory()` (and similarly for all other event sources) is to be done for every lambda that you wish to create
-- `.setHandler( handlerName )` specifies the name of the handler function to be implemented in the controller. Use this to reuse a single controller for many routes
+- `manager.apiGatewayWrapperFactory()` (and similarly for all other event sources) is to be done for every lambda that you wish to create. Its only argument defines the name of the handler function to be implemented in the controller
 - `.setTsInputType<T>()` informs the interface on the input type you're expected to receive. We're not talking about the raw type (e.g. `APIGatewayEvent`), but rather
   - The `body` field for the API gateway (will be JSON.parse'd if the Content-Type is application/json)
   - The `detail` field for the Event Bridge
@@ -362,9 +347,11 @@ export class MyController // The controller must now implement 4 interfaces, 1 f
 
 ## <a name='Typesystem'></a>Type system
 
+When specifying `setTsInputType` (and `setTsOutputType` for the API Gateway), the input data will reference those types (even when a schema is set) but do nothing at the runtime (you need to set a schema for that)
+
 When specifying a yup schema using `setInputSchema` and `setOutputSchema`, but when the corresponding `setTsInputType` and `setTsOutputType` are not set, the type of the input and output is dictated by yup's `InferType< typeof schema >`. The only way to overwrite that if - for example - yup's inferred type isn't good enough, is to override it with `setTsInputType`. This doesn't change the runtime validation, which solely depends on the presence of the schema or not.
 
-On another note, the schema validation can be asynchronous. It is verified before your handler is called.
+On another note, the schema validation can be asynchronous. It is validated before your handler is called and its validation is finished before your handler is executed. If the validation fails, your wrapped handler will not be executed.
 
 ## <a name='Secretinjection'></a>Secret injection
 
@@ -468,25 +455,34 @@ Autocompletion of the secret key:
 
 ## <a name='APIGatewayoutput'></a>API Gateway output
 
-The only major changes here compare to the current systems is that:
-
-- Error HTTP Codes should use the static constructor methods on `HTTPError`, which supports an Error or a string. This allows us to retain a stricly typed return. Therefore, the response type should be `Promise<HTTPError | Response<T>>`:
+To return an API Gateway Response, use the `HTTPResponse` static constructors:
 
 ```typescript
-return HTTPError.BAD_REQUEST(error);
+return HTTPResponse.OK(/* your data */)
+// or
+return HTTPResponse.OK_NO_CONTENT();
+// or
+// ... other static methods
+```
+If you set an output type with `setTsOutputType`, typescript will enforce static type safety in your response.
 
+If you set an output schema with `setOutputSchema`, javascript will validate your payload. If the payload does not validate, an HTTPError 422 will be sent to the upstream caller, in order to protect it from failing further.
+
+To response with an Error, use the static constructor methods on `HTTPError`, which take an Error or a string in their static constructor methods. 
+```typescript
+return HTTPError.BAD_REQUEST(error);
 // or
 return HTTPError.BAD_REQUEST('Failure !');
 ```
-
-- Errors can be "acceptable" or "anormal". An anormal error will be registered with Sentry and Opentelemetry, and should indicate a condition that your service shouldn't enter. If this condition is a consequence of an invalid payload, do not set the error to anormal. This is a problem with the sender of the request. To make an error anormal, just to do following
-
+Errors can be "acceptable" or "anormal". An anormal error will be registered with Sentry and Opentelemetry, and should indicate a condition that your service shouldn't enter. If this condition is a consequence of an invalid payload, do not set the error to anormal. This is a problem with the sender of the request. To make an error anormal, just to do following
 ```typescript
 return HTTPError.BAD_REQUEST(error).anormal();
 ```
+Note: `HTTPError.INTERNAL_ERROR()` is by default anormal.
 
-- `HTTPError.INTERNAL_ERROR()` is by default internal.
 
+In summary, the API Gateway handler should return `Promise<HTTPError | HTTPResponse<T>>`:
+ 
 
 ## <a name='Anoteonerrorhandlingincontrollers'></a>A note on error handling in controllers
 
