@@ -19,6 +19,7 @@ export class SQSHandlerWrapperFactory<
   public __shimInput: TInput;
   public _handler: THandler;
 
+  
   setInputSchema<U extends BaseSchema>(schema: U) {
     const constructor = this.constructor;
 
@@ -120,7 +121,7 @@ export class SQSHandlerWrapperFactory<
     THandler extends string = "handle",
     SInput extends BaseSchema | undefined = undefined
   >() {
-    return new SQSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler, SInput>(this.mgr);
+    return new SQSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler, SInput>( this.mgr );
   }
 }
 

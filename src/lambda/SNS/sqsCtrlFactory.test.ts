@@ -7,7 +7,7 @@ import {
   SQSCtrlInterface,
   SQSHandlerWrapperFactory,
 } from '../SQS/ControllerFactory';
-import { IfHandler } from '..';
+import { IfHandler, LambdaFactoryManager } from '..';
 
 const testRecord: SQSRecord = {
   messageId: 'abc',
@@ -30,8 +30,7 @@ const testRecord: SQSRecord = {
 describe('Testing API Controller factory', function () {
   it('Basic functionality works', async () => {
     const schema = yup.object({ a: yup.string() });
-
-    const controllerFactory = new SQSHandlerWrapperFactory()
+    const controllerFactory = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
       .setInputSchema(schema)
       .setHandler('create');
 

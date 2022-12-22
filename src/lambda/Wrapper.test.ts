@@ -20,7 +20,7 @@ jest.mock('./utils/sentry', () => {
 });
 
 import {
-  getAwsSecretDef,
+  SecretConfig,
   wrapHandlerSecretsManager,
 } from './utils/secrets_manager';
 import { wrapSentry } from './utils/sentry';
@@ -43,8 +43,12 @@ describe('Testing runtime wrapper', () => {
   });
 
   it('Calls the secrets manager', async () => {
-    const secretInj = {
-      a: getAwsSecretDef('Algolia-Products', 'adminApiKey', true),
+    const secretInj: Record<string, SecretConfig> = {
+      a: {
+        "secret": "Algolia-Products",
+        "secretKey": "adminApiKey",
+        required: true
+      }
     };
 
     wrapGenericHandler(async (event, init, secrets, context, callback) => {}, {

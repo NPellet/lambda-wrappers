@@ -8,6 +8,7 @@ import {
 import { HTTPError } from '../../util/apigateway/response';
 import { SecretsOf } from '../../util/types';
 import { IfHandler } from '../../../dist/lambda';
+import { LambdaFactoryManager } from '../Manager';
 
 jest.mock('../utils/secrets_manager_aws', function () {
   return {
@@ -33,7 +34,7 @@ describe('Testing API Controller factory', function () {
       return HTTPError.BAD_REQUEST('Oups');
     });
 
-    const fac = new APIGatewayHandlerWrapperFactory()
+    const fac = new APIGatewayHandlerWrapperFactory( new LambdaFactoryManager())
       .needsSecret('abc', 'Algolia-Products', 'adminApiKey', true)
       .setTsOutputType<{ b: number }>()
       .setTsInputType<{ a: string }>()
@@ -41,7 +42,6 @@ describe('Testing API Controller factory', function () {
       .setOutputSchema(yup.object({ b: yup.number() }))
       .setHandler('create');
 
-    const handlerFactory = fac.makeHandlerFactory();
 
     type IF = APIGatewayCtrlInterface<typeof fac>;
     class Ctrl implements IF {
@@ -59,19 +59,21 @@ describe('Testing API Controller factory', function () {
       };
     }
 
-    const { handler, configuration } = handlerFactory(Ctrl);
+    const { handler, configuration } = fac.createHandler(Ctrl);
 
     expect(configuration.secretInjection!.abc).toStrictEqual({
-      secret: ['Algolia-Products', 'adminApiKey'],
+      secret: 'Algolia-Products', 
+      secretKey: 'adminApiKey',
       required: true,
     });
 
     expect(configuration.yupSchemaInput).toStrictEqual(schema);
     expect(configuration.secretInjection!.abc.required).toBe(true);
-    expect(configuration.secretInjection!.abc.secret).toStrictEqual([
+    expect(configuration.secretInjection!.abc.secret).toStrictEqual(
       'Algolia-Products',
-      'adminApiKey',
-    ]);
+    );
+    expect(configuration.secretInjection!.abc.secretKey).toStrictEqual(      'adminApiKey',
+    );
     const out = await handler(testApiGatewayEvent, LambdaContext, () => {});
     expect(out.statusCode).toBe(500);
     expect(out.body).toContain('Lambda input schema validation failed');
@@ -88,11 +90,10 @@ describe('Testing API Controller factory', function () {
   });
 
   it('needsSecret required param defaults to true', () => {
-    const fac = new APIGatewayHandlerWrapperFactory()
+    const fac = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
       .needsSecret('abc', 'Algolia-Products', 'adminApiKey')
       .setHandler('create');
 
-    const handlerFactory = fac.makeHandlerFactory();
 
     class Ctrl {
       static async init() {
@@ -104,7 +105,7 @@ describe('Testing API Controller factory', function () {
       };
     }
 
-    const { configuration } = handlerFactory(Ctrl);
+    const { configuration } = fac.createHandler(Ctrl);
     expect(configuration.secretInjection?.abc.required).toBe(true);
   });
 });

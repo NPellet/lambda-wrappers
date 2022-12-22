@@ -24,7 +24,6 @@ jest.mock("./secrets_manager_aws", function () {
 
 import {
   clearCache,
-  getAwsSecretDef,
   modifyCacheExpiracy,
   wrapHandlerSecretsManager,
 } from "./secrets_manager";
@@ -40,18 +39,23 @@ describe("Secret manager", () => {
     clearCache();
     //delete process.env.key;
   });
-
+/*
   test("Testing getAwsSecretDef", function () {
     expect(getAwsSecretDef("Algolia-Products", "adminApiKey")).toStrictEqual({
       secret: ["Algolia-Products", "adminApiKey"],
       required: true,
     });
   });
-
+*/
   test("Fetching basic functionality", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
-    });
+      key: {
+        
+        "required": true,
+        "secret": "Algolia-Products", 
+        "secretKey": "adminApiKey"
+      }
+    })
 
     await wrappedHandler(event, LambdaContext, () => {});
 
@@ -61,8 +65,18 @@ describe("Secret manager", () => {
 
   test("Fetching string and json", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
-      key2: getAwsSecretDef("Google", undefined, true),
+      key: {
+        
+        "required": true,
+        "secret": "Algolia-Products", 
+        "secretKey": "adminApiKey"
+      },
+      key2: {
+        
+        "required": true,
+        "secret": "Google", 
+        "secretKey": undefined
+      }
     });
 
     await wrappedHandler(event, LambdaContext, () => {});
@@ -75,8 +89,13 @@ describe("Secret manager", () => {
 
   test("Fetching wrong string/json pair", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: getAwsSecretDef("Algolia-Products", undefined, true),
+      key: { 
+        "required": true,
+        "secret": "Algolia-Products", 
+        "secretKey": undefined
+      }
     });
+
     expect(
       wrappedHandler(event, LambdaContext, () => {})
     ).rejects.toBeInstanceOf(AssertionError);
@@ -84,8 +103,17 @@ describe("Secret manager", () => {
 
   test("Fetching a secret twice should result in a single call", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
-      key2: getAwsSecretDef("Algolia-Products", "apiKey", true),
+
+      key: { 
+        "required": true,
+        "secret": "Algolia-Products", 
+        "secretKey": "adminApiKey"
+      },
+      key2: { 
+        "required": true,
+        "secret": "Algolia-Products", 
+        "secretKey": "apiKey"
+      }
     });
 
     await wrappedHandler(event, LambdaContext, () => {});
@@ -97,8 +125,11 @@ describe("Secret manager", () => {
 
   test("Subsequent handler calls does not result in more fetches to the secret manager, except after a cache clear", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
-    });
+      key: { 
+        "required": true,
+        "secret": "Algolia-Products", 
+        "secretKey": "adminApiKey"
+      },    });
 
     await wrappedHandler(event, LambdaContext, () => {});
     expect(fetchAwsSecret).toHaveBeenCalledTimes(1);
@@ -118,8 +149,11 @@ describe("Secret manager", () => {
 
   test("After expiring, a new call to the secret manager is done", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: getAwsSecretDef("Algolia-Products", "adminApiKey", true),
-    });
+      key: { 
+        "required": true,
+        "secret": "Algolia-Products", 
+        "secretKey": "adminApiKey"
+      },    });
 
     await wrappedHandler(event, LambdaContext, () => {});
     expect(fetchAwsSecret).toHaveBeenCalledTimes(1);
@@ -135,7 +169,12 @@ describe("Secret manager", () => {
 
   test("Required secrets should fail if undefined", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: getAwsSecretDef("Algolia-Products", "lwaAdminApiKey", true),
+      key: { 
+        "required": true,
+        "secret": "Algolia-Products", 
+        "secretKey": "lwaAdminApiKey"
+      },
+
     });
 
     await expect(
@@ -145,8 +184,12 @@ describe("Secret manager", () => {
 
   test("Non-required secrets should not fail if undefined", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
-      key: getAwsSecretDef("Algolia-Products", "lwaAdminApiKey", false),
-    });
+      key: { 
+        "required": false,
+        "secret": "Algolia-Products", 
+        "secretKey": "lwaAdminApiKey"
+      }
+        });
 
     await expect(wrappedHandler(event, LambdaContext, () => {})).resolves.toBe(
       "Ok"
@@ -164,7 +207,13 @@ describe("Secret manager", () => {
       type: LambdaType.GENERIC,
       initFunction: init,
       secretInjection: {
-        secret: getAwsSecretDef("Algolia-Products", "adminApiKey", false),
+
+        secret: { 
+          "required": false,
+          "secret": "Algolia-Products", 
+          "secretKey": "adminApiKey"
+        }
+
       },
     });
 
@@ -182,8 +231,12 @@ describe("Secret manager", () => {
           expect(secrets.secret).toBe("algoliaApiKey");
         },
         secretInjection: {
-          secret: getAwsSecretDef("Algolia-Products", "adminApiKey", false),
-        },
+          secret: { 
+            "required": false,
+            "secret": "Algolia-Products", 
+            "secretKey": "adminApiKey"
+          }
+          },
       }
     );
 

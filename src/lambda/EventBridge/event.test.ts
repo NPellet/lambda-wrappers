@@ -6,7 +6,6 @@ import {
 
 import _ from "lodash";
 import { AWSXRAY_TRACE_ID_HEADER } from "@opentelemetry/propagator-aws-xray";
-import { EventBridgeLambdaHandler } from "../../util/LambdaHandler";
 import { createEventBridgeHandler } from "./event";
 import { LambdaType } from "../config";
 import * as yup from "yup";

@@ -45,7 +45,7 @@ export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
     if (secrets) {
       const secretsToFetch: Set<string> = new Set();
       // List all needed secrets for this lambda
-      for (let [k, { secret, required }] of Object.entries(secrets)) {
+      for (let [k, { secret, secretKey, required }] of Object.entries(secrets)) {
         const isInCache = SecretCache.has(k);
         const isExpired =
           !isInCache || SecretCache.get(k)!.expiresOn.getTime() < Date.now();
@@ -55,7 +55,7 @@ export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
           log.debug(
             `Secret for key ${k} is either not in cache or has expired. Tagging for a refetch`
           );
-          secretsToFetch.add(secret[0]);
+          secretsToFetch.add(secret);
         } else {
           secretsOut[k] = SecretCache.get(k)!.value;
           strict(
@@ -71,16 +71,16 @@ export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
         fetchedAwsSecrets.set(awsSecretName, awsSecret);
       }
 
-      for (let [k, { secret, required }] of Object.entries(secrets)) {
-        if (secretsToFetch.has(secret[0])) {
-          const awsSecretValue = fetchedAwsSecrets.get(secret[0]);
+      for (let [k, { secret, required , secretKey }] of Object.entries(secrets)) {
+        if (secretsToFetch.has(secret)) {
+          const awsSecretValue = fetchedAwsSecrets.get(secret);
 
           let value: string;
-          if (secret[1] === undefined) {
+          if (secretKey === undefined) {
             strict(
               typeof awsSecretValue === 'string',
               'Secret value for secretName ' +
-                secret[0] +
+                secret +
                 ' is not a string. Either use [ secretName, undefined ] with a string secret [ secretName, secretKey ] for a key-value secret'
             );
 
@@ -89,21 +89,21 @@ export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
             strict(
               typeof awsSecretValue === 'object',
               'Secret value for secretName ' +
-                secret[0] +
-                ' is not a string. Either use [ secretName, undefined ] with a string secret [ secretName, secretKey ] for a key-value secret'
+                secret +
+                ' is not a string. Either use secretKey: undefined with a string secret or secretKey: value for a key-value secret'
             );
 
-            value = awsSecretValue[secret[1]];
+            value = awsSecretValue[secretKey];
           }
 
           if (required && value === undefined) {
             throw new Error(
-              `Secret ${secret[0]} (key ${secret[1]}) should not be undefined`
+              `Secret ${secret} (key ${secretKey}) should not be undefined`
             );
           }
 
           log.debug(
-            `Injecting newly fetched secret ${secret[0]}:${secret[1]} into env ${k}`
+            `Injecting newly fetched secret ${secret}:${secretKey} into env ${k}`
           );
 
           if (value !== undefined) {

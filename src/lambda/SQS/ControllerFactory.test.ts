@@ -7,8 +7,8 @@ import {
   SQSHandlerWrapperFactory,
 } from './ControllerFactory';
 import { failSQSRecord } from '../../util/sqs/record';
-import { controllerInterface } from '../../../examples/apigateway';
 import { PayloadOf } from '../../util/types';
+import { LambdaFactoryManager } from '../Manager';
 
 const testRecord: SQSRecord = {
   messageId: 'abc',
@@ -32,7 +32,7 @@ describe('Testing SQS Wrapper factory', function () {
   it('Basic functionality works', async () => {
     const schema = yup.object({ a: yup.string() });
 
-    const controllerFactory = new SQSHandlerWrapperFactory()
+    const controllerFactory = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
       .setInputSchema(schema)
       .setHandler('create');
 
@@ -97,24 +97,25 @@ describe('Testing SQS Wrapper factory', function () {
   });
 
   test('Testing needsSecret', async () => {
-    const controllerFactory = new SQSHandlerWrapperFactory()
+    const controllerFactory = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
       .setHandler('create')
       .needsSecret('key', 'Algolia-Products', 'adminApiKey', true);
 
     expect(controllerFactory._secrets).toStrictEqual({
       key: {
         required: true,
-        secret: ['Algolia-Products', 'adminApiKey'],
+        secret: "Algolia-Products",
+        secretKey: 'adminApiKey'
       },
+      
     });
     // Verifying attribute has been copied
     expect(controllerFactory._handler).toBe('create');
   });
 
   test('Testing TS Input', async () => {
-    const controllerFactory = new SQSHandlerWrapperFactory()
-      .setHandler('create')
-      .setTsInputType<null>();
+    const controllerFactory = new SQSHandlerWrapperFactory( new LambdaFactoryManager())
+      .setHandler('create').setTsInputType<null>();
 
     expect(controllerFactory._handler).toBe('create');
   });
