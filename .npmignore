@@ -4,3 +4,5 @@ node_modules
 test_utils
 *.test.ts
 docs/
+coverage
+cdk_utils

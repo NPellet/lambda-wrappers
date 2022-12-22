@@ -182,7 +182,7 @@ export const { handler, configuration } = wrapperFactory.createWrapper( Controll
 // route.ts
 import manager from 'path/to/manager'
 import { MyController } from 'path/to/controller';
-import { APIGatewayCtrlInterface } from '@lendis-tech/lambda-handlers';
+import { APIGatewayCtrlInterface } from 'aws-lambda-handlers';
 
 // API Route definition file
 const handlerWrapperFactory = manager.apiGatewayWrapperFactory('handle')
@@ -227,7 +227,7 @@ export class MyController implements controllerInterface {
 - similarly, `.setTsOutputType<T>()` informs the type of response the controller is supposed to return (or an instance of `HTTPError` if the controller failed). Only applies to API Gateway
 - `setInputSchema<SCHEMA_TYPE>( schema )` and `setOutputSchema<SCHEMA_TYPE>( schema )` add a runtime verification of a `yup` schema. When `setTsInputType` is not defined but `setInputSchema` is, then the controller is expected to received the result of `InferType< SCHEMA_TYPE >` instead of `T`
 - `needsSecret( key, secretName, secretKey, required )` is used for ahead-of-execution secret injection: when a cold start occurs, the Lambda wrapper will detect if the secret has been injected into `process.env[ key ]`. If not, it will fetch it from AWS and inject it into `process.env`. It will also be made available in the handler method with strong typing.
-  The `required` field can be used to outrightly fail the lambda when the secret is not found. Note that `secretName` and `secretKey` have auto-completion and will throw a TS error if you try to provide a secret that's not stored in the package `@lendis-tech/secret-manager-utilities`
+  The `required` field can be used to outrightly fail the lambda when the secret is not found. Note that `secretName` and `secretKey` have auto-completion and will report a TS error if you have provided a secret list in the manager.
 
 ### <a name='Othernotes'></a>Other notes
 
@@ -287,13 +287,13 @@ export class Controller implements InterfaceHandler {
 
 Note on the following:
 
-- The static initialisation is only called during an initial cold start. During the subsequent lambda invocations, the same controller instance will be reused without re-initialisation. The constructor is not used directly by the wrapper. The static init is used because of the following benefits:
+- The static initialisation is only called during an initial cold start. During the subsequent lambda invocations, the same controller instance will be reused without re-initialisation.
+- The wrapper doesn't use the controller constructor directly. Instead, the async static init is used and brings the following benefits:
   - Asynchronous initialisation
   - Type safety in the controller (`myResource` is of type `MyResource`, and not of type `MyResource | undefined`)
-- You may therefore use the static init method to perform any required initialisation you may desire, for which state should per persisted across invocation
-- The IfHandler<> utility is provided because by default, implemented methods to do infer their parameter types from the implemented interface.
+- You may therefore use the static init method to perform any required initialisation you may desire and persist the state across invocations
+- The IfHandler<> utility is provided because by default, implemented methods to do infer their parameter types from the implemented interface. See [this issue](https://github.com/Microsoft/TypeScript/issues/23911) for reference
 - Several routes can be implemented using `implements IfOfRouteA, IfOfRouteB, ...``
-
 
 ### <a name='Implementingmultipleroutesinacontroller'></a>Implementing multiple routes / events in a controller
 
@@ -424,7 +424,8 @@ class Controller implements RouteHandler {
 
   handler: IfHandler<RouteHandler> = async ( data, secrets ) => {
 
-    // secrets.key is available as "string"
+    // secrets is of type Record<"key", string>
+    // secrets.key is available as type "string" for use
     // process.env.key is also available for use
   }
 }
@@ -442,11 +443,11 @@ controllerFactory.needsSecret(
 );
 ```
 
-Note that the lambda will fail if the provided secret is NOT JSON-valid.
+Note that the lambda will fail if the provided secret is NOT JSON-valid, except if the `required` parameter is `false`.
 
 ### Dealing with String Secrets
 
-By setting `undefined` as the second parameter, the string version of the JSON:
+By setting `undefined` as the second parameter, the string version of the JSON is returned.
 
 ```typescript
 controllerFactory.needsSecret(
