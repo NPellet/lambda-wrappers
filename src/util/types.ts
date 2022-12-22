@@ -1,8 +1,4 @@
 import { BaseSchema, InferType } from 'yup';
-import { HTTPError, Request, Response } from '../lambda';
-import { AwsEventBridgeEvent } from './eventbridge';
-import { AwsSNSRecord } from './sns/record';
-import { AwsSQSRecord } from './sqs/record';
 
 export type ConstructorOf<T> = {
   init(secrets?: Record<string, string>): Promise<T>;

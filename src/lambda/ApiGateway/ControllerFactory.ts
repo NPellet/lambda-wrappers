@@ -5,8 +5,6 @@ import { Request } from '../../util/apigateway/request';
 import { ConstructorOf, IfHandler, TOrSchema } from '../../util/types';
 import { createApiGatewayHandler } from './api';
 import { SecretConfig, SecretsContentOf, TSecretRef} from '../utils/secrets_manager';
-import { ApiGatewayLambdaHandler } from '../../util/LambdaHandler';
-import { wrap } from 'module';
 
 
 export class APIGatewayHandlerWrapperFactory<
@@ -202,4 +200,5 @@ export type APIGatewayCtrlInterface<T> =
         return HTTPError.BAD_REQUEST("sdf");
       }
     }
-    wrapFac.createHandler( Ctrl );
+    const { handler, configuration } = wrapFac.createHandler( Ctrl );
+    

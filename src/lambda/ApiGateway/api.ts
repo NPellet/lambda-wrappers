@@ -4,17 +4,15 @@ import {
   APIGatewayProxyResult,
   Callback,
   Context,
-  Handler,
 } from 'aws-lambda';
 import { BaseSchema, InferType } from 'yup';
 import { recordException } from '../../util/exceptions';
 import {
-  Controller,
   LambdaContext,
   LambdaInitSecretHandler,
 } from '../../util/LambdaHandler';
 import { AwsApiGatewayRequest } from '../../util/apigateway/apigateway';
-import { HandlerConfiguration, LambdaType, TInit } from '../config';
+import { HandlerConfiguration, LambdaType } from '../config';
 import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
 import { HTTPError, HTTPResponse } from '../../util/apigateway/response';
@@ -261,3 +259,4 @@ export const createApiGatewayHandler = <
   }
   // return wrapAsyncStorage(apiGatewayHandler);
 }; 
+

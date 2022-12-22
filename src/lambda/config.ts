@@ -2,7 +2,6 @@ import { ObjectSchema } from 'yup';
 import { wrapTelemetryApiGateway } from './ApiGateway/telemetry/Wrapper';
 import { wrapTelemetryEventBridge } from './EventBridge/telemetry/Wrapper';
 import {
-  getAwsSecretDef,
   SecretConfig,
   SecretsRecord,
 } from './utils/secrets_manager';
@@ -71,8 +70,3 @@ export const LambdaTypeConfiguration = {
   },
 };
 
-const secrets = buildHandlerConfiguration({
-  secretInjection: {
-    k: getAwsSecretDef('Algolia-Products', 'adminApiKey', true),
-  },
-});
