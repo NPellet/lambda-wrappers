@@ -7,9 +7,13 @@ Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic
 
 - [AWS Lambda Wrappers](#aws-lambda-wrappers)
   - [Installation](#installation)
-  - [Installation](#installation-1)
   - [Usage](#usage)
-    - [Create a project (or organisation-wide) manager](#create-a-project-or-organisation-wide-manager)
+    - [1. Create a project (or organisation-wide) manager](#1-create-a-project-or-organisation-wide-manager)
+    - [2. Create a route / event handler using the manager](#2-create-a-route--event-handler-using-the-manager)
+    - [3. Create a controller](#3-create-a-controller)
+  - [Details](#details)
+    - [Wrapper available for AWS sources:](#wrapper-available-for-aws-sources)
+    - [Handler method name](#handler-method-name)
   - [Implementing a controller](#implementing-a-controller)
   - [Usage](#usage-1)
     - [Background](#background)
@@ -47,44 +51,83 @@ Features:
 npm i aws-lambda-wrappers
 ```
 
-
-## <a name='Installation'></a>Installation
-
-
 ## Usage
 
-### Create a project (or organisation-wide) manager
+### 1. Create a project (or organisation-wide) manager
 
 Start by sharing a wrapper manager across all your lambda functions. This is useful to share configuration across your organisation.
 
 Currently, this is only useful for the list of usable secrets, but it may be extended in the future.
 
 ```typescript
+// path/to/manager.ts
+
 import { LambdaFactoryManager } from 'aws-lambda-wrappers'
 const mgr = new LambdaFactoryManager();
-
 // We'll import the manager later on !
 export default mgr;
 ```
 
-
+### 2. Create a route / event handler using the manager
 To use the manager in a handler file, import the manager you just exported into a new file (the one that will use by AWS to handle your function):
 
 ```typescript
+// path/to/route.ts
 
 import manager from './path/to/manager'
+const wrapperFactory = manager.apiGatewayWrapperFactory( "handler_name" ).setTsInputType<string>();
 
-const wrapperFactory = manager.apiGatewayWrapperFactory( "handler_name" );
-
+import { Controller } from './path/to/controller'
+export const { handler, configuration } = wrapperFactory.wrapHandler( Controller )
+export type Interface = APIGatewayCtrlInterface<typeof wrapperFactory>
 ```
 
+### 3. Create a controller
+
+The controller must implement
+```typescript
+// path/to/controller.ts
+import { Interface } from './path/to/route'
+
+class Controller implements Interface {
+  static async init() {
+    return new Controller();
+  }
+  handler_name: IfHandler<Interface> = async( data, secrets ) => {
+    // Write your logic here
+  }
+}
+```
+
+And that's it for the most basic implementation !
+Use `path/to/route.hanlder` as a Lambda entry-point.
+
+We've added a lot of stuff, which may not really make sense and seems burdensome. Let's now move to the real added value of this setup.
+
+## Details
+ 
+### Wrapper available for AWS sources:
 Wrapper factory constructors are available for
 
-- API Gateway
+- API Gateway:
+  ```typescript
+    manager.apiGatewayWrapperFactory( handler: string );
+  ```
 - Event Bridge
+  ```typescript
+    manager.eventBridgeWrapperFactory( handler: string );
+  ```
 - SNS
+  ```typescript
+    manager.sqsWrapperFactory( handler: string );
+  ```
 - SQS
+  ```typescript
+    manager.snsWrapperFactory( handler: string );
+  ```
 
+
+### Handler method name
 The string parameter passed to the constructor function defines which method must be implemented by the constructor:
 
 ```typescript
@@ -415,9 +458,11 @@ mgr.apiGatewayWrapperFactory('read').needsSecret("key", "secretName", "SecretKey
 ```
 
 Autocompletion of the secret name:
+
 ![Autocompletion](./doc/secret_autocompletion.png)
 
 Autocompletion of the secret key:
+
 ![Autocompletion](./doc/secret_key_autocompletion.png)
 
 

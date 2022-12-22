@@ -21,8 +21,6 @@
     "typescript": "~3.9.7"
   },
   "dependencies": {
-    "@lendis-tech/ops-otel-infra-lambdas": "^1.0.5",
-    "@lendis-tech/ops-utils-infra-lambdas": "^1.0.2",
     "constructs": "^10.0.0",
     "glob": "^8.0.3",
     "source-map-support": "^0.5.21"
