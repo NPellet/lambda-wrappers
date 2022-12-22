@@ -49,14 +49,13 @@ This package provides an opiniated stack to insert additional logic in handling 
 <!-- /vscode-markdown-toc -->
 
 Features:
-
-- Provides a controller interface to be implemented by a controller
-- Strong type checking
-- Input and output schema validation (leveraging yup)
-- Sentry wrappers
-- Opentelementry wrappers
-- AWS Secrets manager injection
-- Cold start initialisation method
+- Each handler provides an interface to be implemented by a controller
+- Each controller receives a strongly type-checked deserialized payload
+- Before executing the controller, there is optional runtime schema validation (leveraging yup)
+- All handlers may be automatically wrapped by Sentry, with configuration-sharing
+- All handlers provide Opentelemetry context and 1 or 2 spans, overcoming the shortcomings of the OTel lambda instrumentation
+- Before executing a controller, secrets may be pre-fetched and provided to you
+- State can easily be persisted across invocations, and cold-start initialisation can be easily used for resource acquisition
 
 ## <a name='Installation'></a>Installation
 
