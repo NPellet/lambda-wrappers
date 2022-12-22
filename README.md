@@ -2,10 +2,22 @@
 
 Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup
 
+## Why ?
+
+Lambda's are a great tool, but they're pretty raw. For example, it'd be pretty useful to:
+
+- wrap the handlers with Sentry (you could also use a lambda layer for that)
+- Sanitize API Gateway's responses and SQS failed batch items
+- Pre-fetch a bunch of secrets from the secret manager (do not put secrets in the env variables !)
+- Have static type safety as well as runtime payload validation
+- Replace Opentelemetry's Lambda auto-instrumentation with some more logic (for example, the context may be part of the SQS payload, or part of the Event Bridge payload)
+
+This package provides an opiniated stack to insert additional logic in handling lambdas triggered from the API Gateway, the Event Bridge, SQS and SNS (and we will be adding more sources later !).
 
 <!-- vscode-markdown-toc -->
 
 - [AWS Lambda Wrappers](#aws-lambda-wrappers)
+  - [Why ?](#why-)
   - [Installation](#installation)
   - [Usage](#usage)
     - [1. Create a project (or organisation-wide) manager](#1-create-a-project-or-organisation-wide-manager)
@@ -69,7 +81,8 @@ export default mgr;
 ```
 
 ### 2. Create a route / event handler using the manager
-It is good practice to separate the logic (a controller) from the lambda itself (exposing the handler to AWS), which would allow you to swap out controllers or implement multiple lambdas in a single controller. 
+It is good practice to separate the logic (a controller) from the lambda itself (exposing the handler to AWS), which would allow you to swap out controllers or implement multiple lambdas in a single controller. <br>
+Ideally, the controller route should be `require`-able without it executing any service logic. This allows you to expose "meta-information" that can be used by other tools (for example, automatically add IAM permissions in a CDK code by looading the `configuration` object)
 
 Start by the handler file: import the manager you just exported into a new file (the one that will use by AWS to handle your function) and either start an API Gateway wrapper, and Event Bridge wrapper, an SNS wrapper or an SQS wrapper
 
@@ -353,7 +366,7 @@ On another note, the schema validation can be asynchronous. It is validated befo
 ## Using Sentry
 
 Sentry's configuration is likely to be used across your organisation's microservices, save for its DSN, which is likely to be one per service.
-You may compose a manager using `.configureSentry( opts: Sentry.NodeOptions, expand: boolean )` (see [@sentry/node]{https://www.npmjs.com/package/@sentry/node}), and compose it as many times as you see fit (Note that the configuration is mutable, i.e. the `configureSentry` method does not return a new manager)
+You may compose a manager using `.configureSentry( opts: Sentry.NodeOptions, expand: boolean )` (see [@sentry/node](https://www.npmjs.com/package/@sentry/node)), and compose it as many times as you see fit (Note that the configuration is mutable, i.e. the `configureSentry` method does not return a new manager)
 
 The way to configure Sentry is to do it on the manager level:
 
