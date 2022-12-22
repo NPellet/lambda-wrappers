@@ -4,6 +4,7 @@ import { ConstructorOf, TOrSchema } from '../../util/types';
 import { SecretConfig, SecretsContentOf, TSecretRef } from '../utils/secrets_manager';
 import { createSNSHandler } from './sns';
 import { AwsSNSRecord } from '../../util/sns/record';
+import { BaseWrapperFactory } from '../BaseWrapperFactory';
 
 export class SNSHandlerWrapperFactory<
   TInput,
@@ -11,7 +12,7 @@ export class SNSHandlerWrapperFactory<
   TSecrets extends string = string,
   THandler extends string = 'handle',
   SInput extends BaseSchema | undefined = undefined
-> {
+>  extends BaseWrapperFactory<TSecretList> {
   public _inputSchema: SInput;
   public _secrets: Record<TSecrets, SecretConfig>;
   public __shimInput: TInput;
@@ -97,7 +98,8 @@ export class SNSHandlerWrapperFactory<
         };
 
       const handler = createSNSHandler<INPUT, TInterface, TSecrets, SInput>(
-        (event, init, secrets) => {
+        async (event, init, secrets) => {
+          await this.init();
           return init[this._handler](event, secrets);
         },
         configuration
@@ -118,7 +120,7 @@ export class SNSHandlerWrapperFactory<
     THandler extends string,
     SInput extends BaseSchema | undefined = undefined
   >(): SNSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler,  SInput> {
-    return new SNSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler, SInput>();
+    return new SNSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler, SInput>( this.mgr );
   }
 }
 

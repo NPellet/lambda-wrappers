@@ -14,13 +14,14 @@ Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic
   - [Details](#details)
     - [Wrapper available for AWS sources:](#wrapper-available-for-aws-sources)
     - [Handler method name](#handler-method-name)
-  - [Implementing a controller](#implementing-a-controller)
   - [Detailed Usage](#detailed-usage)
     - [Complete example](#complete-example)
     - [Notes on the Wrapper Factory](#notes-on-the-wrapper-factory)
     - [Other notes](#other-notes)
-  - [Implementing multiple routes / events in a controller](#implementing-multiple-routes--events-in-a-controller)
+    - [Implementing a controller](#implementing-a-controller)
+    - [Implementing multiple routes / events in a controller](#implementing-multiple-routes--events-in-a-controller)
   - [Type system](#type-system)
+  - [Using Sentry](#using-sentry)
   - [Secret injection](#secret-injection)
     - [Dealing with Key-Value Secrets](#dealing-with-key-value-secrets)
     - [Dealing with String Secrets](#dealing-with-string-secrets)
@@ -83,7 +84,7 @@ export type Interface = APIGatewayCtrlInterface<typeof wrapperFactory>
 
 ### 3. Create a controller
 
-The controller must implement
+You can now write your controller, which must implement the interface exported by the Lambda wrapper
 ```typescript
 // path/to/controller.ts
 import { Interface } from './path/to/route'
@@ -125,7 +126,6 @@ Wrapper factory constructors are available for
     manager.snsWrapperFactory( handler: string );
   ```
 
-
 ### Handler method name
 The string parameter passed to the constructor function defines which method must be implemented by the constructor:
 
@@ -158,45 +158,6 @@ import Controller from './path/to/controller'
 export const { handler, configuration } = wrapperFactory.createWrapper( Controller )
 ```
 
-## Implementing a controller
-
-Based on the interface provided by the route, we can now implement our controller, which has two requirements:
-
-- Provide a static async initializer, called `static async init`
-- Provide the method mandated by the route
-
-```typescript
-
-import { InterfaceHandler } from './path/to/interface'
-
-export class Controller implements InterfaceHandler {
-
-  constructor( private myResource: MyResource) {
-
-  }
-
-  static async init() {
-    // Acquires MyResource only during a cold start
-    return new Controller( new MyResource() );
-  }
-
-  // Inherits the method parameter types and return type from the interface. See for details
-  handler_name: IfHandler<InterfaceHandler> = async ( data, secrets ) => {
-    return HTTPResponse.OK_NOT_CONTENT();
-  }
-}
-```
-
-Note on the following:
-
-- The static initialisation is only called during an initial cold start. During the subsequent lambda invocations, the same controller instance will be reused without re-initialisation. The constructor is not used directly by the wrapper. The static init is used because of the following benefits:
-  - Asynchronous initialisation
-  - Type safety in the controller (`myResource` is of type `MyResource`, and not of type `MyResource | undefined`)
-- You may therefore use the static init method to perform any required initialisation you may desire, for which state should per persisted across invocation
-- The IfHandler<> utility is provided because by default, implemented methods to do infer their parameter types from the implemented interface.
-- Several routes can be implemented using `implements IfOfRouteA, IfOfRouteB, ...``
-
-
 
 ## Detailed Usage
 
@@ -205,12 +166,9 @@ Note on the following:
 ```typescript
 //====================================================================
 // route.ts
-
+import manager from 'path/to/manager'
 import { MyController } from 'path/to/controller';
-import{ manager}from 'path/to/manager'
-import {
-  APIGatewayCtrlInterface,
-} from '@lendis-tech/lambda-handlers';
+import { APIGatewayCtrlInterface } from '@lendis-tech/lambda-handlers';
 
 // API Route definition file
 const handlerWrapperFactory = manager.apiGatewayWrapperFactory('handle')
@@ -285,7 +243,45 @@ type controllerInterface = SQSCtrlInterface<
 ```
 
 
-## <a name='Implementingmultipleroutesinacontroller'></a>Implementing multiple routes / events in a controller
+### Implementing a controller
+
+Implementing a Controller has 2 requirements:
+
+- Provide a static async initializer, called `static async init`
+- Provide the method mandated by the route
+
+```typescript
+import { InterfaceHandler } from './path/to/interface'
+
+export class Controller implements InterfaceHandler {
+
+  constructor( private myResource: MyResource ) {
+
+  }
+
+  static async init() {
+    // Acquires MyResource only during a cold start
+    return new Controller( new MyResource() );
+  }
+
+  // Inherits the method parameter types and return type from the interface. See for details
+  handler_name: IfHandler<InterfaceHandler> = async ( data, secrets ) => {
+    return HTTPResponse.OK_NOT_CONTENT();
+  }
+}
+```
+
+Note on the following:
+
+- The static initialisation is only called during an initial cold start. During the subsequent lambda invocations, the same controller instance will be reused without re-initialisation. The constructor is not used directly by the wrapper. The static init is used because of the following benefits:
+  - Asynchronous initialisation
+  - Type safety in the controller (`myResource` is of type `MyResource`, and not of type `MyResource | undefined`)
+- You may therefore use the static init method to perform any required initialisation you may desire, for which state should per persisted across invocation
+- The IfHandler<> utility is provided because by default, implemented methods to do infer their parameter types from the implemented interface.
+- Several routes can be implemented using `implements IfOfRouteA, IfOfRouteB, ...``
+
+
+### <a name='Implementingmultipleroutesinacontroller'></a>Implementing multiple routes / events in a controller
 
 Depending on your design choices, you may decide to create a single controller for multiple routes, for example when handling CRUD operations. This can be achieved like that:
 
@@ -352,6 +348,43 @@ When specifying `setTsInputType` (and `setTsOutputType` for the API Gateway), th
 When specifying a yup schema using `setInputSchema` and `setOutputSchema`, but when the corresponding `setTsInputType` and `setTsOutputType` are not set, the type of the input and output is dictated by yup's `InferType< typeof schema >`. The only way to overwrite that if - for example - yup's inferred type isn't good enough, is to override it with `setTsInputType`. This doesn't change the runtime validation, which solely depends on the presence of the schema or not.
 
 On another note, the schema validation can be asynchronous. It is validated before your handler is called and its validation is finished before your handler is executed. If the validation fails, your wrapped handler will not be executed.
+
+## Using Sentry
+
+Sentry's configuration is likely to be used across your organisation's microservices, save for its DSN, which is likely to be one per service.
+The way to configure Sentry is to do it on the manager level:
+
+```typescript
+// path/to/manager.ts
+import { LambdaFactoryManager } from 'aws-lambda-wrappers'
+const mgr = new LambdaFactoryManager()
+  .configureSentry({
+    enabled: true
+  }, true);
+
+// We'll import the manager later on !
+export default mgr;
+```
+
+The method `configureSentry` takes an object of type `NodeOptions` (see package @sentry/node) and an `expand` boolean to indicate whether the current configuration should be expanded (with Object.assign) or replaced.
+
+It would be a common pattern to have a shared Sentry configuration for your whole service mesh, and then overwrite the DSN for each service's manager:
+
+```typescript
+import manager from '@myorg/my-lambda-manager' // Image you published your utility manager there
+const myNewManager = manager.configureSentryDSN( MY_SENTRY_DSN )
+export default myNewManager
+```
+
+And reuse this service-specific manager for all the lambdas in this service.
+
+Additionally, Sentry can be disabled on a per-lambda basis using
+
+```typescript
+wrapperFactory.sentryDisable();
+```
+
+or by setting the environment variable DISABLE_SENTRY in the lambda's configuration (useful to avoid having to rebuild when you want to temporarily disable Sentry)
 
 ## <a name='Secretinjection'></a>Secret injection
 

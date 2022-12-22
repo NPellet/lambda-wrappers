@@ -4,6 +4,7 @@ import { ConstructorOf, TOrSchema } from '../../util/types';
 import { SecretConfig, SecretsContentOf, TSecretRef } from '../utils/secrets_manager';
 import { createEventBridgeHandler } from './event';
 import { AwsEventBridgeEvent } from '../../util/eventbridge';
+import { BaseWrapperFactory } from '../BaseWrapperFactory';
 
 export class EventBridgeHandlerWrapperFactory<
   TInput,
@@ -11,7 +12,7 @@ export class EventBridgeHandlerWrapperFactory<
   TSecrets extends string = string,
   THandler extends string = 'handle',
   SInput extends BaseSchema | undefined = undefined
-> {
+>  extends BaseWrapperFactory<TSecretList> {
   public _inputSchema: SInput;
   public _handler: THandler;
   public _secrets: Record<TSecrets, SecretConfig>;
@@ -95,7 +96,8 @@ export class EventBridgeHandlerWrapperFactory<
         TInterface,
         TSecrets,
         SInput
-      >((event, init, secrets, c) => {
+      >(async (event, init, secrets, c) => {
+        await this.init();
         return init[this._handler](event, secrets);
       }, configuration);
 
@@ -120,7 +122,7 @@ export class EventBridgeHandlerWrapperFactory<
       TSecrets,
       THandler,
       SInput
-    >();
+    >( this.mgr );
   }
 }
 

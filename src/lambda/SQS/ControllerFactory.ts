@@ -5,6 +5,7 @@ import { SecretConfig, SecretsContentOf, TSecretRef } from '../utils/secrets_man
 import { createSQSHandler } from './sqs';
 import { AwsSQSRecord } from '../../util/sqs/record';
 import { SQSBatchItemFailure } from 'aws-lambda';
+import { BaseWrapperFactory } from '../BaseWrapperFactory';
 
 export class SQSHandlerWrapperFactory<
   TInput,  
@@ -12,7 +13,7 @@ export class SQSHandlerWrapperFactory<
   TSecrets extends string = string,
   THandler extends string = "handle",
   SInput extends BaseSchema | undefined = undefined
-> {
+>  extends BaseWrapperFactory<TSecretList> {
   public _inputSchema: SInput;
   public _secrets: Record<TSecrets, SecretConfig>;
   public __shimInput: TInput;
@@ -97,7 +98,8 @@ export class SQSHandlerWrapperFactory<
         };
 
       const handler = createSQSHandler<INPUT, TInterface, TSecrets, SInput>(
-        (event, init, secrets, c) => {
+        async (event, init, secrets, c) => {
+          await this.init();
           return init[this._handler](event, secrets);
         },
         configuration
@@ -118,7 +120,7 @@ export class SQSHandlerWrapperFactory<
     THandler extends string = "handle",
     SInput extends BaseSchema | undefined = undefined
   >() {
-    return new SQSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler, SInput>();
+    return new SQSHandlerWrapperFactory<TInput, TSecretList, TSecrets, THandler, SInput>(this.mgr);
   }
 }
 

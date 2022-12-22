@@ -2,10 +2,10 @@ import { BaseSchema } from 'yup';
 import { HandlerConfiguration } from '../config';
 import { HTTPError, HTTPResponse } from '../../util/apigateway/response';
 import { Request } from '../../util/apigateway/request';
-import { ConstructorOf, IfHandler, TOrSchema } from '../../util/types';
+import { ConstructorOf, TOrSchema } from '../../util/types';
 import { createApiGatewayHandler } from './api';
 import { SecretConfig, SecretsContentOf, TSecretRef} from '../utils/secrets_manager';
-
+import { BaseWrapperFactory } from '../BaseWrapperFactory';
 
 export class APIGatewayHandlerWrapperFactory<
   TInput,
@@ -15,7 +15,7 @@ export class APIGatewayHandlerWrapperFactory<
   THandler extends string = 'handle',
   SInput extends BaseSchema | undefined = undefined,
   SOutput extends BaseSchema | undefined = undefined
-> {
+> extends BaseWrapperFactory<TSecretList> {
   public _outputSchema: SOutput;
   public _secrets: Record<TSecrets, SecretConfig>;
   public _handler: THandler;
@@ -23,9 +23,8 @@ export class APIGatewayHandlerWrapperFactory<
   public __shimInput: TInput;
   public __shimOutput: TOutput;
 
-  setInputSchema<U extends BaseSchema>(schema: U) {
-    const constructor = this.constructor;
 
+  setInputSchema<U extends BaseSchema>(schema: U) {
     const api = this.fork<TInput, TOutput, TSecrets, THandler, U, SOutput>();
     api._inputSchema = schema;
     api._outputSchema = this._outputSchema;
@@ -133,8 +132,8 @@ export class APIGatewayHandlerWrapperFactory<
         },        TSecrets,
         SInput,
         SOutput
-      >((event, init, secrets, c) => {
-        
+      >(async (event, init, secrets, c) => {
+        await this.init();
         return init[this._handler](event, secrets);
       }, configuration);
 
@@ -162,7 +161,7 @@ export class APIGatewayHandlerWrapperFactory<
       THandler,
       SInput,
       SOutput
-    >();
+    >( this.mgr );
   }
 }
 
@@ -184,21 +183,3 @@ export type APIGatewayCtrlInterface<T> =
       }
     : never;
 
-
-
-    const wrapFac = new APIGatewayHandlerWrapperFactory().setHandler("abc").needsSecret("ab", "iuhsdf", "ihdf", true );
-      type IF = APIGatewayCtrlInterface<typeof wrapFac>;
-
-    class Ctrl implements IF {
-      static async init() {
-        return new Ctrl();
-      }
-      
-     abc: IfHandler<IF> = async ( data ) => {
-      const d = data.getData();
-      
-        return HTTPError.BAD_REQUEST("sdf");
-      }
-    }
-    const { handler, configuration } = wrapFac.createHandler( Ctrl );
-    
