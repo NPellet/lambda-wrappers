@@ -8,6 +8,7 @@
     "build": "node esbuild.cjs && npx tsc",
     "test": "jest"
   },
+  "repository": "git@github.com:NPellet/lambda-wrappers",
   "author": "Norman Pellet",
   "license": "MIT",
   "dependencies": {

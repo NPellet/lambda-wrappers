@@ -1,11 +1,9 @@
-import { SentryError } from "@sentry/utils";
 import { APIGatewayHandlerWrapperFactory } from "./ApiGateway/ControllerFactory";
 import { EventBridgeHandlerWrapperFactory } from "./EventBridge/ControllerFactory";
 import { SNSHandlerWrapperFactory } from "./SNS/ControllerFactory";
 import { SQSHandlerWrapperFactory } from "./SQS/ControllerFactory";
 import { TSecretRef } from "./utils/secrets_manager";
 import { NodeOptions } from '@sentry/node';
-import { AWSLambda } from "@sentry/serverless";
 
 export class LambdaFactoryManager<T extends TSecretRef> {
 	sentryCfg: NodeOptions = {};
