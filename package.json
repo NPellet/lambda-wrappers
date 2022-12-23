@@ -1,7 +1,7 @@
 {
   "name": "aws-lambda-handlers",
   "version": "1.0.28",
-  "description": "",
+  "description": "Enhance AWS Lambdas with strong typing, secrets, schema validation, opentelemetry and sentry",
   "main": "dist/index.js",
   "types": "dist/lambda/index.d.ts",
   "scripts": {

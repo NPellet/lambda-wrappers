@@ -1,5 +1,7 @@
 # AWS Lambda Wrappers
 
+Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup
+
 <a href="https://codecov.io/gh/NPellet/lambda-wrappers/branch/main/">
   <img alt="Codecov Status" src="https://img.shields.io/codecov/c/github/NPellet/lambda-wrappers">
 </a>
@@ -8,7 +10,6 @@
   <img src="https://github.com/NPellet/lambda-wrappers/actions/workflows/test.yaml/badge.svg">
 </a>
 
-Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup
 
 ## Why ?
 
