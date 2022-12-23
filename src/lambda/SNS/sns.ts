@@ -66,9 +66,9 @@ export const createSNSHandler = <
       event.Records.map((record) => innerLoop(record, context))
     ).then((settled) => {
       if (settled.filter((e) => e.status == 'rejected').length > 0) {
-        throw new Error(
-          "Some SNS wrapped handlers have thrown. This shouldn't be possible."
-        );
+        const error = 'Some SNS handlers have failed. This should not happen and point to a bug in the instrumentation library.'
+        log.error( error );
+        throw new Error( error );
       }
     });
 

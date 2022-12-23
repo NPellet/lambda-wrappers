@@ -39,6 +39,21 @@ describe("Event bridge handler", function () {
   });
 
   it("Checking schema validation", async () => {
+
+    const handler = createEventBridgeHandler(async ( event ) => {
+      expect( event.getDetailType() ).toBe( testEventBridgeEvent["detail-type"] );
+      expect( event.getSource() ).toBe( testEventBridgeEvent.source );
+    }, {
+      initFunction: mockInit,
+      type: LambdaType.GENERIC,
+
+      messageType: MessageType.Binary,
+      secretInjection: {},
+    });
+    await handler(testEventBridgeEvent, LambdaContext, () => {});
+  });
+
+  it("Checking schema validation", async () => {
     const init = async () => {};
     const handler = createEventBridgeHandler(
       async (request) => {

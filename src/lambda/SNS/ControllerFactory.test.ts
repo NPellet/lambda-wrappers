@@ -93,47 +93,52 @@ describe('Testing API Controller factory', function () {
     return configuration;
   }
 
-  test("setStringInputType yields a message of type String in config", async() => {
-    const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setStringInputType();
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.String)
-  });
+  describe("Message types", function() {
 
-  test("setNumberInputType yields a message of type Number in config", async() => {
-    const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setNumberInputType();
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.Number)
-  });
+      
+    test("setStringInputType yields a message of type String in config", async() => {
+      const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setStringInputType();
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.String)
+    });
 
-  test("setObjectInputType yields a message of type Object in config", async() => {
-    const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setTsInputType<{ a: string}>();
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.Object)
-  });
+    test("setNumberInputType yields a message of type Number in config", async() => {
+      const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setNumberInputType();
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.Number)
+    });
 
-  test("setBinaryInputType yields a message of type Binary in config", async() => {
-    const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setBinaryInputType();
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.Binary)
-  });
+    test("setObjectInputType yields a message of type Object in config", async() => {
+      const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setTsInputType<{ a: string}>();
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.Object)
+    });
 
-  test("Using setInputSchema with a string schema yields a message of type String in config", async() => {
-    const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setInputSchema( yup.string() );
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.String )
-  });
+    test("setBinaryInputType yields a message of type Binary in config", async() => {
+      const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setBinaryInputType();
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.Binary)
+    });
 
-  test("Using setInputSchema with a number schema yields a message of type String in config", async() => {
-    const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setInputSchema( yup.number() );
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.Number )
-  });
+    test("Using setInputSchema with a string schema yields a message of type String in config", async() => {
+      const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setInputSchema( yup.string() );
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.String )
+    });
 
-  test("Using setInputSchema with a object schema yields a message of type String in config", async() => {
-    const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setInputSchema( yup.object() );
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.Object )
-    
+    test("Using setInputSchema with a number schema yields a message of type String in config", async() => {
+      const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setInputSchema( yup.number() );
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.Number )
+    });
+
+    test("Using setInputSchema with a object schema yields a message of type String in config", async() => {
+      const fac1 = new SNSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setInputSchema( yup.object() );
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.Object )
+      
+    });
+
   });
 
 });

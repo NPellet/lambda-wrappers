@@ -6,7 +6,7 @@ import {
 import { Handler } from 'aws-lambda';
 import { event } from '../../test_utils/apigateway';
 import { LambdaContext, memoryExporter } from '../../test_utils/utils';
-import { flush, wrapTelemetryLambda } from './telemetry';
+import { contextPayloadGetter, flush, wrapTelemetryLambda } from './telemetry';
 
 const handler: Handler<any, any> = async () => {
   return 'Ok';
@@ -62,4 +62,15 @@ describe('Telemetry: generic lambda', () => {
       spans[0].events[0].attributes![SemanticAttributes.EXCEPTION_STACKTRACE]
     ).toBeDefined();
   });
+
+  test("TextMapGetter behaviour", () => {
+
+    const obj = {
+      "a": "b",
+      "c": "d"
+    }
+    expect( contextPayloadGetter.keys( obj ) ).toStrictEqual(["a", "c"] );
+    expect( contextPayloadGetter.get( obj, 'a' ) ).toStrictEqual("b");
+    
+  })
 });

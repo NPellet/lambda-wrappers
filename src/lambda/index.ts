@@ -24,7 +24,6 @@ export {
 
 export { HTTPResponse, HTTPError } from '../util/records/apigateway/response';
 export { Request } from '../util/records/apigateway/request';
-export { buildHandlerConfiguration } from '../lambda/config';
 export type { TInit, TSecrets } from './config';
 export type { SecretsOf, PayloadOf, ReplyOf, IfHandler } from '../util/types';
 

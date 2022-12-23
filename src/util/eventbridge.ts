@@ -14,6 +14,7 @@ export class AwsEventBridgeEvent<T> extends GenericRecord<T, EventBridgeEvent<st
   protected getBody(): string {
     return ""
   }
+  
   protected parse() {
     return this.data.detail;
   }

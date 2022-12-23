@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { LambdaContext } from '../../test_utils/utils';
 import * as yup from 'yup';
-import { SQSBatchResponse, SQSHandler, SQSRecord } from 'aws-lambda';
+import { SQSBatchResponse, SQSRecord } from 'aws-lambda';
 import {
   SQSCtrlInterface,
   SQSHandlerWrapperFactory,
@@ -9,7 +9,6 @@ import {
 import { MessageType, PayloadOf } from '../../util/types';
 import { LambdaFactoryManager } from '../Manager';
 import { failSQSRecord } from '../../util/records/sqs/record';
-import { SNSHandlerWrapperFactory } from '../SNS/ControllerFactory';
 
 const testRecord: SQSRecord = {
   messageId: 'abc',
@@ -30,6 +29,27 @@ const testRecord: SQSRecord = {
 };
 
 describe('Testing SQS Wrapper factory', function () {
+
+
+  it('All properties get copied', function() {
+
+    const fac = new LambdaFactoryManager().sqsWrapperFactory("ahandler");
+    expect(fac).toBeInstanceOf(SQSHandlerWrapperFactory)
+    expect(fac._handler).toBe('ahandler');
+
+    const fac2 = fac.setTsInputType<{ a: string }>().needsSecret("key", "a", "b", true).sentryDisable().setInputSchema(yup.object({
+        a: yup.number()
+    }))
+
+    expect(fac2._handler).toBe('ahandler');
+    expect(fac2._inputSchema).toBeInstanceOf(yup.ObjectSchema)
+    expect(fac2._secrets.key).toStrictEqual({
+        "secret": "a",
+        "secretKey": "b",
+        "required": true
+    })
+});
+
   it('Basic functionality works', async () => {
     const schema = yup.object({ a: yup.string() });
 
@@ -120,58 +140,62 @@ describe('Testing SQS Wrapper factory', function () {
     expect(controllerFactory._handler).toBe('create');
   });
 
-  const createConf = ( factory: SQSHandlerWrapperFactory<any, any, string, any, any> ) => {
-    const { configuration, handler } = factory.setHandler('h').createHandler(class Ctrl {
-      static async init() { return new Ctrl() }
-      async h() {
-        
-      }
-    } );
 
-    return configuration;
-  }
+  describe("Message types", function() {
 
-  test("setStringInputType yields a message of type String in config", async() => {
-    const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setStringInputType();
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.String)
-  });
+    const createConf = ( factory: SQSHandlerWrapperFactory<any, any, string, any, any> ) => {
+      const { configuration, handler } = factory.setHandler('h').createHandler(class Ctrl {
+        static async init() { return new Ctrl() }
+        async h() {
+          
+        }
+      } );
 
-  test("setNumberInputType yields a message of type Number in config", async() => {
-    const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setNumberInputType();
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.Number)
-  });
+      return configuration;
+    }
 
-  test("setObjectInputType yields a message of type Object in config", async() => {
-    const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setTsInputType<{ a: string}>();
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.Object)
-  });
+    test("setStringInputType yields a message of type String in config", async() => {
+      const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setStringInputType();
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.String)
+    });
 
-  test("setBinaryInputType yields a message of type Binary in config", async() => {
-    const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setBinaryInputType();
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.Binary)
-  });
+    test("setNumberInputType yields a message of type Number in config", async() => {
+      const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setNumberInputType();
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.Number)
+    });
 
-  test("Using setInputSchema with a string schema yields a message of type String in config", async() => {
-    const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setInputSchema( yup.string() );
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.String )
-  });
+    test("setObjectInputType yields a message of type Object in config", async() => {
+      const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setTsInputType<{ a: string}>();
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.Object)
+    });
 
-  test("Using setInputSchema with a number schema yields a message of type String in config", async() => {
-    const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setInputSchema( yup.number() );
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.Number )
-  });
+    test("setBinaryInputType yields a message of type Binary in config", async() => {
+      const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setBinaryInputType();
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.Binary)
+    });
 
-  test("Using setInputSchema with a object schema yields a message of type String in config", async() => {
-    const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
-      .setInputSchema( yup.object() );
-    expect( createConf( fac1 ).messageType ).toBe( MessageType.Object )
-    
+    test("Using setInputSchema with a string schema yields a message of type String in config", async() => {
+      const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setInputSchema( yup.string() );
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.String )
+    });
+
+    test("Using setInputSchema with a number schema yields a message of type String in config", async() => {
+      const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setInputSchema( yup.number() );
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.Number )
+    });
+
+    test("Using setInputSchema with a object schema yields a message of type String in config", async() => {
+      const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
+        .setInputSchema( yup.object() );
+      expect( createConf( fac1 ).messageType ).toBe( MessageType.Object )
+      
+    });
   });
 
 });

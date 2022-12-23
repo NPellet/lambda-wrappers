@@ -68,49 +68,38 @@ export class HTTPError extends BaseHTTPResponse<T> {
     return this;
   }
 
-  #possibleUpstreamError: string | undefined = undefined;
+  //#possibleUpstreamError: string | undefined = undefined;
   public possibleUpstreamError(reason: string) {
     api.trace
       .getActiveSpan()
-      ?.setAttribute('io.lendis.httperror.possible_upstream_error', reason);
-    this.#possibleUpstreamError = reason;
+      ?.setAttribute('httperror.possible_upstream_error', reason);
+    //this.#possibleUpstreamError = reason;
     return this;
   }
 
-  #possibleDownstreamError: string | undefined = undefined;
+  //#possibleDownstreamError: string | undefined = undefined;
   public possibleDownstreamError(reason: string) {
     api.trace
       .getActiveSpan()
-      ?.setAttribute('io.lendis.httperror.possible_downstream_error', reason);
-    this.#possibleDownstreamError = reason;
+      ?.setAttribute('httperror.possible_downstream_error', reason);
+    //this.#possibleDownstreamError = reason;
     return this;
   }
 
-  #possibleDataCorruptionMessage: string | undefined = undefined;
+  //#possibleDataCorruptionMessage: string | undefined = undefined;
   public possibleDataCorruption(reason: string) {
     api.trace
       .getActiveSpan()
-      ?.setAttribute('io.lendis.httperror.possible_data_corruption', reason);
-    this.#possibleDataCorruptionMessage = reason;
+      ?.setAttribute('httperror.possible_data_corruption', reason);
+    //this.#possibleDataCorruptionMessage = reason;
     return this;
   }
 
-  #defiesLawsOfPhysicsMessage: string | undefined = undefined;
+  //#defiesLawsOfPhysicsMessage: string | undefined = undefined;
   public defiesLawsOfPhysics(reason: string) {
     api.trace
-      .getActiveSpan()
-      ?.setAttribute('io.lendis.httperror.defies_laws_of_physics', reason);
-    this.#defiesLawsOfPhysicsMessage = reason;
-    return this;
-  }
-
-  #whyMessage: string | undefined = undefined;
-  public whyyyyyyyyyyyyy(reason: string) {
-    api.trace
-      .getActiveSpan()
-      ?.setAttribute('io.lendis.httperror.whyyyyyyyyyyyyy', reason);
-    api;
-    this.#whyMessage = reason;
+      .getActiveSpan()!.setAttribute('httperror.defies_laws_of_physics', reason);
+    //this.#defiesLawsOfPhysicsMessage = reason;
     return this;
   }
 
@@ -143,14 +132,14 @@ export class HTTPError extends BaseHTTPResponse<T> {
   }
 
   public static NOT_FOUND(
-    data: T = ' Not Found',
+    data: T = 'Not Found',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 404);
   }
 
   public static VALIDATION_FAILED(
-    data: T = 'Unprocessable Entity',
+    data: T = 'Validation Failed',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 422);

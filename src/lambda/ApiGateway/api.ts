@@ -78,8 +78,10 @@ export const createApiGatewayHandler = <
       if (responseData instanceof Error) {
         if (responseData.stack) {
           outData = responseData.stack;
-        } else {
+        } else if( responseData.message ) {
           outData = responseData.message;
+        } else {
+          outData = String(responseData);
         }
       } else {
         outData = String(responseData);

@@ -11,9 +11,8 @@ import {
 
 export const telemetryFindApiGatewayParent = (event: APIGatewayEvent) => {
   let ctx: OtelContext = ROOT_CONTEXT;
-  let tryHeaders: boolean = false;
-
-  if (ctx == ROOT_CONTEXT || tryHeaders) {
+  
+  if (ctx == ROOT_CONTEXT ) {
     ctx = otelapi.propagation.extract(
       ROOT_CONTEXT,
       event.headers,

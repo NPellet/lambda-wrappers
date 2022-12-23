@@ -117,10 +117,10 @@ describe('Testing API Controller factory', function () {
 
   it("By default, use the string message type", async () => {
 
-    const handlerImpl = jest.fn( async (data: Request<any>, secrets) => {
-      expect( data.getMessageType() ).toBe( MessageType.String );
+    const handlerImpl = jest.fn(async (data: Request<any>, secrets) => {
+      expect(data.getMessageType()).toBe(MessageType.String);
       return HTTPError.BAD_REQUEST('');
-    } );
+    });
 
     const { configuration, handler } = new LambdaFactoryManager().apiGatewayWrapperFactory("handler").createHandler(
       class Ctrl {
@@ -131,10 +131,70 @@ describe('Testing API Controller factory', function () {
         handler = handlerImpl;
       });
 
-    expect(configuration.messageType ).toBe( MessageType.String )
-    
-    await handler( testApiGatewayEvent, LambdaContext, () => {} );
+    expect(configuration.messageType).toBe(MessageType.String)
 
-    expect( handlerImpl ).toHaveBeenCalledTimes( 1 )
+    await handler(testApiGatewayEvent, LambdaContext, () => { });
+
+    expect(handlerImpl).toHaveBeenCalledTimes(1)
   })
+
+
+  describe("Message types", function () {
+
+    const createConf = (factory: APIGatewayHandlerWrapperFactory<any, any, any, string, any, any, any>) => {
+      const { configuration, handler } = factory.setHandler('h').createHandler(class Ctrl {
+        static async init() { return new Ctrl() }
+        async h() {
+          return HTTPError.BAD_REQUEST();
+        }
+      });
+
+      return configuration;
+    }
+
+    test("setStringInputType yields a message of type String in config", async () => {
+      const fac1 = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
+        .setStringInputType();
+      expect(createConf(fac1).messageType).toBe(MessageType.String)
+    });
+
+    test("setNumberInputType yields a message of type Number in config", async () => {
+      const fac1 = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
+        .setNumberInputType();
+      expect(createConf(fac1).messageType).toBe(MessageType.Number)
+    });
+
+    test("setObjectInputType yields a message of type Object in config", async () => {
+      const fac1 = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
+        .setTsInputType<{ a: string }>();
+      expect(createConf(fac1).messageType).toBe(MessageType.Object)
+    });
+
+    test("setBinaryInputType yields a message of type Binary in config", async () => {
+      const fac1 = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
+        .setBinaryInputType();
+      expect(createConf(fac1).messageType).toBe(MessageType.Binary)
+    });
+
+    test("Using setInputSchema with a string schema yields a message of type String in config", async () => {
+      const fac1 = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
+        .setInputSchema(yup.string());
+      expect(createConf(fac1).messageType).toBe(MessageType.String)
+    });
+
+    test("Using setInputSchema with a number schema yields a message of type String in config", async () => {
+      const fac1 = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
+        .setInputSchema(yup.number());
+      expect(createConf(fac1).messageType).toBe(MessageType.Number)
+    });
+
+    test("Using setInputSchema with a object schema yields a message of type String in config", async () => {
+      const fac1 = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
+        .setInputSchema(yup.object());
+      expect(createConf(fac1).messageType).toBe(MessageType.Object)
+
+    });
+
+  })
+
 });
