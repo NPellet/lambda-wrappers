@@ -19,8 +19,6 @@ export class EventBridgeHandlerWrapperFactory<
   public __shimInput: TInput;
 
   setInputSchema<U extends BaseSchema>(schema: U) {
-    const constructor = this.constructor;
-
     const api = this.fork<TInput, TSecrets, THandler, U>();
     api._inputSchema = schema;
     api._secrets = this._secrets;
