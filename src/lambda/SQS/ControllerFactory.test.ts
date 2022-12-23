@@ -9,6 +9,7 @@ import {
 import { MessageType, PayloadOf } from '../../util/types';
 import { LambdaFactoryManager } from '../Manager';
 import { failSQSRecord } from '../../util/records/sqs/record';
+import { SNSHandlerWrapperFactory } from '../SNS/ControllerFactory';
 
 const testRecord: SQSRecord = {
   messageId: 'abc',
@@ -170,6 +171,7 @@ describe('Testing SQS Wrapper factory', function () {
     const fac1 = new SQSHandlerWrapperFactory( new LambdaFactoryManager() )
       .setInputSchema( yup.object() );
     expect( createConf( fac1 ).messageType ).toBe( MessageType.Object )
+    
   });
 
 });

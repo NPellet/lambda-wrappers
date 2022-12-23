@@ -27,6 +27,7 @@ export class SQSHandlerWrapperFactory<
     const api = this.fork<TInput, TSecrets,THandler, U>();
     api._inputSchema = schema;
     api._secrets = this._secrets;
+    api._handler = this._handler;
     api.setMessageTypeFromSchema( schema );
 
     return api;

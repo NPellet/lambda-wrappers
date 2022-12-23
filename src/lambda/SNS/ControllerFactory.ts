@@ -25,6 +25,7 @@ export class SNSHandlerWrapperFactory<
     const api = this.fork<TInput, TSecrets,THandler, U>();
     api._inputSchema = schema;
     api._secrets = this._secrets;
+    api._handler = this._handler;
     api.setMessageTypeFromSchema( schema );
 
     return api;
@@ -75,6 +76,7 @@ export class SNSHandlerWrapperFactory<
   setTsInputType<U>() {
     const api = this.fork<U, TSecrets, THandler, SInput>();
     api._messageType = MessageType.Object;
+
     this.copyAll( api );
     return api;
   }
