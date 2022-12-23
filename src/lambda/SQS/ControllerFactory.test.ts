@@ -9,6 +9,7 @@ import {
 import { MessageType, PayloadOf } from '../../util/types';
 import { LambdaFactoryManager } from '../Manager';
 import { failSQSRecord } from '../../util/records/sqs/record';
+import { CtrlInterfaceOf } from '../CtrlInterface';
 
 const testRecord: SQSRecord = {
   messageId: 'abc',
@@ -57,7 +58,7 @@ describe('Testing SQS Wrapper factory', function () {
       .setInputSchema(schema)
       .setHandler('create');
 
-    type IF = SQSCtrlInterface<typeof controllerFactory>;
+    type IF = CtrlInterfaceOf<typeof controllerFactory>;
 
     const mockHandler = jest.fn(
       async (data: PayloadOf<IF, 'create'>, secrets) => {

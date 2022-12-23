@@ -94,8 +94,8 @@ export default mgr;
 ```
 
 ### 2. Create a route / event handler using the manager
-It is good practice to separate the logic (a controller) from the lambda itself (exposing the handler to AWS), which would allow you to swap out controllers or implement multiple lambdas in a single controller. <br>
-Ideally, the controller route should be `require`-able without it executing any service logic. This allows you to expose "meta-information" that can be used by other tools (for example, automatically add IAM permissions in a CDK code by looading the `configuration` object)
+It is good practice to separate the logic (a controller) from the hangler itself (the entrypoint exposed to AWS), which would allow you to swap out controllers or implement multiple lambdas in a single controller. <br>
+Ideally, the controller route should be `require`-able without it executing any service logic. This allows you to expose "meta-information" that can be used by other tools (for example, automatically add IAM permissions in a CDK code by looading the `configuration` object, or building an OpenAPI v3 spec)
 
 Start by the handler file: import the manager you just exported into a new file (the one that will use by AWS to handle your function) and either start an API Gateway wrapper, and Event Bridge wrapper, an SNS wrapper or an SQS wrapper
 
@@ -106,7 +106,7 @@ const wrapperFactory = manager.apiGatewayWrapperFactory( "handler_name" ).setTsI
 
 import { Controller } from './path/to/controller'
 export const { handler, configuration } = wrapperFactory.createHandler( Controller )
-export type Interface = APIGatewayCtrlInterface<typeof wrapperFactory>
+export type Interface = CtrlInterfaceOf<typeof wrapperFactory>
 ```
 
 ### 3. Create a controller
@@ -157,7 +157,7 @@ Wrapper factory constructors are available for
 The string parameter passed to the constructor function defines which method must be implemented by the constructor:
 
 ```typescript
-type HandlerIf = APIGatewayCtrlInterface<wrapperFactory>
+type HandlerIf = CtrlInterfaceOf<wrapperFactory>
 
 /* HandlerIf is of type
 {
@@ -177,7 +177,7 @@ const wrapperFactory = manager
     handled: yup.boolean()
   }));
 
-export type InterfaceHandler = APIGatewayCtrlInterface< typeof wrapperFactory >
+export type InterfaceHandler = CtrlInterfaceOf< typeof wrapperFactory >
 
 // Creating the handler and the configuration
 
@@ -195,7 +195,7 @@ export const { handler, configuration } = wrapperFactory.createWrapper( Controll
 // route.ts
 import manager from 'path/to/manager'
 import { MyController } from 'path/to/controller';
-import { APIGatewayCtrlInterface } from 'aws-lambda-handlers';
+import { CtrlInterfaceOf } from 'aws-lambda-handlers';
 
 // API Route definition file
 const handlerWrapperFactory = manager.apiGatewayWrapperFactory('handle')
@@ -206,7 +206,7 @@ const handlerWrapperFactory = manager.apiGatewayWrapperFactory('handle')
   .needsSecret('process_env_key', 'SecretName', 'adminApiKey', true) // Fetches the secrets during a cold start
   .needsSecret('process_env_other_key', 'SecretName', 'apiKey', true);
 
-type controllerInterface = APIGatewayCtrlInterface<
+type controllerInterface = CtrlInterfaceOf<
   typeof handlerWrapperFactory
 >;
 
@@ -248,23 +248,23 @@ Once the wrapper factory has been created, you can extract its interface type us
 
 ```typescript
 // API Gateway handler
-type controllerInterface = APIGatewayCtrlInterface<
-  typeof handlerWrapperFactory
+type controllerInterface = CtrlInterfaceOf<
+  typeof APIHandlerWrapperFactory
 >;
 
 // Event bridge handler
-type controllerInterface = EventBridgeCtrlInterface<
-  typeof handlerWrapperFactory
+type controllerInterface = CtrlInterfaceOf<
+  typeof EventBridgeHandlerWrapperFactory
 >;
 
 // SNS handler
-type controllerInterface = SNSCtrlInterface<
-  typeof handlerWrapperFactory
+type controllerInterface = CtrlInterfaceOf<
+  typeof snsHandlerWrapperFactory
 >;
 
 // SQS handler
-type controllerInterface = SQSCtrlInterface<
-  typeof handlerWrapperFactory
+type controllerInterface = CtrlInterfaceOf<
+  typeof sqsHandlerWrapperFactory
 >;
 
 ```
@@ -320,7 +320,7 @@ import Controller from 'path/to/controller';
 
 const createHandlerWrapperFactory = manager.apiGatewayWrapperFactory('create');
   
-type controllerInterface = APIGatewayCtrlInterface<
+type controllerInterface = CtrlInterfaceOf<
   typeof createHandlerWrapperFactory
 >;
 
@@ -334,7 +334,7 @@ import Controller from 'path/to/controller';
 
 const readHandlerWrapperFactory = manager.apiGatewayWrapperFactory('read');
 
-type controllerInterface = APIGatewayCtrlInterface<
+type controllerInterface = CtrlInterfaceOf<
   typeof readHandlerWrapperFactory
 >;
 
