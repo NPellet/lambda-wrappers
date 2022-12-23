@@ -92,7 +92,7 @@ import manager from './path/to/manager' // You can also use an npm module to sha
 const wrapperFactory = manager.apiGatewayWrapperFactory( "handler_name" ).setTsInputType<string>();
 
 import { Controller } from './path/to/controller'
-export const { handler, configuration } = wrapperFactory.wrapHandler( Controller )
+export const { handler, configuration } = wrapperFactory.createHandler( Controller )
 export type Interface = APIGatewayCtrlInterface<typeof wrapperFactory>
 ```
 
@@ -197,7 +197,7 @@ type controllerInterface = APIGatewayCtrlInterface<
   typeof handlerWrapperFactory
 >;
 
-export const { handler, configuration } = handlerWrapperFactory.wrapHandler(MyController);
+export const { handler, configuration } = handlerWrapperFactory.createHandler(MyController);
 export { controllerInterface }; // Export the type to be reimported by the route implementation
 
 //====================================================================
@@ -311,7 +311,7 @@ type controllerInterface = APIGatewayCtrlInterface<
   typeof createHandlerWrapperFactory
 >;
 
-export const { handler, configuration } = createHandlerWrapperFactory.wrapHandler(Controller);
+export const { handler, configuration } = createHandlerWrapperFactory.createHandler(Controller);
 export { controllerInterface };
 ```
 
@@ -325,7 +325,7 @@ type controllerInterface = APIGatewayCtrlInterface<
   typeof readHandlerWrapperFactory
 >;
 
-export const { handler, configuration } = readHandlerWrapperFactory.wrapHandler(Controller);
+export const { handler, configuration } = readHandlerWrapperFactory.createHandler(Controller);
 export { controllerInterface };
 
 // Update.ts...

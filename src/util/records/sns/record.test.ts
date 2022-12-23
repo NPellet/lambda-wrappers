@@ -1,47 +1,30 @@
 import { SNSEventRecord } from 'aws-lambda';
+import { testSNSRecord } from '../../../test_utils/utils';
 import { MessageType } from '../../types';
 import { AwsSNSRecord } from './record';
 
-const testRecord: SNSEventRecord = {
-  "EventSource": "src",
-  "EventSubscriptionArn": "srcarn",
-  "EventVersion": "version",
-  "Sns": {
-    "Message": "Hello world",
-    "MessageAttributes": {},
-    "MessageId": "messageId",
-    "Signature": "",
-    "SignatureVersion": "",
-    "Timestamp": "",
-    "Subject": "subject",
-    "TopicArn": "topic",
-    "SigningCertUrl": "",
-    "Type": "",
-    "UnsubscribeUrl": ""
-  }
-};
 
 describe('Testing SQS Record', () => {
 
 
   test('getMessageId works', async () => {
-    const record = new AwsSNSRecord(testRecord, MessageType.String);
-    expect(record.getMessageId()).toBe(testRecord.Sns.MessageId);
+    const record = new AwsSNSRecord(testSNSRecord, MessageType.String);
+    expect(record.getMessageId()).toBe(testSNSRecord.Sns.MessageId);
   });
 
   test('getRawRecord works', async () => {
-    const record = new AwsSNSRecord(testRecord, MessageType.String);
-    expect(record.getRawRecord()).toBe(testRecord);
+    const record = new AwsSNSRecord(testSNSRecord, MessageType.String);
+    expect(record.getRawRecord()).toBe(testSNSRecord);
   });
 
   test('getRawRecord works', async () => {
-    const record = new AwsSNSRecord(testRecord, MessageType.String);
-    expect(record.getRawRecord()).toBe(testRecord);
+    const record = new AwsSNSRecord(testSNSRecord, MessageType.String);
+    expect(record.getRawRecord()).toBe(testSNSRecord);
   });
 
 
   test('Fails parsing when bad json', async () => {
-    const record = new AwsSNSRecord({ ...testRecord, Sns: Object.assign({ ...testRecord.Sns }, { "Message": 'bad_json' }) }, MessageType.Object);
+    const record = new AwsSNSRecord({ ...testSNSRecord, Sns: Object.assign({ ...testSNSRecord.Sns }, { "Message": 'bad_json' }) }, MessageType.Object);
 
     expect(() => {
       record.getData();
@@ -49,20 +32,20 @@ describe('Testing SQS Record', () => {
   });
 
   test('Returns raw string with message attribute', async () => {
-    const record = new AwsSNSRecord(testRecord, MessageType.String);
+    const record = new AwsSNSRecord(testSNSRecord, MessageType.String);
 
-    expect(record.getRawRecord()).toBe(testRecord);
+    expect(record.getRawRecord()).toBe(testSNSRecord);
 
     expect(() => {
       record.getData();
     }).not.toThrow();
 
-    expect(record.getData()).toBe(testRecord.Sns.Message);
+    expect(record.getData()).toBe(testSNSRecord.Sns.Message);
   });
 
 
   test('Getting binary data', async () => {
-    const record = new AwsSNSRecord<Buffer>({ ...testRecord, Sns: Object.assign({ ...testRecord.Sns }, { "Message": 'YSBzdHJpbmc=' }) }, MessageType.Binary);
+    const record = new AwsSNSRecord<Buffer>({ ...testSNSRecord, Sns: Object.assign({ ...testSNSRecord.Sns }, { "Message": 'YSBzdHJpbmc=' }) }, MessageType.Binary);
     expect(record.getData()).toBeInstanceOf(Buffer);
     expect(record.getData().toString('ascii')).toBe('a string');
   });

@@ -98,7 +98,9 @@ export class SNSHandlerWrapperFactory<
   }
 
 
-  makeHandlerFactory() {
+  createHandler(controllerFactory: ConstructorOf<
+    SNSCtrlInterface<typeof this>
+  >) {
     type INPUT = TOrSchema<TInput, SInput>;
 
     type TInterface = {
@@ -114,34 +116,31 @@ export class SNSHandlerWrapperFactory<
       ) => Promise<void>;
     };
 
-    const handlerFactory = (controllerFactory: ConstructorOf<TInterface>) => {
-      const configuration: HandlerConfiguration<TInterface, SInput, TSecrets> =
-        {
-          opentelemetry: true,
-          sentry: true,
-          yupSchemaInput: this._inputSchema,
-          secretInjection: this._secrets,
-          initFunction: async (secrets) => {
-            return controllerFactory.init(secrets);
-          },
-          messageType: this._messageType
-        };
-
-      const handler = createSNSHandler<INPUT, TInterface, TSecrets, SInput>(
-        async (event, init, secrets) => {
-          await this.init();
-          return init[this._handler](event, secrets);
+    const configuration: HandlerConfiguration<TInterface, SInput, TSecrets> =
+      {
+        opentelemetry: true,
+        sentry: true,
+        yupSchemaInput: this._inputSchema,
+        secretInjection: this._secrets,
+        initFunction: async (secrets) => {
+          return controllerFactory.init(secrets);
         },
-        configuration
-      );
-
-      return {
-        handler,
-        configuration,
+        messageType: this._messageType
       };
+
+    const handler = createSNSHandler<INPUT, TInterface, TSecrets, SInput>(
+      async (event, init, secrets) => {
+        await this.init();
+        return init[this._handler](event, secrets);
+      },
+      configuration
+    );
+
+    return {
+      handler,
+      configuration,
     };
 
-    return handlerFactory;
   }
 
   fork<

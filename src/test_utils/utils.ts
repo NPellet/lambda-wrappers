@@ -17,7 +17,7 @@ import {
   ROOT_CONTEXT,
 } from '@opentelemetry/api';
 import { AWSXRayPropagator } from '@opentelemetry/propagator-aws-xray';
-import { APIGatewayEvent, Context, EventBridgeEvent } from 'aws-lambda';
+import { APIGatewayEvent, Context, EventBridgeEvent, SNSEventRecord } from 'aws-lambda';
 
 export const contextSetter = {
   set(carrier: any, key: string, value: string) {
@@ -164,6 +164,26 @@ export const testApiGatewayEvent: APIGatewayEvent = {
     resourcePath: '',
   },
   resource: '',
+};
+
+
+export const testSNSRecord: SNSEventRecord = {
+  "EventSource": "src",
+  "EventSubscriptionArn": "srcarn",
+  "EventVersion": "version",
+  "Sns": {
+    "Message": "Hello world",
+    "MessageAttributes": {},
+    "MessageId": "messageId",
+    "Signature": "",
+    "SignatureVersion": "",
+    "Timestamp": "",
+    "Subject": "subject",
+    "TopicArn": "topic",
+    "SigningCertUrl": "",
+    "Type": "",
+    "UnsubscribeUrl": ""
+  }
 };
 
 export const LambdaContext: Context = {

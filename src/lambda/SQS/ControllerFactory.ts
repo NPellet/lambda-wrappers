@@ -99,9 +99,9 @@ export class SQSHandlerWrapperFactory<
     return api;
   }
 
-
-
-  makeHandlerFactory() {
+  createHandler(controllerFactory: ConstructorOf<
+    SQSCtrlInterface<typeof this>
+  >) {
     type INPUT = TOrSchema<TInput, SInput>;
 
     type TInterface = {
@@ -117,18 +117,17 @@ export class SQSHandlerWrapperFactory<
       ) => Promise<void | SQSBatchItemFailure>;
     };
 
-    const handlerFactory = (controllerFactory: ConstructorOf<TInterface>) => {
-      const configuration: HandlerConfiguration<TInterface, SInput, TSecrets> =
-        {
-          opentelemetry: true,
-          sentry: true,
-          yupSchemaInput: this._inputSchema,
-          secretInjection: this._secrets,
-          initFunction: async (secrets) => {
-            return controllerFactory.init(secrets);
-          },
-          messageType: this._messageType
-        };
+    const configuration: HandlerConfiguration<TInterface, SInput, TSecrets> =
+      {
+        opentelemetry: true,
+        sentry: true,
+        yupSchemaInput: this._inputSchema,
+        secretInjection: this._secrets,
+        initFunction: async (secrets) => {
+          return controllerFactory.init(secrets);
+        },
+        messageType: this._messageType
+      };
 
       const handler = createSQSHandler<INPUT, TInterface, TSecrets, SInput>(
         async (event, init, secrets, c) => {
@@ -142,9 +141,6 @@ export class SQSHandlerWrapperFactory<
         handler,
         configuration,
       };
-    };
-
-    return handlerFactory;
   }
 
   fork<
