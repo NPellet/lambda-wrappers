@@ -81,7 +81,9 @@ npm i aws-lambda-wrappers
 
 Start by sharing a wrapper manager across all your lambda functions. This is useful to share configuration across your organisation.
 
-Currently, this is only useful for the list of usable secrets, but it may be extended in the future.
+Currently the manager is used for:
+  - Setting a global Sentry configuration
+  - Setting the list of available secrets
 
 ```typescript
 // path/to/manager.ts
