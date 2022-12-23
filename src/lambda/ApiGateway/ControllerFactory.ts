@@ -6,7 +6,6 @@ import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import { createApiGatewayHandler } from './api';
 import { SecretConfig, SecretsContentOf, TSecretRef } from '../utils/secrets_manager';
 import { BaseWrapperFactory } from '../BaseWrapperFactory';
-import { MessageTypeValues } from '@opentelemetry/semantic-conventions';
 
 export class APIGatewayHandlerWrapperFactory<
   TInput,
