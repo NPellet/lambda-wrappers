@@ -327,29 +327,17 @@ Routes definitions (1 file per handler, or more, but then you'd have to rename a
 ```typescript
 // Create.ts
 import Controller from 'path/to/controller';
-
 const createHandlerWrapperFactory = manager.apiGatewayWrapperFactory('create');
-  
-type controllerInterface = CtrlInterfaceOf<
-  typeof createHandlerWrapperFactory
->;
-
+export type controllerInterface = CtrlInterfaceOf<typeof createHandlerWrapperFactory>;
 export const { handler, configuration } = createHandlerWrapperFactory.createHandler(Controller);
-export { controllerInterface };
 ```
 
 ```typescript
 // Read.ts
 import Controller from 'path/to/controller';
-
 const readHandlerWrapperFactory = manager.apiGatewayWrapperFactory('read');
-
-type controllerInterface = CtrlInterfaceOf<
-  typeof readHandlerWrapperFactory
->;
-
+export type controllerInterface = CtrlInterfaceOf<typeof readHandlerWrapperFactory>;
 export const { handler, configuration } = readHandlerWrapperFactory.createHandler(Controller);
-export { controllerInterface };
 
 // Update.ts...
 // Delete.ts...
