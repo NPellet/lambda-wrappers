@@ -38,6 +38,7 @@ This package provides an opiniated stack to insert additional logic in handling 
     - [Wrapper available for AWS sources:](#wrapper-available-for-aws-sources)
     - [Handler method name](#handler-method-name)
   - [Detailed Usage](#detailed-usage)
+    - [Main exports](#main-exports)
     - [Complete example](#complete-example)
     - [Notes on the Wrapper Factory](#notes-on-the-wrapper-factory)
     - [Other notes](#other-notes)
@@ -187,6 +188,15 @@ export const { handler, configuration } = wrapperFactory.createWrapper( Controll
 
 
 ## Detailed Usage
+
+### Main exports
+
+This package exposes 3 main objects you may want to import:
+- class ```LambdaFactoryManager```, which you use to create any handler
+- type ```CtrlInterfaceOf```, which derives the WrapperFactory into a TS interface to be implemented by the controller
+- type ```IfHandler```, which stands for "interface handler", and informs the controller handler about the parameter type (see examples).
+
+
 
 ### Complete example
 
