@@ -22,6 +22,7 @@ export class APIGatewayHandlerWrapperFactory<
   public _inputSchema: SInput;
   public __shimInput: TInput;
   public __shimOutput: TOutput;
+  protected _messageType: MessageType = MessageType.String;
 
 
   setInputSchema<U extends BaseSchema>(schema: U) {
@@ -149,6 +150,7 @@ export class APIGatewayHandlerWrapperFactory<
       yupSchemaOutput: this._outputSchema,
       secretInjection: this._secrets,
       initFunction: async (secrets) => {
+        await this.init();
         return controllerFactory.init(secrets);
       },
       messageType: this._messageType
@@ -166,7 +168,6 @@ export class APIGatewayHandlerWrapperFactory<
       SInput,
       SOutput
     >(async (event, init, secrets, c) => {
-      await this.init();
       return init[this._handler](event, secrets);
     }, configuration);
 
@@ -174,8 +175,6 @@ export class APIGatewayHandlerWrapperFactory<
       handler,
       configuration,
     };
-
-
   }
 
   fork<

@@ -269,6 +269,7 @@ describe('API Gateway: Checking schemas', () => {
       }
     );
 
+
     const clonedTest = _.cloneDeep( testApiGatewayEvent );
     clonedTest.body = JSON.stringify({"b": "c"})
     await expect(

@@ -35,6 +35,7 @@ export class LambdaFactoryManager<T extends TSecretRef> {
 	 */
 	public configureSentryDSN( dsn: string ) {
 		this.configureSentry( { dsn }, true );
+		return this;
 	}
 
 	/**

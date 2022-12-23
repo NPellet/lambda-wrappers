@@ -179,7 +179,7 @@ export const createApiGatewayHandler = <
             `Lambda input data malformed. Raw input data was "${request.getBody()}. Error was: ${e}`
         };
       }
-console.log( configuration.yupSchemaInput );
+
       if (configuration.yupSchemaInput) {
         try {
           await configuration.yupSchemaInput.validate(data);

@@ -123,6 +123,7 @@ export class SNSHandlerWrapperFactory<
         yupSchemaInput: this._inputSchema,
         secretInjection: this._secrets,
         initFunction: async (secrets) => {
+          await this.init();
           return controllerFactory.init(secrets);
         },
         messageType: this._messageType
@@ -130,7 +131,6 @@ export class SNSHandlerWrapperFactory<
 
     const handler = createSNSHandler<INPUT, TInterface, TSecrets, SInput>(
       async (event, init, secrets) => {
-        await this.init();
         return init[this._handler](event, secrets);
       },
       configuration

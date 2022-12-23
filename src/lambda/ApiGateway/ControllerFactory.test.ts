@@ -6,8 +6,9 @@ import {
   APIGatewayHandlerWrapperFactory,
 } from './ControllerFactory';
 import { HTTPError } from '../../util/records/apigateway/response';
-import { IfHandler, SecretsOf } from '../../util/types';
+import { IfHandler, MessageType, SecretsOf } from '../../util/types';
 import { LambdaFactoryManager } from '../Manager';
+import { Request } from '../../util/records/apigateway/request';
 
 jest.mock('../utils/secrets_manager_aws', function () {
   return {
@@ -33,7 +34,7 @@ describe('Testing API Controller factory', function () {
       return HTTPError.BAD_REQUEST('Oups');
     });
 
-    const fac = new APIGatewayHandlerWrapperFactory( new LambdaFactoryManager())
+    const fac = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
       .needsSecret('abc', 'Algolia-Products', 'adminApiKey', true)
       .setTsOutputType<{ b: number }>()
       .setTsInputType<{ a: string }>()
@@ -61,7 +62,7 @@ describe('Testing API Controller factory', function () {
     const { handler, configuration } = fac.createHandler(Ctrl);
 
     expect(configuration.secretInjection!.abc).toStrictEqual({
-      secret: 'Algolia-Products', 
+      secret: 'Algolia-Products',
       secretKey: 'adminApiKey',
       required: true,
     });
@@ -71,14 +72,14 @@ describe('Testing API Controller factory', function () {
     expect(configuration.secretInjection!.abc.secret).toStrictEqual(
       'Algolia-Products',
     );
-    expect(configuration.secretInjection!.abc.secretKey).toStrictEqual(      'adminApiKey',
+    expect(configuration.secretInjection!.abc.secretKey).toStrictEqual('adminApiKey',
     );
 
 
-    const clonedTest = _.cloneDeep( testApiGatewayEvent );
-    clonedTest.body = JSON.stringify({"wrongInput": "c"})
+    const clonedTest = _.cloneDeep(testApiGatewayEvent);
+    clonedTest.body = JSON.stringify({ "wrongInput": "c" })
 
-    const out = await handler(clonedTest, LambdaContext, () => {});
+    const out = await handler(clonedTest, LambdaContext, () => { });
     expect(out.statusCode).toBe(500);
     expect(out.body).toContain('Lambda input schema validation failed');
 
@@ -87,7 +88,7 @@ describe('Testing API Controller factory', function () {
     apiGatewayEventClone.headers['Content-Type'] = 'application/json';
     apiGatewayEventClone.body = JSON.stringify({ a: 'abc' });
 
-    const out2 = await handler(apiGatewayEventClone, LambdaContext, () => {});
+    const out2 = await handler(apiGatewayEventClone, LambdaContext, () => { });
 
     expect(mockHandler).toHaveBeenCalled(); // Validation doesn't pass
     expect(out2.statusCode).toBe(HTTPError.BAD_REQUEST('').getStatusCode());
@@ -112,4 +113,28 @@ describe('Testing API Controller factory', function () {
     const { configuration } = fac.createHandler(Ctrl);
     expect(configuration.secretInjection?.abc.required).toBe(true);
   });
+
+
+  it("By default, use the string message type", async () => {
+
+    const handlerImpl = jest.fn( async (data: Request<any>, secrets) => {
+      expect( data.getMessageType() ).toBe( MessageType.String );
+      return HTTPError.BAD_REQUEST('');
+    } );
+
+    const { configuration, handler } = new LambdaFactoryManager().apiGatewayWrapperFactory("handler").createHandler(
+      class Ctrl {
+        static async init() {
+          return new Ctrl();
+        }
+
+        handler = handlerImpl;
+      });
+
+    expect(configuration.messageType ).toBe( MessageType.String )
+    
+    await handler( testApiGatewayEvent, LambdaContext, () => {} );
+
+    expect( handlerImpl ).toHaveBeenCalledTimes( 1 )
+  })
 });
