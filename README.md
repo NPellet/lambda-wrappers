@@ -4,8 +4,8 @@
     <img alt="Codecov Status" src="https://img.shields.io/codecov/c/github/NPellet/lambda-wrappers?style=for-the-badge">
   </a>
 
-   <a href="https://github.com/NPellet/lambda-wrappers/actions/workflows/test.yml">
-    <img src="https://github.com/NPellet/lambda-wrappers/actions/workflows/test.yml/badge.svg">
+   <a href="https://github.com/NPellet/lambda-wrappers/actions/workflows/test.yaml">
+    <img src="https://github.com/NPellet/lambda-wrappers/actions/workflows/test.yaml/badge.svg">
   </a>
 
 Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup
