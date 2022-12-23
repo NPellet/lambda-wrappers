@@ -1,7 +1,7 @@
 # AWS Lambda Wrappers
 
   <a href="https://codecov.io/gh/NPellet/lambda-wrappers/branch/main/">
-    <img alt="Codecov Status" src="https://img.shields.io/codecov/c/github/NPellet/lambda-wrappers?style=for-the-badge">
+    <img alt="Codecov Status" src="https://img.shields.io/codecov/c/github/NPellet/lambda-wrappers">
   </a>
 
    <a href="https://github.com/NPellet/lambda-wrappers/actions/workflows/test.yaml">
