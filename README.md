@@ -1,6 +1,5 @@
 # AWS Lambda Wrappers
 
-Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup
 
 <a href="https://codecov.io/gh/NPellet/lambda-wrappers/branch/main/">
   <img alt="Codecov Status" src="https://img.shields.io/codecov/c/github/NPellet/lambda-wrappers">
@@ -10,16 +9,19 @@ Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic
   <img src="https://github.com/NPellet/lambda-wrappers/actions/workflows/test.yaml/badge.svg">
 </a>
 
+Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup
+
 
 ## Why ?
 
 Lambda's are a great tool, but they're pretty raw. For example, it'd be pretty useful to:
 
 - Wrap the handlers with Sentry (you could also use a lambda layer for that)
-- Sanitize API Gateway's responses and SQS failed batch items
+- Automatically parse and validate the inputs based on schemas
+- Sanitize the outputs: API Gateway's responses and SQS failed batch items
 - Pre-fetch a bunch of secrets from the secret manager (do not put secrets in the env variables !)
-- Have static type safety as well as runtime payload validation
-- Replace Opentelemetry's Lambda auto-instrumentation with some more logic (for example, the context may be part of the SQS payload, or part of the Event Bridge payload)
+- Have static type safety
+- Overcome the shortcomings of Opentelemetry's Lambda auto-instrumentation
 
 This package provides an opiniated stack to insert additional logic in handling lambdas triggered from the API Gateway, the Event Bridge, SQS and SNS (and we will be adding more sources later !).
 
