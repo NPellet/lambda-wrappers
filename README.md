@@ -14,7 +14,7 @@ Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic
 ## Breaking changes in v2.x
 
 The only changes between v2.x and v1.x are in the secrets manager.
-For the documentation of v1.x, see (documentation)[https://www.npmjs.com/package/aws-lambda-handlers/v/1.0.31]
+For the documentation of v1.x, see [documentation](https://www.npmjs.com/package/aws-lambda-handlers/v/1.0.31)
 
 Version 2 introduces a small breaking change when working with AWS secrets. In v2, it is possible to define custom secret fetchers other than target other sources than the AWS Secret manager.
 Therefore, we had to introduce a change in the following signatures:
@@ -22,15 +22,11 @@ Therefore, we had to introduce a change in the following signatures:
 ```typescript
 // Was:
 new LambdaFactoryManager().setSecrets
-
 // Now:
 new LamndaFactoryManager().setAWSSecrets
-
 ////////////////////////////
-
 // Was:
 factory..needsSecret('key', 'secretName', 'secretKey', required) // required is bool
-
 // Is:
 factory.needsSecret('aws', 'key', 'secretName', 'secretKey', undefined, required )
 ```
@@ -38,10 +34,9 @@ factory.needsSecret('aws', 'key', 'secretName', 'secretKey', undefined, required
 The reason behind those changes in reflected in the following documentation (under [Secret injection](#secret-injection))
 
 
-
 ## Why ?
 
-Lambda's are a great tool, but they're pretty raw. For example, it'd be pretty useful to:
+AWS Lambda's are a great piece of engineering and makes our life easier, but they're pretty "raw". For example, it would be pretty useful to:
 
 - Wrap the handlers with Sentry (you could also use a lambda layer for that)
 - Automatically parse and validate the inputs based on schemas
