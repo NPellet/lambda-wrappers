@@ -14,7 +14,7 @@ jest.mock('../utils/secrets_manager_aws', function () {
   return {
     __esModule: true,
     fetchAwsSecret: jest.fn(async (secretName: string) => {
-      if (secretName == 'Algolia-Products') {
+      if (secretName == 'ThirdPartyAPI') {
         return {
           adminApiKey: 'algoliaApiKey',
           apiKey: 'algoliaApiKey',
@@ -35,7 +35,7 @@ describe('Testing API Controller factory', function () {
     });
 
     const fac = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
-      .needsSecret('abc', 'Algolia-Products', 'adminApiKey', true)
+      .needsSecret("aws", 'abc', 'ThirdPartyAPI', 'adminApiKey', undefined, true)
       .setTsOutputType<{ b: number }>()
       .setTsInputType<{ a: string }>()
       .setInputSchema(schema)
@@ -62,7 +62,9 @@ describe('Testing API Controller factory', function () {
     const { handler, configuration } = fac.createHandler(Ctrl);
 
     expect(configuration.secretInjection!.abc).toStrictEqual({
-      secret: 'Algolia-Products',
+      source: "aws",
+      meta: undefined,
+      secret: 'ThirdPartyAPI',
       secretKey: 'adminApiKey',
       required: true,
     });
@@ -70,7 +72,7 @@ describe('Testing API Controller factory', function () {
     expect(configuration.yupSchemaInput).toStrictEqual(schema);
     expect(configuration.secretInjection!.abc.required).toBe(true);
     expect(configuration.secretInjection!.abc.secret).toStrictEqual(
-      'Algolia-Products',
+      'ThirdPartyAPI',
     );
     expect(configuration.secretInjection!.abc.secretKey).toStrictEqual('adminApiKey',
     );
@@ -96,7 +98,7 @@ describe('Testing API Controller factory', function () {
 
   it('needsSecret required param defaults to true', () => {
     const fac = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
-      .needsSecret('abc', 'Algolia-Products', 'adminApiKey')
+      .needsSecret('aws', 'abc', 'ThirdPartyAPI', 'adminApiKey', {})
       .setHandler('create');
 
 

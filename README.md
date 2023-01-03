@@ -11,6 +11,30 @@
 
 Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup
 
+## Breaking changes in v2.x
+
+Version 2 introduces a small breaking change when working with AWS secrets. In v2, it is possible to define custom secret fetchers other than target other sources than the AWS Secret manager.
+Therefore, we had to introduce a change in the following signatures:
+
+```typescript
+// Was:
+new LambdaFactoryManager().setSecrets
+
+// Now:
+new LamndaFactoryManager().setAWSSecrets
+
+////////////////////////////
+
+// Was:
+factory..needsSecret('key', 'secretName', 'secretKey', required) // required is bool
+
+// Is:
+factory.needsSecret('aws', 'key', 'secretName', 'secretKey', undefined, required )
+```
+
+The reason behind those changes in reflected in the following documentation (under [Secret injection](#secret-injection))
+
+
 
 ## Why ?
 
@@ -28,6 +52,7 @@ This package provides an opiniated stack to insert additional logic in handling 
 <!-- vscode-markdown-toc -->
 
 - [AWS Lambda Wrappers](#aws-lambda-wrappers)
+  - [Breaking changes in v2.x](#breaking-changes-in-v2x)
   - [Why ?](#why-)
   - [Installation](#installation)
   - [Usage](#usage)
@@ -35,7 +60,8 @@ This package provides an opiniated stack to insert additional logic in handling 
     - [2. Create a route / event handler using the manager](#2-create-a-route--event-handler-using-the-manager)
     - [3. Create a controller](#3-create-a-controller)
   - [Details](#details)
-    - [Wrapper available for AWS sources:](#wrapper-available-for-aws-sources)
+    - [AWS Event sources](#aws-event-sources)
+    - [Notes on immutability](#notes-on-immutability)
     - [Handler method name](#handler-method-name)
   - [Detailed Usage](#detailed-usage)
     - [Main exports](#main-exports)
@@ -52,6 +78,7 @@ This package provides an opiniated stack to insert additional logic in handling 
     - [Dealing with Key-Value Secrets](#dealing-with-key-value-secrets)
     - [Dealing with String Secrets](#dealing-with-string-secrets)
     - [Providing a secret list to the manager](#providing-a-secret-list-to-the-manager)
+    - [Providing alternative secret sources](#providing-alternative-secret-sources)
   - [API Gateway output](#api-gateway-output)
   - [A note on error handling in controllers](#a-note-on-error-handling-in-controllers)
 
@@ -134,7 +161,7 @@ We've added a lot of stuff, which may not really make sense and seems burdensome
 
 ## Details
  
-### Wrapper available for AWS sources:
+### AWS Event sources
 Wrapper factory constructors are available for
 
 - API Gateway:
@@ -153,6 +180,23 @@ Wrapper factory constructors are available for
   ```typescript
     manager.snsWrapperFactory( handler: string );
   ```
+
+### Notes on immutability
+
+Both the `LambdaFactoryManager` and the derived `APIGatewayWrapperFactory` and others are **mostly** immutable (understand by it that you cannot safely rely on their immutability either). It is important to understand that most of the methods return a new instance:
+
+```typescript
+const apiWrapperFactory = new LambdaFactoryManager().apiGatewayWrapperFactory()
+
+const apiWrapperFactory2 = api.needsSecret( /*...*/ );
+
+// apiWrapperFactory2 is of "similar" type as apiWrapperFactorty, and will require the secret
+// apiWrapperFactory will NOT require the secret
+
+// BAD !
+api.needsSecret(); // Not assigned to a variable
+```
+
 
 ### Handler method name
 The string parameter passed to the constructor function defines which method must be implemented by the constructor:
@@ -213,8 +257,8 @@ const handlerWrapperFactory = manager.apiGatewayWrapperFactory('handle')
   .setTsOutputType<OUTPUT_TYPE>() // Injects type safety, overrides yup schema
   .setInputSchema(yupSchema) // Of type yup
   .setOutputSchema(yupSchema) // Of type yup
-  .needsSecret('process_env_key', 'SecretName', 'adminApiKey', true) // Fetches the secrets during a cold start
-  .needsSecret('process_env_other_key', 'SecretName', 'apiKey', true);
+  .needsSecret('aws', 'process_env_key', 'SecretName', 'adminApiKey', undefined, true) // Fetches the secrets during a cold start
+  .needsSecret('aws', 'process_env_other_key', 'SecretName', 'apiKey', undefined, true);
 
 type controllerInterface = CtrlInterfaceOf<
   typeof handlerWrapperFactory
@@ -249,7 +293,7 @@ export class MyController implements controllerInterface {
   - The `message` content for SQS and SNS
 - similarly, `.setTsOutputType<T>()` informs the type of response the controller is supposed to return (or an instance of `HTTPError` if the controller failed). Only applies to API Gateway
 - `setInputSchema<SCHEMA_TYPE>( schema )` and `setOutputSchema<SCHEMA_TYPE>( schema )` add a runtime verification of a `yup` schema. When `setTsInputType` is not defined but `setInputSchema` is, then the controller is expected to received the result of `InferType< SCHEMA_TYPE >` instead of `T`
-- `needsSecret( key, secretName, secretKey, required )` is used for ahead-of-execution secret injection: when a cold start occurs, the Lambda wrapper will detect if the secret has been injected into `process.env[ key ]`. If not, it will fetch it from AWS and inject it into `process.env`. It will also be made available in the handler method with strong typing.
+- `needsSecret( source, key, secretName, secretKey, meta, required )` is used for ahead-of-execution secret injection: when a cold start occurs, the Lambda wrapper will detect if the secret has been injected into `process.env[ key ]`. If not, it will fetch it from AWS and inject it into `process.env`. It will also be made available in the handler method with strong typing.
   The `required` field can be used to outrightly fail the lambda when the secret is not found. Note that `secretName` and `secretKey` have auto-completion and will report a TS error if you have provided a secret list in the manager.
 
 ### <a name='Othernotes'></a>Other notes
@@ -381,13 +425,13 @@ The API Gateway, SNS and SQS pass the message body (or request as a string), and
 
 Here are the rules we generally apply:
 
-- When calling `setInputSchema`, we look at the schema type:
-  - If it's an `ObjectSchema`, we run JSON.parse before validation
-  - If it's a `StringSchema`, we run no parsing before validation
-  - If it's a `NumberSchema`, we run parseFloat before validation
+- If you have called `setInputSchema`, the handler will look at the schema type:
+  - If it's an `ObjectSchema`, it will run JSON.parse before validation
+  - If it's a `StringSchema`, it will run no parsing before validation
+  - If it's a `NumberSchema`, it will run parseFloat before validation
 
-- If the schema is not set, but `setTsInputType` is set, then we used JSON.parse
-- If `setNumberInputType`, `setStringInputType` or `setBinaryInputType` are used instead of `setTsInputType`, then we parse a float, nothing and a base64 buffer, respectively
+- If the schema is not set, but `setTsInputType` was called, then the handler will use JSON.parse
+- If `setNumberInputType`, `setStringInputType` or `setBinaryInputType` is used instead of `setTsInputType`, then the handler will parse a float, nothing and a base64 buffer, respectively
 
 - If nothing is called, there will do no parsing and the type will unknown anyway. In other words, you will get a string for API Gateway, SQS and SNS, and potentially a JSON for the Event Bridge.
 
@@ -433,19 +477,20 @@ or by setting the environment variable DISABLE_SENTRY in the lambda's configurat
 
 ## <a name='Secretinjection'></a>Secret injection
 
-Another cool feature of those lambda wrappers is that secrets can be inject before the handler is called.
-Secrets are fetched during a cold start, of after the cache has expired.
+Another cool feature of those lambda wrappers is that secrets from the AWS Secret Manager can be injected before the handler is called.
+Secrets are fetched during a cold start, of after a 2h cache has expired, but never in between.
 
-Secrets are exposed in 2 ways
-
+They are exposed in two ways:
 - Injected into process.env
 - Available in the controller method (the 2nd argument)
 
 ```typescript
 controllerFactory.needsSecret(
+  source, // Use 'aws' for the default AWS secret manager
   'key',
   'SecretName',
   'SecretKey',
+  meta, // Use undefined for the default AWS secret manager
   true
 );
 
@@ -465,9 +510,11 @@ class Controller implements RouteHandler {
 AWS Secrets can be of JSON type. It is pretty common to store a simple key-value structure in AWS, which we support for retrieval:
 ```typescript
 controllerFactory.needsSecret(
+  source,
   'process_env_key',
   'SecretName',
   'SecretKey',
+  meta,
   true
 );
 ```
@@ -480,9 +527,11 @@ By setting `undefined` as the second parameter, the string version of the JSON i
 
 ```typescript
 controllerFactory.needsSecret(
+  source,
   'process_env_key',
   'SecretName',
   undefined,
+  meta,
   true
 );
 ```
@@ -513,14 +562,14 @@ By setting the secret list into the manager, they can provide type safety when c
 
 ```typescript
 import { LambdaFactoryManager } from 'aws-lambda-wrappers'
-const mgr = new LambdaFactoryManager().setSecrets( aws_secrets );
+const mgr = new LambdaFactoryManager().setAWSSecrets( aws_secrets );
 // Imagine a list of secrets, indexed by secret name on the first level, and secret key (for key-value secrets) on the second level
 
 export default mgr
 
 ///
 
-mgr.apiGatewayWrapperFactory('read').needsSecret("key", "secretName", "SecretKey");
+mgr.apiGatewayWrapperFactory('read').needsSecret("aws", "key", "secretName", "SecretKey");
 ```
 
 Autocompletion of the secret name:
@@ -531,6 +580,95 @@ Autocompletion of the secret key:
 
 ![Autocompletion](./doc/secret_key_autocompletion.png)
 
+
+### Providing alternative secret sources
+
+Since v2, it is possible to specify an implementation for secret managers other than the AWS secrets manager (for example, Hashicorp Vault, or some secrets from GCP)
+
+Fetching credentials from other sources will typically require authentication, and you can store the authentication credentials in the AWS secrets manager, which will be retrieved before your custom fetcher is called.
+
+In addition, when tuning the manager, you can require that the services consuming your manager (when using `needsSecret`) to specify an extra set of arguments along with the `secretName` and `secretKey` parameters. This "meta information" may be used to alter the behaviour of your fetcher. For example, the region where the secret manager is located, or the namespace of the secret, its version, etc...
+
+The fetching logic is written at the manager level, so it is by default shared across projects.
+
+```typescript
+type META = {
+  "metaKey": string
+};
+
+const awsSecrets = {
+  "Hashicorp": {
+    "Auth": "Auth",
+    "OtherInfo": "OtherInfo"
+  }
+}
+
+// K-V of secrets stored in your other secret manager
+const otherSecrets = {
+  "Secret": {
+    "Key": "Key",
+    "OtherKey": "OtherKey",
+  },
+  "Secret2": {
+    "Key": "Key",
+    "OtherKey": "OtherKey",
+  }
+}
+
+const mgr = new LambdaFactoryManager()
+  .setAWSSecrets( awsSecrets )
+  .addSecretSource<META>()( // Note here the "special" syntax, due to the fact that typescript doesn't have partial type inference at the time of writing
+      "HashicorpVault", 
+      otherSecrets, 
+      async ( toFetch, awsSecrets ) => {
+          /*
+            toFetch is of type
+            Record<string, {
+              source: string,
+              secret: string,
+              secretKey?: string,
+              meta: META,
+              required: boolean
+            }>
+
+            Where the key of the record is to be reused in the return object
+            Promise<Record<string, string>>
+          */
+
+        const hashicorp_auth = awsSecrets.authKey;
+        const other_helper_secret_from_aws = awsSecrets.otherKey;
+
+          // Possible implementation
+          let out: Record<string, string> = {};
+          for( let [ k, secret ] of Object.entries( toFetch ) ) {
+              out[k] = // Fetch here the secret;
+          }
+          return out;
+      },
+      ( aws ) => { // aws is a convenience function helping with auto-completion, based on the secrets passed to the manager in .setAWSSecrets()
+        return {
+            // With auto-completion if you're using VSCode :) !
+            "authKey": aws("Hashicorp", "Auth", true), 
+            "otherKey": aws("Hashicorp", "OtherInfo" ) // Required defaults to true
+        };
+      }  
+    );
+```
+
+Note that the prefetching secrets are only embedded in the configuration is the consumer actually requires a secret from the added secret source. In that case, those prefetching secrets end up in the configuration and can be picked up by some of your IaC tools if you wish it.
+
+In the example above, the "Hashicorp" secret is stored in AWS and prefetched at runtime. the `aws` method provided in the prefetch definition callback provides auto-completion with the aws secrets passed previously in `setAWSSecrets`. If the secret you need is not listed, TS will complain and you'll need to silence it. If you do not provide any AWS secrets, the `aws` method signature becomes `(string, string | undefined )` and therefore any string can be passed without TS complaining.
+
+When the service consumes, the manager, the developer may now call:
+
+```typescript
+// Auto-completion here as well !
+api.needsSecret("HashicorpVault", "injectedKey", "Secret", "Key", {
+  metaKey: "metaVal"
+}, true );
+```
+
+Which can then be consumed by the handler as `injectedKey`
 
 ## <a name='APIGatewayoutput'></a>API Gateway output
 

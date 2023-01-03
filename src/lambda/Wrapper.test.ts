@@ -21,6 +21,7 @@ jest.mock('./utils/sentry', () => {
 });
 
 import {
+  fetchSecretsFromAWS,
   SecretConfig,
   wrapHandlerSecretsManager,
 } from './utils/secrets_manager';
@@ -29,6 +30,11 @@ import { wrapSentry } from './utils/sentry';
 import { wrapBaseLambdaHandler, wrapGenericHandler } from './Wrapper';
 
 describe('Testing runtime wrapper', () => {
+
+  afterEach( () => {
+    jest.clearAllMocks();
+  });
+
   it('Shims callback when not returning a promise', async () => {
     const wrapped = wrapBaseLambdaHandler(
       (event, init, secrets, context, callback) => {
@@ -46,7 +52,7 @@ describe('Testing runtime wrapper', () => {
   it('Calls the secrets manager', async () => {
     const secretInj: Record<string, SecretConfig> = {
       a: {
-        "secret": "Algolia-Products",
+        "secret": "ThirdPartyAPI",
         "secretKey": "adminApiKey",
         required: true
       }
@@ -54,13 +60,15 @@ describe('Testing runtime wrapper', () => {
 
     wrapGenericHandler(async (event, init, secrets, context, callback) => {}, {
       secretInjection: secretInj,
+      secretFetchers: { aws: fetchSecretsFromAWS },
       type: LambdaType.GENERIC,
       messageType: MessageType.Object
     });
 
     expect(wrapHandlerSecretsManager).toHaveBeenCalledWith(
       expect.any(Function),
-      secretInj
+      secretInj,
+      { aws: fetchSecretsFromAWS }
     );
   });
 
@@ -72,6 +80,7 @@ describe('Testing runtime wrapper', () => {
 
     expect(wrapHandlerSecretsManager).toHaveBeenCalledWith(
       expect.any(Function),
+      {},
       {}
     );
   });

@@ -16,7 +16,7 @@ export {
 
 
 export { LambdaFactoryManager } from './Manager'
-export { CtrlInterfaceOf } from './CtrlInterface'
+export type { CtrlInterfaceOf } from './CtrlInterface'
 
 export { HTTPResponse, HTTPError } from '../util/records/apigateway/response';
 export { Request } from '../util/records/apigateway/request';

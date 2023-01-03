@@ -11,7 +11,7 @@ jest.mock("./secrets_manager_aws", function () {
   return {
     __esModule: true,
     fetchAwsSecret: jest.fn(async (secretName: string) => {
-      if (secretName == "Algolia-Products") {
+      if (secretName == "ThirdPartyAPI") {
         return {
           adminApiKey: "algoliaApiKey",
           apiKey: "algoliaApiKey",
@@ -42,8 +42,8 @@ describe("Secret manager", () => {
   });
 /*
   test("Testing getAwsSecretDef", function () {
-    expect(getAwsSecretDef("Algolia-Products", "adminApiKey")).toStrictEqual({
-      secret: ["Algolia-Products", "adminApiKey"],
+    expect(getAwsSecretDef("ThirdPartyAPI", "adminApiKey")).toStrictEqual({
+      secret: ["ThirdPartyAPI", "adminApiKey"],
       required: true,
     });
   });
@@ -51,9 +51,8 @@ describe("Secret manager", () => {
   test("Fetching basic functionality", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
       key: {
-        
         "required": true,
-        "secret": "Algolia-Products", 
+        "secret": "ThirdPartyAPI", 
         "secretKey": "adminApiKey"
       }
     })
@@ -61,19 +60,17 @@ describe("Secret manager", () => {
     await wrappedHandler(event, LambdaContext, () => {});
 
     expect(process.env.key).toBe("algoliaApiKey");
-    expect(fetchAwsSecret).toHaveBeenCalledWith("Algolia-Products");
+    expect(fetchAwsSecret).toHaveBeenCalledWith("ThirdPartyAPI");
   });
 
   test("Fetching string and json", async () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
       key: {
-        
         "required": true,
-        "secret": "Algolia-Products", 
+        "secret": "ThirdPartyAPI", 
         "secretKey": "adminApiKey"
       },
       key2: {
-        
         "required": true,
         "secret": "Google", 
         "secretKey": undefined
@@ -84,7 +81,7 @@ describe("Secret manager", () => {
 
     expect(process.env.key).toBe("algoliaApiKey");
     expect(process.env.key2).toBe("secretString");
-    expect(fetchAwsSecret).toHaveBeenNthCalledWith(1, "Algolia-Products");
+    expect(fetchAwsSecret).toHaveBeenNthCalledWith(1, "ThirdPartyAPI");
     expect(fetchAwsSecret).toHaveBeenNthCalledWith(2, "Google");
   });
 
@@ -92,7 +89,7 @@ describe("Secret manager", () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
       key: { 
         "required": true,
-        "secret": "Algolia-Products", 
+        "secret": "ThirdPartyAPI", 
         "secretKey": undefined
       }
     });
@@ -107,12 +104,12 @@ describe("Secret manager", () => {
 
       key: { 
         "required": true,
-        "secret": "Algolia-Products", 
+        "secret": "ThirdPartyAPI", 
         "secretKey": "adminApiKey"
       },
       key2: { 
         "required": true,
-        "secret": "Algolia-Products", 
+        "secret": "ThirdPartyAPI", 
         "secretKey": "apiKey"
       }
     });
@@ -128,7 +125,7 @@ describe("Secret manager", () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
       key: { 
         "required": true,
-        "secret": "Algolia-Products", 
+        "secret": "ThirdPartyAPI", 
         "secretKey": "adminApiKey"
       },    });
 
@@ -152,7 +149,7 @@ describe("Secret manager", () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
       key: { 
         "required": true,
-        "secret": "Algolia-Products", 
+        "secret": "ThirdPartyAPI", 
         "secretKey": "adminApiKey"
       },    });
 
@@ -172,7 +169,7 @@ describe("Secret manager", () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
       key: { 
         "required": true,
-        "secret": "Algolia-Products", 
+        "secret": "ThirdPartyAPI", 
         "secretKey": "lwaAdminApiKey"
       },
 
@@ -187,7 +184,7 @@ describe("Secret manager", () => {
     const wrappedHandler = wrapHandlerSecretsManager(handler, {
       key: { 
         "required": false,
-        "secret": "Algolia-Products", 
+        "secret": "ThirdPartyAPI", 
         "secretKey": "lwaAdminApiKey"
       }
         });
@@ -213,7 +210,7 @@ describe("Secret manager", () => {
 
         secret: { 
           "required": false,
-          "secret": "Algolia-Products", 
+          "secret": "ThirdPartyAPI", 
           "secretKey": "adminApiKey"
         }
 
@@ -238,7 +235,7 @@ describe("Secret manager", () => {
         secretInjection: {
           secret: { 
             "required": false,
-            "secret": "Algolia-Products", 
+            "secret": "ThirdPartyAPI", 
             "secretKey": "adminApiKey"
           }
           },
