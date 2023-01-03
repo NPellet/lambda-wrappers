@@ -13,6 +13,9 @@ Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic
 
 ## Breaking changes in v2.x
 
+The only changes between v2.x and v1.x are in the secrets manager.
+For the documentation of v1.x, see (documentation)[https://www.npmjs.com/package/aws-lambda-handlers/v/1.0.31]
+
 Version 2 introduces a small breaking change when working with AWS secrets. In v2, it is possible to define custom secret fetchers other than target other sources than the AWS Secret manager.
 Therefore, we had to introduce a change in the following signatures:
 
