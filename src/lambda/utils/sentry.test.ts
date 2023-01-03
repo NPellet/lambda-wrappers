@@ -4,7 +4,6 @@ jest.mock('@sentry/serverless', function() {
         ...jest.requireActual('@sentry/serverless'),
         AWSLambda: {
             init: jest.fn( () => {
-                console.trace();
             }),
             wrapHandler: jest.fn(( h ) => h )
         }

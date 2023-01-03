@@ -2,8 +2,11 @@ import { ObjectSchema } from 'yup';
 import { MessageType } from '../util/types';
 import { wrapTelemetryApiGateway } from './ApiGateway/telemetry/Wrapper';
 import { wrapTelemetryEventBridge } from './EventBridge/telemetry/Wrapper';
+import { SecretFetcher } from './Manager';
 import {
+  METABase,
   SecretConfig,
+  SecretFetchCfg,
   SecretsRecord,
 } from './utils/secrets_manager';
 
@@ -13,7 +16,9 @@ export type HandlerConfiguration<
   V extends any | ObjectSchema<any> = any,
   TSecrets extends string = string
 > = {
-  secretInjection?: Record<TSecrets, SecretConfig>;
+  secretInjection?: Record<TSecrets, SecretConfig<METABase>>,
+
+  secretFetchers?: Record<string, SecretFetcher<TSecrets, any >>,
   yupSchemaInput?: U;
   yupSchemaOutput?: V;
   initFunction?: (secrets: SecretsRecord<TSecrets>) => Promise<TInit>;
@@ -41,19 +46,6 @@ export type TInit<A extends HandlerConfiguration> = A['initFunction'] extends (
 export type TSecrets<A extends HandlerConfiguration> =
   keyof A['secretInjection'];
 
-export const buildHandlerConfiguration = <
-  I,
-  U extends any | ObjectSchema<any> = any,
-  V extends any | ObjectSchema<any> = any,
-  TSecrets extends string = string
->(cfg: {
-  secretInjection?: Record<TSecrets, SecretConfig>;
-  yupSchemaInput?: U;
-  yupSchemaOutput?: V;
-  initFunction?: (secrets: SecretsRecord<TSecrets>) => Promise<I>;
-  sentry?: boolean;
-  opentelemetry?: boolean;
-}) => cfg;
 
 export const enum LambdaType {
   EVENT_BRIDGE,

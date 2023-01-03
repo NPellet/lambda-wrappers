@@ -1,7 +1,7 @@
-import { BaseSchema, InferType, NumberSchema, ObjectSchema, StringSchema } from 'yup';
+import { BaseSchema, InferType } from 'yup';
 import { HandlerConfiguration } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
-import { SecretConfig, SecretsContentOf, TSecretRef } from '../utils/secrets_manager';
+import { SecretConfig, SecretsContentOf, TAllSecretRefs, TSecretRef } from '../utils/secrets_manager';
 import { createSQSHandler } from './sqs';
 import { SQSBatchItemFailure } from 'aws-lambda';
 import { BaseWrapperFactory } from '../BaseWrapperFactory';
@@ -9,13 +9,13 @@ import { AwsSQSRecord } from '../../util/records/sqs/record';
 
 export class SQSHandlerWrapperFactory<
   TInput,  
-  TSecretList extends TSecretRef,
+  TSecretList extends TAllSecretRefs,
   TSecrets extends string = string,
   THandler extends string = "handle",
   SInput extends BaseSchema | undefined = undefined
 >  extends BaseWrapperFactory<TSecretList> {
   public _inputSchema: SInput;
-  public _secrets: Record<TSecrets, SecretConfig>;
+  public _secrets: Record<TSecrets, SecretConfig<any>>;
   public __shimInput: TInput;
   public _handler: THandler;
   protected _messageType: MessageType = MessageType.String;
@@ -34,11 +34,14 @@ export class SQSHandlerWrapperFactory<
   }
 
   
-  needsSecret<U extends string, T extends keyof TSecretList>(
+  needsSecret<SRC extends keyof TSecretList & string, U extends string, T extends keyof TSecretList[SRC]["lst"]>(
+    source: SRC,
     key: U,
     secretName: T,
-    secretKey: SecretsContentOf<T, TSecretList> | undefined,
-    required: boolean = true
+    secretKey: SecretsContentOf<SRC, T, TSecretList> | undefined,
+    meta: TSecretList[SRC]["src"],
+    required: boolean = true,
+
   ) {
     const api = this.fork<
       TInput,
@@ -48,14 +51,18 @@ export class SQSHandlerWrapperFactory<
     >();
     api._secrets = api._secrets || {};
     api._secrets[key] = {
-      "secret": secretName as string,
-      "secretKey": secretKey as string | undefined,
-      required };
-          api._inputSchema = this._inputSchema;
-    api._handler = this._handler;
+      secret: secretName as string,
+      source,
+      meta,
+      secretKey: secretKey as string | undefined,
+      required
+    };
 
+    api._inputSchema = this._inputSchema;
+    api._handler = this._handler;
     return api;
   }
+
 
   setHandler<T extends string>(handler: T) {
     const api = this.fork<TInput, TSecrets, T, SInput>();
@@ -170,3 +177,5 @@ export type SQSCtrlInterface<T> = T extends SQSHandlerWrapperFactory<
       ) => Promise<void | SQSBatchItemFailure>;
     }
   : never;
+
+  
