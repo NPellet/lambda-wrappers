@@ -59,7 +59,8 @@ export const wrapGenericHandler = <
   TSecrets extends string
 >(
   handler: LambdaInitSecretHandler<T, TInit, TSecrets, U>,
-  configuration: HandlerConfigurationWithType<TInit, SInput, SOutput, TSecrets>
+  configuration: HandlerConfigurationWithType<TInit, SInput, SOutput, TSecrets>,
+  
 ) => {
   // Needs to wrap before the secrets manager, because secrets should be available in the init phase
   let wrappedHandler = wrapBaseLambdaHandler(
@@ -68,12 +69,11 @@ export const wrapGenericHandler = <
   );
 
   wrappedHandler = wrapRuntime(wrappedHandler);
-
   let wrappedHandlerWithSecrets = wrapHandlerSecretsManager(
     wrappedHandler,
-    configuration.secretInjection ?? {}
+    configuration.secretInjection ?? {},
+    configuration.secretFetchers ?? {}
   );
-
   if (configuration.sentry) {
     wrappedHandlerWithSecrets = wrapSentry(wrappedHandlerWithSecrets);
   }

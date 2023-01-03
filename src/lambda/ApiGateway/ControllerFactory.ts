@@ -4,20 +4,20 @@ import { HTTPError, HTTPResponse } from '../../util/records/apigateway/response'
 import { Request } from '../../util/records/apigateway/request';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import { createApiGatewayHandler } from './api';
-import { SecretConfig, SecretsContentOf, TSecretRef } from '../utils/secrets_manager';
+import { SecretConfig, SecretsContentOf, TAllSecretRefs, TSecretRef } from '../utils/secrets_manager';
 import { BaseWrapperFactory } from '../BaseWrapperFactory';
 
 export class APIGatewayHandlerWrapperFactory<
   TInput,
   TOutput,
-  TSecretList extends TSecretRef,
+  TSecretList extends TAllSecretRefs,
   TSecrets extends string = string,
   THandler extends string = 'handle',
   SInput extends BaseSchema | undefined = undefined,
   SOutput extends BaseSchema | undefined = undefined
 > extends BaseWrapperFactory<TSecretList> {
   public _outputSchema: SOutput;
-  public _secrets: Record<TSecrets, SecretConfig>;
+  public _secrets: Record<TSecrets, SecretConfig<any>>;
   public _handler: THandler;
   public _inputSchema: SInput;
   public __shimInput: TInput;
@@ -46,11 +46,14 @@ export class APIGatewayHandlerWrapperFactory<
     return api;
   }
 
-  needsSecret<U extends string, T extends keyof TSecretList>(
+  needsSecret<SRC extends keyof TSecretList & string, U extends string, T extends keyof TSecretList[SRC]["lst"]>(
+    source: SRC,
     key: U,
     secretName: T,
-    secretKey: SecretsContentOf<T, TSecretList> | undefined,
-    required: boolean = true
+    secretKey: SecretsContentOf<SRC, T, TSecretList> | undefined,
+    meta: TSecretList[SRC]["src"],
+    required: boolean = true,
+
   ) {
     const api = this.fork<
       TInput,
@@ -62,8 +65,10 @@ export class APIGatewayHandlerWrapperFactory<
     >();
     api._secrets = api._secrets || {};
     api._secrets[key] = {
-      "secret": secretName as string,
-      "secretKey": secretKey as string | undefined,
+      secret: secretName as string,
+      source,
+      meta,
+      secretKey: secretKey as string | undefined,
       required
     };
 
@@ -111,10 +116,7 @@ export class APIGatewayHandlerWrapperFactory<
 
   setTsOutputType<U>() {
     const api = this.fork<TInput, U, TSecrets, THandler, SInput, SOutput>();
-    api._inputSchema = this._inputSchema;
-    api._outputSchema = this._outputSchema;
-    api._secrets = this._secrets;
-    api._handler = this._handler;
+    this.copyAll( api );
     return api;
   }
 
@@ -138,6 +140,8 @@ export class APIGatewayHandlerWrapperFactory<
       ) => Promise<HTTPResponse<TOrSchema<TOutput, SOutput>> | HTTPError>;
     };
 
+    const secrets = this.expandSecrets( this._secrets );
+
     const configuration: HandlerConfiguration<
       IF,
       SInput,
@@ -148,7 +152,8 @@ export class APIGatewayHandlerWrapperFactory<
       sentry: true,
       yupSchemaInput: this._inputSchema,
       yupSchemaOutput: this._outputSchema,
-      secretInjection: this._secrets,
+      secretInjection: secrets,
+      secretFetchers: this.mgr.secretFetchers ?? {},
       initFunction: async (secrets) => {
         await this.init();
         return controllerFactory.init(secrets);

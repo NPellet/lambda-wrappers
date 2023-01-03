@@ -19,13 +19,15 @@ describe('Testing API Controller factory', function () {
       expect(fac).toBeInstanceOf(SNSHandlerWrapperFactory)
       expect(fac._handler).toBe('ahandler');
 
-      const fac2 = fac.setTsInputType<{ a: string }>().needsSecret("key", "a", "b", true).sentryDisable().setInputSchema(yup.object({
+      const fac2 = fac.setTsInputType<{ a: string }>().needsSecret("aws", "key", "a", "b", undefined, true).sentryDisable().setInputSchema(yup.object({
           a: yup.number()
       }))
 
       expect(fac2._handler).toBe('ahandler');
       expect(fac2._inputSchema).toBeInstanceOf(yup.ObjectSchema)
       expect(fac2._secrets.key).toStrictEqual({
+          "meta": undefined,
+          "source": "aws",
           "secret": "a",
           "secretKey": "b",
           "required": true
