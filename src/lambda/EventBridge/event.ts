@@ -64,6 +64,8 @@ export const createEventBridgeHandler = <
         if( configuration.sources?.eventBridge?.failLambdaOnValidationFail ?? true ) {
           throw e;
         }
+
+        return;
       }
     }
 

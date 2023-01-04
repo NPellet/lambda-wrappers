@@ -35,6 +35,8 @@ describe("Testing BaseWrapperFactory features", function() {
 
     })
 
+
+
     test("Sources config are correctly deep extended", () => {
 
         const mgr = new LambdaFactoryManager().setSourcesConfig({
@@ -61,4 +63,5 @@ describe("Testing BaseWrapperFactory features", function() {
             "failLambdaOnValidationFail": true
         })
     })
+
 })

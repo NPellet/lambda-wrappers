@@ -5,5 +5,5 @@ module.exports = {
   testEnvironment: 'node',
   setupFilesAfterEnv: ['./src/test_utils/setupTests.ts'],
   collectCoverage: true,
-  
+  coveragePathIgnorePatterns: [ "<rootDir>/src/lambda/utils/secrets_manager_aws.ts"]
 };
