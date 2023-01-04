@@ -17,6 +17,7 @@ import { wrapTelemetrySQS } from './Telemetry/Wrapper';
 import { flush } from '../utils/telemetry';
 import { validateRecord } from '../../util/validateRecord';
 import { AwsSQSRecord, failSQSRecord } from '../../util/records/sqs/record';
+import { recordException } from '../../util/exceptions';
 
 export const createSQSHandler = <
   TInput,
@@ -45,6 +46,11 @@ export const createSQSHandler = <
     try {
       await validateRecord(_record, configuration.yupSchemaInput);
     } catch (e) {
+
+
+      if( configuration.sources?.sqs?.recordExceptionOnValidationFail ) {
+        recordException( e );
+      }
 
       if( configuration.sources?.sqs?.silenceRecordOnValidationFail ) {
         return;

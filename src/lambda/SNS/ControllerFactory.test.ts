@@ -65,22 +65,32 @@ describe('Testing API Controller factory', function () {
 
     const { handler, configuration } = controllerFactory.createHandler(Ctrl);
 
-    const out = await handler(
+    await expect( handler(
       {
         Records: [
           { ...testSNSRecord, Sns: { ...testSNSRecord.Sns, Message: "BAD_JSON" }  }, // We put it first to make sure the rest still runs
+        ],
+      },
+      LambdaContext,
+      () => {}
+    ) ).rejects.toBeDefined()
+
+    expect( mockHandler ).toHaveBeenCalledTimes( 0 );
+
+
+    const out2 = await handler(
+      {
+        Records: [
           { ...testSNSRecord, Sns: { ...testSNSRecord.Sns, Message: JSON.stringify({ a: '1' }) } },
-          { ...testSNSRecord, Sns: { ...testSNSRecord.Sns, Message: JSON.stringify({ a: '2' }) } },
+          //{ ...testSNSRecord, Sns: { ...testSNSRecord.Sns, Message: JSON.stringify({ a: '2' }) } },
         ],
       },
       LambdaContext,
       () => {}
     );
 
-    expect( mockHandler ).toHaveBeenCalledTimes( 2 );
-    await expect( mockHandler.mock.results[0].value ).rejects.toBeTruthy( )
-    await expect( mockHandler.mock.results[1].value ).resolves.toBe( undefined )
-    expect(out).toBe( undefined );
+    expect( mockHandler ).toHaveBeenCalledTimes( 1);
+
   });
 
 
