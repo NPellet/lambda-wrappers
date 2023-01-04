@@ -11,7 +11,7 @@ jest.mock('./telemetry/Wrapper', function() {
     }
   })
 
-  import { wrapTelemetrySNS } from "./Telemetry/Wrapper";
+  import { wrapTelemetrySNS } from "./telemetry/Wrapper";
   
 describe("SNS: Telemetry", function() {
 
