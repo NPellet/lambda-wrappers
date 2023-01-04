@@ -14,7 +14,7 @@ describe('API Gateway request', () => {
     expect(request.getHeaders()['Content-Type']).toBe('text/plain');
     expect(request.getPathParameters().a).toBe('b');
     expect(request.getQueryParameters().query).toBe('content');
-
+      expect( request.getRawData() ).toBe(testApiGatewayEvent );
     expect(request.getData()).toBe('Request body');
   });
 

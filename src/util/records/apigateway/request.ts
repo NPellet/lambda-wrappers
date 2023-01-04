@@ -15,14 +15,15 @@ export class Request<T> extends GenericRecord<T, string> {
     super( messageType )
   }
 
+  public getRawData() {
+    return this.rawData;
+  }
+
   public getBody(): string {
     return this.rawData.body || ""
   }
 
-
   public getData(): T {
-
-    
     if (this.data) return this.data;
 
     this.data = this.parse();

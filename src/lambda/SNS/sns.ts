@@ -11,7 +11,7 @@ import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
 import { BaseSchema } from 'yup';
 import { TOrSchema } from '../../util/types';
-import { wrapTelemetrySNS } from './Telemetry/Wrapper';
+import { wrapTelemetrySNS } from './telemetry/Wrapper';
 import { flush } from '../utils/telemetry';
 import { AwsSNSRecord } from '../../util/records/sns/record';
 import { validateRecord } from '../../util/validateRecord';

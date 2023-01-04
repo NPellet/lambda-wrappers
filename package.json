@@ -1,10 +1,19 @@
 {
   "name": "aws-lambda-handlers",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Enhance AWS Lambdas with strong typing, secrets, schema validation, opentelemetry and sentry",
   "main": "dist/index.js",
   "types": "dist/lambda/index.d.ts",
-  "keywords": ["lambda", "aws", "sentry", "yup", "schema", "opentelemetry", "tracing", "context"],
+  "keywords": [
+    "lambda",
+    "aws",
+    "sentry",
+    "yup",
+    "schema",
+    "opentelemetry",
+    "tracing",
+    "context"
+  ],
   "scripts": {
     "build": "node esbuild.cjs && npx tsc",
     "test": "npx jest"

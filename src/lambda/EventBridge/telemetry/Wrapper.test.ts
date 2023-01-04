@@ -38,7 +38,6 @@ describe("Telemetry: Event bridge wrapper", function () {
     event.detail[AWSXRAY_TRACE_ID_HEADER] = sampledAwsHeader;
 
     await handler(event, LambdaContext, () => {});
-    await flush();
 
     const spans = memoryExporter.getFinishedSpans();
 
@@ -57,5 +56,22 @@ describe("Telemetry: Event bridge wrapper", function () {
     expect(telemetryFindEventBridgeParent).toHaveBeenCalled();
 
     expect(spans[0].parentSpanId).toBe(sampledAwsSpanContextHeader.spanId);
+  });
+
+  it("A failing handler should fail the span", async () => {
+    const handler = wrapTelemetryEventBridge( async () => {
+      throw new Error("Unhandled exception")
+    });
+
+    try {
+      await handler(testEventBridgeEvent, LambdaContext, () => {});
+    } catch( e ) {
+      // Handle the exception
+    }
+
+    const spans = memoryExporter.getFinishedSpans();
+
+    expect(spans.length).toBe(1);
+    expect(spans[0].status.code).toBe(SpanStatusCode.ERROR);
   });
 });
