@@ -125,7 +125,8 @@ export class SQSHandlerWrapperFactory<
       ) => Promise<void | SQSBatchItemFailure>;
     };
 
-    const configuration: HandlerConfiguration<TInterface, SInput, TSecrets> =
+    const configuration: HandlerConfiguration<TInterface, SInput, any, TSecrets> =
+    this.expandConfiguration(
       {
         opentelemetry: true,
         sentry: true,
@@ -136,7 +137,7 @@ export class SQSHandlerWrapperFactory<
           return controllerFactory.init(secrets);
         },
         messageType: this._messageType
-      };
+      });
 
       const handler = createSQSHandler<INPUT, TInterface, TSecrets, SInput>(
         async (event, init, secrets, c) => {

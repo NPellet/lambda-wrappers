@@ -125,8 +125,8 @@ export class SNSHandlerWrapperFactory<
       ) => Promise<void>;
     };
 
-    const configuration: HandlerConfiguration<TInterface, SInput, TSecrets> =
-      {
+    const configuration: HandlerConfiguration<TInterface, SInput, any, TSecrets> =
+    this.expandConfiguration({
         opentelemetry: true,
         sentry: true,
         yupSchemaInput: this._inputSchema,
@@ -136,7 +136,7 @@ export class SNSHandlerWrapperFactory<
           return controllerFactory.init(secrets);
         },
         messageType: this._messageType
-      };
+      });
 
     const handler = createSNSHandler<INPUT, TInterface, TSecrets, SInput>(
       async (event, init, secrets) => {

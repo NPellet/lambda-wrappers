@@ -3,6 +3,7 @@ import { LambdaFactoryManager } from "./Manager";
 
 describe("Testing BaseWrapperFactory features", function() {
 
+
     test("Extending secrets auto-default to AWS", () => {
 
         class ImplFactory extends BaseWrapperFactory<any> {
@@ -31,6 +32,32 @@ describe("Testing BaseWrapperFactory features", function() {
 
         const inst = new ImplFactory( mgr );
         inst.testSecret();
+
+    })
+
+    test("Sources config are correctly deep extended", () => {
+
+        const mgr = new LambdaFactoryManager().setSourcesConfig({
+            "eventBridge": {"failLambdaOnValidationFail": true}
+        })
+
+        const { configuration } = mgr.eventBridgeWrapperFactory("handler").setConfig( {
+            "recordExceptionOnValidationFail": true
+        }).createHandler( class Handler {
+            static async init() {
+                return new Handler();
+            }
+
+            async handler() {
+
+            }
+        })
+
+        expect( configuration.sources?.eventBridge ).toStrictEqual( {
+            "recordExceptionOnValidationFail": true,
+            "failLambdaOnValidationFail": true
+        })
+
 
     })
 })

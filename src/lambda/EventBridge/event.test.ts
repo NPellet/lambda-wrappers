@@ -41,7 +41,6 @@ describe("Event bridge handler", function () {
     const handler = createEventBridgeHandler(mockHandler, {
       initFunction: mockInit,
       type: LambdaType.GENERIC,
-
       messageType: MessageType.Binary,
       secretInjection: {},
     });
@@ -121,10 +120,13 @@ describe("Event bridge handler", function () {
     ).rejects.toBeDefined(); 
 
     expect( recordException ).toHaveBeenCalled();
-      
   });
 
-  test("Telemetry wrapper is called depending on otel flag", async () => {
+  test("Wrapped spans are properly created", async () => {
+
+
+    const event = _.cloneDeep(testEventBridgeEvent);
+    event.detail[AWSXRAY_TRACE_ID_HEADER] = sampledAwsHeader;
 
     const handler = createEventBridgeHandler(
       async (request) => {
@@ -134,9 +136,6 @@ describe("Event bridge handler", function () {
         messageType: MessageType.Binary,
       }
     );
-
-    const event = _.cloneDeep(testEventBridgeEvent);
-    event.detail[AWSXRAY_TRACE_ID_HEADER] = sampledAwsHeader;
 
 
     await handler(event, LambdaContext, () => {});
@@ -151,8 +150,23 @@ describe("Event bridge handler", function () {
 
     expect(spans[0].parentSpanId).toBe(spans[1].spanContext().spanId);
 
-    jest.clearAllMocks();
+  })
 
+  test("Telemetry wrapper is called depending on otel flag", async () => {
+
+    const handler = createEventBridgeHandler(
+      async (request) => {
+      },
+      {
+        opentelemetry: true,
+        messageType: MessageType.Binary,
+      }
+    );
+
+    await handler(testEventBridgeEvent, LambdaContext, () => {});
+    expect( wrapTelemetryEventBridge ).toHaveBeenCalled();
+
+    jest.clearAllMocks();
 
     const handler2 = createEventBridgeHandler(
       async (request) => {
@@ -165,6 +179,5 @@ describe("Event bridge handler", function () {
 
     await handler2(testEventBridgeEvent, LambdaContext, () => {});
     expect( wrapTelemetryEventBridge ).not.toHaveBeenCalled();
-
   })
 });

@@ -3,11 +3,14 @@ import type { LambdaFactoryManager } from './Manager';
 import { AWSLambda } from "@sentry/serverless";
 import { MessageType } from '../util/types';
 import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from 'yup';
+import { HandlerConfiguration, SourceConfig } from './config';
+import _ from 'lodash';
 
 
 export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
   private _disableSentry: boolean;
   protected _messageType: MessageType;
+  sourceCfg: SourceConfig;
 
   constructor(protected mgr: LambdaFactoryManager<TSecretList>) {
   }
@@ -19,6 +22,11 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
 
   public sentryDisable() {
     this._disableSentry = true;
+    return this;
+  }
+
+  protected setSourceConfig( cfg: SourceConfig ) {
+    this.sourceCfg = cfg;
     return this;
   }
 
@@ -37,13 +45,34 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
     }
   }
 
+  protected expandConfiguration<IF, SInput, SOutput, TSecrets extends string>( cfg: HandlerConfiguration<
+    IF,
+    SInput,
+    SOutput,
+    TSecrets
+  > ) : HandlerConfiguration<
+  IF,
+  SInput,
+  SOutput,
+  TSecrets
+> {
+
+    const secrets = cfg.secretInjection;
+    const expandedSecrets = this.expandSecrets( secrets );
+
+    return {...cfg, secretInjection: expandedSecrets, sources: _.defaultsDeep( {}, this.mgr.sourcesCfg, this.sourceCfg)};
+  }
   /**
    * Adds pre-secrets to the list of user-defined secrets
    * @param secretsIn The secrets defined by the needsSecret() calls
    * @returns A list of expanded secrets (input secrets + necessary secrets to prefetch)
    */
-  protected expandSecrets( secretsIn: Record<string, SecretConfig<any>> ) {
+  protected expandSecrets( secretsIn: Record<string, SecretConfig<any>> | undefined ) {
     const sources = new Set<string>();
+
+    if( ! secretsIn ) {
+      return {};
+    }
 
     for( let i in secretsIn ) {
       const source = secretsIn[ i ].source;

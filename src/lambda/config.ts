@@ -1,14 +1,20 @@
 import { ObjectSchema } from 'yup';
 import { MessageType } from '../util/types';
-import { wrapTelemetryApiGateway } from './ApiGateway/telemetry/Wrapper';
-import { wrapTelemetryEventBridge } from './EventBridge/telemetry/Wrapper';
 import { SecretFetcher } from './Manager';
 import {
   METABase,
   SecretConfig,
-  SecretFetchCfg,
   SecretsRecord,
 } from './utils/secrets_manager';
+
+export type SourceConfigEB = Partial<{
+  recordExceptionOnValidationFail: boolean,
+  failLambdaOnValidationFail: boolean
+}>;
+
+export type SourceConfig = Partial<{
+  eventBridge: SourceConfigEB
+}>;
 
 export type HandlerConfiguration<
   TInit = any,
@@ -26,6 +32,8 @@ export type HandlerConfiguration<
   opentelemetry?: boolean;
   type?: LambdaType;
   messageType: MessageType
+
+  sources?: SourceConfig
 };
 
 export type HandlerConfigurationWithType<
