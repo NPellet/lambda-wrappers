@@ -54,13 +54,3 @@ export const enum LambdaType {
   SQS,
   GENERIC,
 }
-
-export const LambdaTypeConfiguration = {
-  [LambdaType.EVENT_BRIDGE]: {
-    opentelemetryWrapper: wrapTelemetryEventBridge,
-  },
-  [LambdaType.API_GATEWAY]: {
-    opentelemetryWrapper: wrapTelemetryApiGateway,
-  },
-};
-

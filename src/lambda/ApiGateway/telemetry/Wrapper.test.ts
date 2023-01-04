@@ -9,7 +9,6 @@ import {
   errorHandler,
   exceptionHandler,
 } from '../../../test_utils/apigateway';
-import { flush } from '../../utils/telemetry';
 import { APIGatewayProxyResult } from 'aws-lambda';
 
 describe('Telemetry: API Gateway wrapper handles all types of outputs', function () {
@@ -23,7 +22,7 @@ describe('Telemetry: API Gateway wrapper handles all types of outputs', function
   it('Handles 200', async () => {
     const handler = wrapTelemetryApiGateway(successHandler);
 
-    const out = await expect(
+    await expect(
       handler(event, LambdaContext, () => {})
     ).resolves.toBeDefined();
 
@@ -63,7 +62,6 @@ describe('Telemetry: API Gateway wrapper handles all types of outputs', function
   it('Handles 500 ', async () => {
     const handler = wrapTelemetryApiGateway(errorHandler);
     const out = await handler(event, LambdaContext, () => {});
-    await flush();
 
     const spans = memoryExporter.getFinishedSpans();
     expect(spans.length).toBe(1);
@@ -76,7 +74,6 @@ describe('Telemetry: API Gateway wrapper handles all types of outputs', function
       handler(event, LambdaContext, () => {})
     ).rejects.toBeTruthy();
 
-    await flush();
     const spans = memoryExporter.getFinishedSpans();
     expect(spans.length).toBe(1);
     expect(spans[0].status.code).toBe(SpanStatusCode.ERROR);

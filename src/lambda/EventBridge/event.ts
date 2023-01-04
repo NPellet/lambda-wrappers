@@ -6,6 +6,7 @@ import { wrapGenericHandler } from '../Wrapper';
 import { BaseSchema, InferType, ObjectSchema } from 'yup';
 import { AwsEventBridgeEvent } from '../../util/eventbridge';
 import { recordException } from '../../util/exceptions';
+import { wrapTelemetryEventBridge } from './telemetry/Wrapper';
 
 export const createEventBridgeHandler = <
   T,
@@ -62,5 +63,12 @@ export const createEventBridgeHandler = <
     return wrappedHandler(_event, context, callback);
   };
 
-  return handler;
+
+  if (configuration.opentelemetry) {
+    const wrapped = wrapTelemetryEventBridge(handler);
+    return wrapped;
+  } else {
+    return handler;
+  }
+
 };

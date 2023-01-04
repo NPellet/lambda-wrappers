@@ -1,6 +1,7 @@
-import otelapi, { trace, context, SpanKind } from "@opentelemetry/api";
+import otelapi, { trace, SpanKind, SpanStatusCode } from "@opentelemetry/api";
 import { Callback, Context, EventBridgeEvent, Handler } from "aws-lambda";
-import { tracer } from "../../utils/telemetry";
+import { log } from "../../utils/logger";
+import { flush, tracer } from "../../utils/telemetry";
 import { telemetryFindEventBridgeParent } from "./ParentContext";
 
 export const wrapTelemetryEventBridge = <T>(
@@ -24,14 +25,26 @@ export const wrapTelemetryEventBridge = <T>(
       parentCtx
     );
 
-    const out = await otelapi.context.with(
-      trace.setSpan(parentCtx, eventBridgeSpan),
-      () => {
-        return handler(event, context, callback);
-      }
-    );
+    try {
+      
+      const out = await otelapi.context.with(
+        trace.setSpan(parentCtx, eventBridgeSpan),
+        () => {
+          return handler(event, context, callback);
+        }
+      );
 
-    eventBridgeSpan.end();
-    return out;
+      log.error('EventBridge lambda execution has succeeded. Goodbye');
+      eventBridgeSpan.end();
+      await flush();
+      return out;
+
+    } catch (e) {
+      
+      log.error('EventBridge lambda execution has errored. Goodbye');
+      eventBridgeSpan.setStatus({ code: SpanStatusCode.ERROR });
+      eventBridgeSpan.end();
+      await flush();
+    }
   };
 };

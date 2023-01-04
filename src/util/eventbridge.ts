@@ -7,7 +7,6 @@ import { MessageType } from './types';
 export class AwsEventBridgeEvent<T> extends GenericRecord<T, EventBridgeEvent<string,T>>{
   validatedData: T;
   public constructor(private data: EventBridgeEvent<string, T>) {
-
     super( MessageType.Object )
   }
 
@@ -29,5 +28,9 @@ export class AwsEventBridgeEvent<T> extends GenericRecord<T, EventBridgeEvent<st
 
   public getDetailType() {
     return this.data['detail-type'];
+  }
+
+  public getRawData() {
+    return this.data;
   }
 }

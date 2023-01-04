@@ -1,6 +1,5 @@
 # AWS Lambda Wrappers
 
-
 <a href="https://codecov.io/gh/NPellet/lambda-wrappers/branch/main/">
   <img alt="Codecov Status" src="https://img.shields.io/codecov/c/github/NPellet/lambda-wrappers">
 </a>
@@ -9,7 +8,7 @@
   <img src="https://github.com/NPellet/lambda-wrappers/actions/workflows/test.yaml/badge.svg">
 </a>
 
-Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup
+Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup and Secret prefetching
 
 ## Breaking changes in v2.x
 
@@ -21,9 +20,9 @@ Therefore, we had to introduce a change in the following signatures:
 
 ```typescript
 // Was:
-new LambdaFactoryManager().setSecrets
+new LambdaFactoryManager().setSecrets( /*...*/ )
 // Now:
-new LamndaFactoryManager().setAWSSecrets
+new LamndaFactoryManager().setAWSSecrets( /*...*/ )
 ////////////////////////////
 // Was:
 factory..needsSecret('key', 'secretName', 'secretKey', required) // required is bool
@@ -33,7 +32,6 @@ factory.needsSecret('aws', 'key', 'secretName', 'secretKey', undefined, required
 
 The reason behind those changes in reflected in the following documentation (under [Secret injection](#secret-injection))
 
-
 ## Why ?
 
 AWS Lambda's are a great piece of engineering and makes our life easier, but they're pretty "raw". For example, it would be pretty useful to:
@@ -41,7 +39,7 @@ AWS Lambda's are a great piece of engineering and makes our life easier, but the
 - Wrap the handlers with Sentry (you could also use a lambda layer for that)
 - Automatically parse and validate the inputs based on schemas
 - Sanitize the outputs: API Gateway's responses and SQS failed batch items
-- Pre-fetch a bunch of secrets from the secret manager (do not put secrets in the env variables !)
+- Pre-fetch a bunch of secrets from the secret manager (you should not have them defined in environment variables !)
 - Have static type safety
 - Overcome the shortcomings of Opentelemetry's Lambda auto-instrumentation
 
@@ -52,13 +50,15 @@ This package provides an opiniated stack to insert additional logic in handling 
 - [AWS Lambda Wrappers](#aws-lambda-wrappers)
   - [Breaking changes in v2.x](#breaking-changes-in-v2x)
   - [Why ?](#why-)
+  - [How it works](#how-it-works)
   - [Installation](#installation)
-  - [Usage](#usage)
-    - [1. Create a project (or organisation-wide) manager](#1-create-a-project-or-organisation-wide-manager)
+  - [Features](#features)
+  - [Demo Usage](#demo-usage)
+    - [1. Create a service-wide (or cross-service) manager](#1-create-a-service-wide-or-cross-service-manager)
     - [2. Create a route / event handler using the manager](#2-create-a-route--event-handler-using-the-manager)
     - [3. Create a controller](#3-create-a-controller)
   - [Details](#details)
-    - [AWS Event sources](#aws-event-sources)
+    - [Triggering from different AWS sources](#triggering-from-different-aws-sources)
     - [Notes on immutability](#notes-on-immutability)
     - [Handler method name](#handler-method-name)
   - [Detailed Usage](#detailed-usage)
@@ -77,7 +77,14 @@ This package provides an opiniated stack to insert additional logic in handling 
     - [Dealing with String Secrets](#dealing-with-string-secrets)
     - [Providing a secret list to the manager](#providing-a-secret-list-to-the-manager)
     - [Providing alternative secret sources](#providing-alternative-secret-sources)
-  - [API Gateway output](#api-gateway-output)
+  - [Specificifities](#specificifities)
+    - [API Gateway](#api-gateway)
+      - [Input](#input)
+      - [Output](#output)
+      - [Error handling](#error-handling)
+    - [Event Bridge](#event-bridge)
+      - [Input](#input-1)
+      - [Output](#output-1)
   - [A note on error handling in controllers](#a-note-on-error-handling-in-controllers)
 
 <!-- vscode-markdown-toc-config
@@ -86,14 +93,15 @@ This package provides an opiniated stack to insert additional logic in handling 
 	/vscode-markdown-toc-config -->
 <!-- /vscode-markdown-toc -->
 
-Features:
-- Each handler provides an interface to be implemented by a controller
-- Each controller receives a strongly type-checked deserialized payload
-- Before executing the controller, there is optional runtime schema validation (leveraging yup)
-- All handlers may be automatically wrapped by Sentry, with configuration-sharing
-- All handlers provide Opentelemetry context and 1 or 2 spans, overcoming the shortcomings of the OTel lambda instrumentation
-- Before executing a controller, secrets may be pre-fetched and provided to you
-- State can easily be persisted across invocations, and cold-start initialisation can be easily used for resource acquisition
+## How it works
+
+The idea behind this framework is to declare a **Lambda Manager**, which may be common across all your microservices. It alllows you to define which secrets are available, configure secret sources for other secret managers than the one provided by AWS and configure a base Sentry configuration for all your lambdas in all your services. The lambda manager is a common source of **Handler Wrappers**, for the API Gateway, SQS, SNS or for the EventBridge.
+
+Then, in each service, use the **Lambda Manager** to define a **Handler Wrapper**, which can be further configured (this time on a per-lambda basis) with secrets, static typings and schema validation. The **Handler Wrapper** provides a typescript interface which you should implement using a **Controller** (as simple as class defining 2 methods)
+
+Finally, export the handler and the configuration using the **Handler Wrapper** and your defined **Controller** class.
+
+It may sound a bit overly complex, but after using it a bit, it will all make sense.
 
 ## <a name='Installation'></a>Installation
 
@@ -101,15 +109,25 @@ Features:
 npm i aws-lambda-wrappers
 ```
 
-## Usage
+## Features
 
-### 1. Create a project (or organisation-wide) manager
+- Strongly typed TS Interfaces to be implemented by Controllers
+- Optional payload input (and output) validation against a schema
+- Wrapping with Sentry (with cross-oranisation configuration sharing)
+- Tracing with Opentelemetry, separating Lambda spans with source spans (no need for the auto-instrumentation)
+- Before executing a controller, secrets may be pre-fetched and provided to you
+- State can easily be persisted across invocations, and cold-start initialisation can be easily used for resource acquisition
+
+## Demo Usage
+
+### 1. Create a service-wide (or cross-service) manager
 
 Start by sharing a wrapper manager across all your lambda functions. This is useful to share configuration across your organisation.
 
 Currently the manager is used for:
   - Setting a global Sentry configuration
-  - Setting the list of available secrets
+  - Setting the list of available AWS secrets
+  - Setting another source of secrets as well as how to retrieve them
 
 ```typescript
 // path/to/manager.ts
@@ -120,8 +138,8 @@ export default mgr;
 ```
 
 ### 2. Create a route / event handler using the manager
-It is good practice to separate the logic (a controller) from the hangler itself (the entrypoint exposed to AWS), which would allow you to swap out controllers or implement multiple lambdas in a single controller. <br>
-Ideally, the controller route should be `require`-able without it executing any service logic. This allows you to expose "meta-information" that can be used by other tools (for example, automatically add IAM permissions in a CDK code by looading the `configuration` object, or building an OpenAPI v3 spec)
+It is good practice to separate the logic (a controller) from the handler itself (the entrypoint exposed to AWS), which allows you to swap controllers or implement multiple lambdas with a single controller. <br>
+Ideally, the controller route should be `require`-able without it executing any service logic. This allows you to expose "meta-information" that can be used by other tools (for example, automatically add IAM permissions in a CDK code by loading the `configuration` object, or building an OpenAPI v3 spec, etc.)
 
 Start by the handler file: import the manager you just exported into a new file (the one that will use by AWS to handle your function) and either start an API Gateway wrapper, and Event Bridge wrapper, an SNS wrapper or an SQS wrapper
 
@@ -137,7 +155,7 @@ export type Interface = CtrlInterfaceOf<typeof wrapperFactory>
 
 ### 3. Create a controller
 
-You can now write your controller, which must implement the interface exported by the Lambda wrapper
+You can now write your controller, which must implement the interface exported by the Lambda wrapper (we called it `Interface`)
 ```typescript
 // path/to/controller.ts
 import { Interface } from './path/to/route'
@@ -152,14 +170,13 @@ class Controller implements Interface {
 }
 ```
 
-And that's it for the most basic implementation !
-Use `path/to/route.handler` as a Lambda entry-point.
-
-We've added a lot of stuff, which may not really make sense and seems burdensome. Let's now move to the real added value of this setup.
+And that's it for the most basic implementation ! You may now use `path/to/route.handler` as a Lambda entry-point.
 
 ## Details
- 
-### AWS Event sources
+
+In this section we explore the benefits that our approach brings.
+
+### Triggering from different AWS sources
 Wrapper factory constructors are available for
 
 - API Gateway:
@@ -178,6 +195,8 @@ Wrapper factory constructors are available for
   ```typescript
     manager.snsWrapperFactory( handler: string );
   ```
+
+The differences exist because the input types and output types are not the same whether the lambda is triggered by either of those event sources, and because the error handling is different (for example, the lambda triggered by the API Gateway should never fail, but the EventBridge lambda may be allowed fail). In addition, the SQS loop is unrolled (you implement only the method for the record, not for the whole event, which contains many records) for error management purposes. 
 
 ### Notes on immutability
 
@@ -668,9 +687,27 @@ api.needsSecret("HashicorpVault", "injectedKey", "Secret", "Key", {
 
 Which can then be consumed by the handler as `injectedKey`
 
-## <a name='APIGatewayoutput'></a>API Gateway output
+## Specificifities
+### API Gateway
 
-To return an API Gateway Response, use the `HTTPResponse` static constructors:
+#### Input
+
+The payload passed to your handler is of type `Request<T>` ( where `T` is the static type set in `setTsInputType` or infered from the schema).
+
+The payload may be retrieved using:
+
+```
+declare const request: Request<any>;
+
+// Retrieves the payload, JSON parsed and validated
+const payload = request.getData();
+// Returns the raw APIGatewayProxyEvent, where the body is a string
+const raw = request.getRawData()
+```
+
+#### Output
+
+To return an API Gateway Response, you are expected to return a `HTTPResponse`, using the static constructors:
 
 ```typescript
 return HTTPResponse.OK(/* your data */)
@@ -679,11 +716,12 @@ return HTTPResponse.OK_NO_CONTENT();
 // or
 // ... other static methods
 ```
-If you set an output type with `setTsOutputType`, typescript will enforce static type safety in your response.
+If you set an output type with `setTsOutputType`, typescript will enforce static type safety in your response and you must conform to it.
 
 If you set an output schema with `setOutputSchema`, javascript will validate your payload. If the payload does not validate, an HTTPError 422 will be sent to the upstream caller, in order to protect it from failing further.
 
-To response with an Error, use the static constructor methods on `HTTPError`, which take an Error or a string in their static constructor methods. 
+To reply with a managed Error, use the static constructor methods on `HTTPError`, which take an Error or a string in their static constructor methods. 
+
 ```typescript
 return HTTPError.BAD_REQUEST(error);
 // or
@@ -695,9 +733,34 @@ return HTTPError.BAD_REQUEST(error).anormal();
 ```
 Note: `HTTPError.INTERNAL_ERROR()` is by default anormal.
 
-
 In summary, the API Gateway handler should return `Promise<HTTPError | HTTPResponse<T>>`:
- 
+
+#### Error handling
+
+When your lambda throws an error, the wrapper will catch it and automatically reply with `HTTPResponse.INTERNAL_ERROR( error )`, which means it's considered "anormal" and will register the exception with Sentry as well as fail the Opentelemetry span. In other words, it's perfectly acceptable to let the handler fail.
+
+### Event Bridge
+
+#### Input
+
+The input type of the event bridge is of type `AwsEventBridgeEvent<T>`, and the following methods are exposed
+
+```typescript
+declare const data: AwsEventBridgeEvent<any>;
+
+data.getData() // => T
+data.getSource() // Returns the event source field
+data.getDetailType() // Returns the event detail-type field
+data.getRawData() // Returns the raw underlying EventBridgeEvent<string, T> object
+```
+
+#### Output
+
+The event bridge lambda is not expect to return anything, but you may return if you so wishes. The value will be discarded.
+
+In the following cases will Sentry and Opentelemetry pick up errors:
+- When the schema doesn't validate the data
+- When an unhandled exception is thrown from the lambda
 
 ## <a name='Anoteonerrorhandlingincontrollers'></a>A note on error handling in controllers
 

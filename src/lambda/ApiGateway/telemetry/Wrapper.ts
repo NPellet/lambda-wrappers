@@ -104,7 +104,9 @@ export const wrapTelemetryApiGateway = <T, U>(
       await flush();
       log.info('API Gateway lambda execution has finished. Goodbye');
       return out;
+    
     } catch (e) {
+
       span.setStatus({ code: SpanStatusCode.ERROR });
       span.end();
       await flush();
