@@ -1,8 +1,6 @@
-import { APIGatewayProxyEvent, EventBridgeEvent } from 'aws-lambda';
-import { BaseSchema, ObjectSchema } from 'yup';
-import { log } from '../lambda/utils/logger';
-import { GenericRecord } from './records/generic';
-import { MessageType } from './types';
+import { EventBridgeEvent } from 'aws-lambda';
+import { GenericRecord } from '../generic';
+import { MessageType } from '../../types';
 
 export class AwsEventBridgeEvent<T> extends GenericRecord<T, EventBridgeEvent<string,T>>{
   validatedData: T;

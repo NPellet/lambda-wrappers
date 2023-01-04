@@ -86,6 +86,7 @@ describe('API Gateway. Sanitizing outputs', function () {
     expect(out.body).toContain('The lambda execution for the API Gateway ');
     expect(recordException).toHaveBeenCalled();
   });
+  
   it('Reports stack trace when HTTPError has payload of instance Error', async () => {
     const handler = createApiGatewayHandler(unauthorizedWithErrorLHandler, cfg);
     const out = await handler(event, LambdaContext, () => {});

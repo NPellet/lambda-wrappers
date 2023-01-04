@@ -4,7 +4,7 @@ import { LambdaInitSecretHandler } from '../../util/LambdaHandler';
 import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
 import { BaseSchema, InferType, ObjectSchema } from 'yup';
-import { AwsEventBridgeEvent } from '../../util/eventbridge';
+import { AwsEventBridgeEvent } from '../../util/records/eventbridge/eventbridge';
 import { recordException } from '../../util/exceptions';
 import { wrapTelemetryEventBridge } from './telemetry/Wrapper';
 

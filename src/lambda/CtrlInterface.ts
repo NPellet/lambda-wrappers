@@ -1,5 +1,5 @@
 import { SQSBatchItemFailure } from "aws-lambda";
-import { AwsEventBridgeEvent } from "../util/eventbridge";
+import { AwsEventBridgeEvent } from "../util/records/eventbridge/eventbridge";
 import { Request } from "../util/records/apigateway/request";
 import { HTTPError, HTTPResponse } from "../util/records/apigateway/response";
 import { AwsSNSRecord } from "../util/records/sns/record";

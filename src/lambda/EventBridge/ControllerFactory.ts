@@ -3,7 +3,7 @@ import { HandlerConfiguration } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import { SecretConfig, SecretsContentOf, TAllSecretRefs, TSecretRef } from '../utils/secrets_manager';
 import { createEventBridgeHandler } from './event';
-import { AwsEventBridgeEvent } from '../../util/eventbridge';
+import { AwsEventBridgeEvent } from '../../util/records/eventbridge/eventbridge';
 import { BaseWrapperFactory } from '../BaseWrapperFactory';
 
 export class EventBridgeHandlerWrapperFactory<
