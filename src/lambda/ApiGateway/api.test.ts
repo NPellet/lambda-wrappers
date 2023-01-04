@@ -27,6 +27,8 @@ jest.mock('../../util/exceptions', function () {
   };
 });
 
+import { recordException } from '../../util/exceptions';
+
 jest.mock('../Wrapper', function () {
   const actual = jest.requireActual('../Wrapper');
   return {
@@ -43,7 +45,6 @@ jest.mock('./telemetry/Wrapper', function () {
 });
 import { wrapTelemetryApiGateway } from './telemetry/Wrapper';
 
-import { recordException } from '../../util/exceptions';
 import { HandlerConfiguration, LambdaType } from '../config';
 import { HTTPResponse } from '../../util/records/apigateway/response';
 import { MessageType } from '../../util/types';
@@ -85,6 +86,7 @@ describe('API Gateway. Sanitizing outputs', function () {
     expect(out.body).toContain('The lambda execution for the API Gateway ');
     expect(recordException).toHaveBeenCalled();
   });
+  
   it('Reports stack trace when HTTPError has payload of instance Error', async () => {
     const handler = createApiGatewayHandler(unauthorizedWithErrorLHandler, cfg);
     const out = await handler(event, LambdaContext, () => {});
@@ -145,7 +147,7 @@ describe('API Gateway. Sanitizing outputs', function () {
 });
 
 describe('API Gateway: Telemetry', function () {
-  process.env.USE_OPENTELEMETRY = '1';
+  
   const cfg: HandlerConfiguration = {
     type: LambdaType.API_GATEWAY,
     secretInjection: {},
