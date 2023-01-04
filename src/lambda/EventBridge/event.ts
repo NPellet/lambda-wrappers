@@ -59,7 +59,7 @@ export const createEventBridgeHandler = <
           recordException(e);
         }
         
-        if( configuration.sources?.eventBridge?.failLambdaOnValidationFail ) {
+        if( configuration.sources?.eventBridge?.failLambdaOnValidationFail ?? true ) {
           throw e;
         }
       }

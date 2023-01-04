@@ -15,6 +15,7 @@ import { wrapTelemetrySNS } from './telemetry/Wrapper';
 import { flush } from '../utils/telemetry';
 import { AwsSNSRecord } from '../../util/records/sns/record';
 import { validateRecord } from '../../util/validateRecord';
+import { recordException } from '../../util/exceptions';
 
 export const createSNSHandler = <
   TInput,
@@ -48,15 +49,21 @@ export const createSNSHandler = <
       return;
     }
 
-    try {
-      return await wrappedHandler(_record, context, () => {});
-    } catch (e) {
-      return;
-    }
+    return wrappedHandler(_record, context, () => {});
   };
 
   if (configuration.opentelemetry) {
     innerLoop = wrapTelemetrySNS(innerLoop);
+  }
+
+  innerLoop = async ( record, context ) => {
+    try {
+      const out = await innerLoop( record, context )
+      return out;
+    } catch( e ) {
+      recordException( e );
+      return;
+    }
   }
 
   return async (event: SNSEvent, context: Context, callback: Callback) => {

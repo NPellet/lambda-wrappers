@@ -45,6 +45,8 @@ export const wrapTelemetryEventBridge = <T>(
       eventBridgeSpan.setStatus({ code: SpanStatusCode.ERROR });
       eventBridgeSpan.end();
       await flush();
+
+      throw e;
     }
   };
 };

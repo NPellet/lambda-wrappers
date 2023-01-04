@@ -46,26 +46,31 @@ export const createSQSHandler = <
     try {
       await validateRecord(_record, configuration.yupSchemaInput);
     } catch (e) {
-      return failSQSRecord(_record);
+
+      throw e;
     }
 
-    try {
-      return await wrappedHandler(_record, context, () => {});
-    } catch (e) {
-      return failSQSRecord(_record);
-    }
+    return wrappedHandler(_record, context, () => {});
   };
 
   if (configuration.opentelemetry) {
     innerLoop = wrapTelemetrySQS(innerLoop);
   }
 
+
+  innerLoop = async ( record, context ) => {
+    try {
+      const out = await innerLoop( record, context )
+      return out;
+    } catch( e ) {
+      recordException( e );
+      const _record = new AwsSQSRecord<V>(record, configuration.messageType);
+      return failSQSRecord(_record);
+    }
+  }
+
   return async (event: SQSEvent, context: Context, callback: Callback) => {
     log.info(`Received SQS event with  ${event.Records.length} records.`);
-
-    const sqsErrors: SQSBatchResponse = {
-      batchItemFailures: [],
-    };
 
     const out = (await Promise.allSettled(
       event.Records.map((record) => innerLoop(record, context))

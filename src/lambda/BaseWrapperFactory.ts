@@ -5,6 +5,7 @@ import { MessageType } from '../util/types';
 import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from 'yup';
 import { HandlerConfiguration, SourceConfig } from './config';
 import _ from 'lodash';
+import { defaultSourceConfig } from '../util/defaultConfig';
 
 
 export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
@@ -60,7 +61,7 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
     const secrets = cfg.secretInjection;
     const expandedSecrets = this.expandSecrets( secrets );
 
-    return {...cfg, secretInjection: expandedSecrets, sources: _.defaultsDeep( {}, this.mgr.sourcesCfg, this.sourceCfg)};
+    return {...cfg, secretInjection: expandedSecrets, sources: _.defaultsDeep( {}, defaultSourceConfig, this.mgr.sourcesCfg, this.sourceCfg)};
   }
   /**
    * Adds pre-secrets to the list of user-defined secrets

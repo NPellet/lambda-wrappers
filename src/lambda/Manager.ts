@@ -12,6 +12,7 @@ type awsPreSecret = {
 	secretKey?: string
 };
 
+
 export type SecretFetcher<KEYS extends string, META extends METABase, AWSKEYS extends string = string> = ( secretsToFetch: SecretFetchCfg<KEYS, META>, awsSecrets: Partial<Record<AWSKEYS, string>> ) => Promise<Partial<Record<KEYS, string>>>
 
 export class LambdaFactoryManager<T extends TAllSecretRefs> {

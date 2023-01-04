@@ -15,13 +15,13 @@ import {
 import { tracer } from '../../utils/telemetry';
 import { telemetryFindSNSParent } from './ParentContext';
 import { getAwsResourceFromArn } from '../../../util/aws';
+import { log } from '../../utils/logger';
 
 export const wrapTelemetrySNS = <T, U>(
   handler: (record: SNSEventRecord, context: Context) => Promise<void>
 ) => {
   return async function (event: SNSEventRecord, context: Context) {
     const parentContext = telemetryFindSNSParent(event);
-    const eventData = event;
 
     let attributes: Attributes = {
       [SemanticAttributes.MESSAGE_TYPE]: MessageTypeValues.RECEIVED,
@@ -41,11 +41,22 @@ export const wrapTelemetrySNS = <T, U>(
       parentContext
     );
 
-    const out = await otelapi.context.with(
-      otelapi.trace.setSpan(parentContext, span),
-      () => handler(event, context)
-    );
-    span.end();
-    return out;
+    // No flushing, we're in the inner loop
+    try {
+      const out = await otelapi.context.with(
+        otelapi.trace.setSpan(parentContext, span),
+        () => handler(event, context)
+      );
+      span.end();
+      return out;
+
+    } catch( e ) {
+      log.error('Telemetry: SNS lambda execution has errored');
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      span.end();
+      throw e;
+    }
+
+    
   };
 };

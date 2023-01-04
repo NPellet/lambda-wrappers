@@ -86,6 +86,12 @@ describe("Event bridge handler", function () {
         yupSchemaInput: yup.object({
           field: yup.number().required(),
         }),
+        sources: {
+          eventBridge: {
+            failLambdaOnValidationFail: true,
+            recordExceptionOnValidationFail: true
+          }
+        }
       }
     );
 
