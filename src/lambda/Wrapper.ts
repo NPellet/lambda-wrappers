@@ -60,7 +60,7 @@ export const wrapGenericHandler = <
 >(
   handler: LambdaInitSecretHandler<T, TInit, TSecrets, U>,
   configuration: HandlerConfigurationWithType<TInit, SInput, SOutput, TSecrets>,
-  
+
 ) => {
   // Needs to wrap before the secrets manager, because secrets should be available in the init phase
   let wrappedHandler = wrapBaseLambdaHandler(
@@ -68,7 +68,7 @@ export const wrapGenericHandler = <
     configuration.initFunction
   );
 
-  wrappedHandler = wrapRuntime(wrappedHandler);
+  wrappedHandler = wrapRuntime(wrappedHandler, configuration.sources?._general?.recordExceptionOnLambdaFail);
   let wrappedHandlerWithSecrets = wrapHandlerSecretsManager(
     wrappedHandler,
     configuration.secretInjection ?? {},
@@ -86,7 +86,8 @@ export const wrapGenericHandler = <
 };
 
 const wrapRuntime = <T, TSecrets extends string, U>(
-  handler: LambdaSecretsHandler<T, TSecrets, U>
+  handler: LambdaSecretsHandler<T, TSecrets, U>,
+  recordExceptionOnFailure: boolean = true
 ) => {
   return async function (event, secrets, context) {
     try {
@@ -97,7 +98,9 @@ const wrapRuntime = <T, TSecrets extends string, U>(
       log.error(e);
 
       log.debug('Recording diagnostic information and rethrowing');
-      recordException(e);
+      if (recordExceptionOnFailure) {
+        recordException(e);
+      }
       throw e;
     }
   };

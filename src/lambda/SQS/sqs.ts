@@ -58,12 +58,12 @@ export const createSQSHandler = <
   }
 
 
-  innerLoop = async ( record, context ) => {
+  const _innerLoop = async ( record, context ) => {
     try {
       const out = await innerLoop( record, context )
       return out;
     } catch( e ) {
-      recordException( e );
+      // Do notrecord. Automatically recorded
       const _record = new AwsSQSRecord<V>(record, configuration.messageType);
       return failSQSRecord(_record);
     }
@@ -73,7 +73,7 @@ export const createSQSHandler = <
     log.info(`Received SQS event with  ${event.Records.length} records.`);
 
     const out = (await Promise.allSettled(
-      event.Records.map((record) => innerLoop(record, context))
+      event.Records.map((record) => _innerLoop(record, context))
     ).then((maybeItemFailures) =>
       maybeItemFailures
         .map((o) => {

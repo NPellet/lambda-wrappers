@@ -56,7 +56,7 @@ export const createSNSHandler = <
     innerLoop = wrapTelemetrySNS(innerLoop);
   }
 
-  innerLoop = async ( record, context ) => {
+  const _innerLoop = async ( record, context ) => {
     try {
       const out = await innerLoop( record, context )
       return out;
@@ -70,7 +70,7 @@ export const createSNSHandler = <
     log.info(`Received SNS event with ${event.Records.length} records.`);
 
     await Promise.allSettled(
-      event.Records.map((record) => innerLoop(record, context))
+      event.Records.map((record) => _innerLoop(record, context))
     ).then((settled) => {
       if (settled.filter((e) => e.status == 'rejected').length > 0) {
         const error = 'Some SNS handlers have failed. This should not happen and point to a bug in the instrumentation library.'

@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { LambdaContext, memoryExporter } from '../../test_utils/utils';
 import * as yup from 'yup';
-import { SQSBatchResponse, SQSRecord } from 'aws-lambda';
+import { SQSRecord } from 'aws-lambda';
 import { createSQSHandler } from './sqs';
 
 jest.mock('../../util/exceptions', function () {

@@ -7,13 +7,18 @@ import {
   SecretsRecord,
 } from './utils/secrets_manager';
 
-export type SourceConfigEB = Partial<{
-  recordExceptionOnValidationFail: boolean,
-  failLambdaOnValidationFail: boolean
+export type SourceConfigEB = Partial<{  
+  failLambdaOnValidationFail: boolean,
+  recordExceptionOnValidationFail: boolean
 }>;
 
+export type SourceConfigGeneral = {
+  recordExceptionOnLambdaFail: boolean,
+}
+
 export type SourceConfig = Partial<{
-  eventBridge: SourceConfigEB
+  eventBridge: SourceConfigEB,
+  _general: SourceConfigGeneral
 }>;
 
 export type HandlerConfiguration<

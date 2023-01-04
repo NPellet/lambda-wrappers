@@ -89,7 +89,10 @@ describe("Event bridge handler", function () {
         sources: {
           eventBridge: {
             failLambdaOnValidationFail: true,
-            recordExceptionOnValidationFail: true
+            recordExceptionOnValidationFail: true,
+          },
+          _general: {
+            recordExceptionOnLambdaFail: true
           }
         }
       }
@@ -118,6 +121,7 @@ describe("Event bridge handler", function () {
       {
         initFunction: async () => {},
         messageType: MessageType.Binary,
+        
       }
     );
 

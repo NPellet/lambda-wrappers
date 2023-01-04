@@ -1,5 +1,5 @@
 import { BaseSchema } from 'yup';
-import { HandlerConfiguration, SourceConfigEB } from '../config';
+import { HandlerConfiguration, SourceConfigEB, SourceConfigGeneral } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import { SecretConfig, SecretsContentOf, TAllSecretRefs, TSecretRef } from '../utils/secrets_manager';
 import { createEventBridgeHandler } from './event';
@@ -28,8 +28,9 @@ export class EventBridgeHandlerWrapperFactory<
     return api;
   }
 
-  setConfig( cfg: SourceConfigEB ) {
+  setConfig( cfg: SourceConfigEB, general: SourceConfigGeneral ) {
     super.setSourceConfig( {
+      _general: general,
       eventBridge: cfg 
     })
     return this;

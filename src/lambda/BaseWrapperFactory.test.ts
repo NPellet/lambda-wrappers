@@ -42,8 +42,8 @@ describe("Testing BaseWrapperFactory features", function() {
         })
 
         const { configuration } = mgr.eventBridgeWrapperFactory("handler").setConfig( {
-            "recordExceptionOnValidationFail": true
-        }).createHandler( class Handler {
+            
+        }, { "recordExceptionOnLambdaFail": true }).createHandler( class Handler {
             static async init() {
                 return new Handler();
             }
@@ -53,11 +53,12 @@ describe("Testing BaseWrapperFactory features", function() {
             }
         })
 
-        expect( configuration.sources?.eventBridge ).toStrictEqual( {
-            "recordExceptionOnValidationFail": true,
-            "failLambdaOnValidationFail": true
+        expect( configuration.sources?._general ).toStrictEqual( {
+            "recordExceptionOnLambdaFail": true,
         })
 
-
+        expect( configuration.sources?.eventBridge ).toStrictEqual( {
+            "failLambdaOnValidationFail": true
+        })
     })
 })

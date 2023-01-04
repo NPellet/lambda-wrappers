@@ -51,14 +51,16 @@ export const createEventBridgeHandler = <
       try {
         await configuration.yupSchemaInput.validate(_event.getData());
       } catch (e) {
+
         log.warn(
           `Lambda's input schema failed to validate.`
         );
         log.debug(e);
-        if( configuration.sources?.eventBridge?.recordExceptionOnValidationFail ) {
-          recordException(e);
-        }
         
+        if( configuration.sources?.eventBridge?.recordExceptionOnValidationFail ) {
+          recordException( e )
+        }
+
         if( configuration.sources?.eventBridge?.failLambdaOnValidationFail ?? true ) {
           throw e;
         }
