@@ -17,7 +17,7 @@ export type SecretFetcher<KEYS extends string, META extends METABase, AWSKEYS ex
 
 export class LambdaFactoryManager<T extends TAllSecretRefs> {
 
-	sourcesCfg: SourceConfig | undefined = undefined;
+	runtimeCfg: SourceConfig | undefined = undefined;
 	sentryCfg: NodeOptions = {};
 	secretFetchers: Record<keyof T, SecretFetcher<string, any>>
 	preSecrets: Record<keyof T, awsPreSecret>
@@ -26,8 +26,8 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
 
 	public async init() {}
 
-	public setSourcesConfig( cfg: SourceConfig ) {
-		this.sourcesCfg = cfg;
+	public setRuntimeConfig( cfg: SourceConfig ) {
+		this.runtimeCfg = cfg;
 		return this;
 	}
 
@@ -41,7 +41,7 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
 		type N = string extends keyof T ?  AWS : T & AWS
 		const newMgr = new LambdaFactoryManager<N>();
 		newMgr.sentryCfg = this.sentryCfg;
-		newMgr.sourcesCfg = this.sourcesCfg;
+		newMgr.runtimeCfg = this.runtimeCfg;
 		// @ts-ignore
 		newMgr.secretFetchers = this.secretFetchers;
 		
@@ -80,7 +80,7 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
 			newMgr.sentryCfg = _self.sentryCfg;
 			newMgr.secretFetchers = { ..._self.secretFetchers, [sourceName]: fetcher };
 			newMgr.preSecrets = { ..._self.preSecrets, [sourceName]: secrets };
-			newMgr.sourcesCfg = _self.sourcesCfg;
+			newMgr.runtimeCfg = _self.runtimeCfg;
 			
 			//@ts-ignore // TODO: Find whether static asserts might exist in typescript ?
 			return newMgr;
@@ -133,3 +133,4 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
 		return wrapper.setHandler( handler );
 	}
 }
+

@@ -39,11 +39,11 @@ describe("Testing BaseWrapperFactory features", function() {
 
     test("Sources config are correctly deep extended", () => {
 
-        const mgr = new LambdaFactoryManager().setSourcesConfig({
+        const mgr = new LambdaFactoryManager().setRuntimeConfig({
             "eventBridge": {"failLambdaOnValidationFail": true}
         })
 
-        const { configuration } = mgr.eventBridgeWrapperFactory("handler").setConfig( {
+        const { configuration } = mgr.eventBridgeWrapperFactory("handler").configureRuntime( {
             
         }, { "recordExceptionOnLambdaFail": true }).createHandler( class Handler {
             static async init() {

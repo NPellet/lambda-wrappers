@@ -191,7 +191,7 @@ describe("Event bridge handler", function () {
     expect(wrapTelemetryEventBridge).not.toHaveBeenCalled();
   })
 
-  it("Exception recording on validation fail follows the source config", async () => {
+  it("Validation failure records exception", async () => {
 
     const handler = createEventBridgeHandler(
       async (request) => {

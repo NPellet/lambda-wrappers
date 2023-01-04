@@ -1,5 +1,5 @@
 import { BaseSchema } from 'yup';
-import { HandlerConfiguration } from '../config';
+import { HandlerConfiguration, SourceConfigAPIGateway, SourceConfigGeneral } from '../config';
 import { HTTPError, HTTPResponse } from '../../util/records/apigateway/response';
 import { Request } from '../../util/records/apigateway/request';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
@@ -112,6 +112,14 @@ export class APIGatewayHandlerWrapperFactory<
     newObj._handler = this._handler;
   }
 
+
+  configureRuntime( cfg: SourceConfigAPIGateway, general: SourceConfigGeneral ) {
+    super._configureRuntime( {
+      _general: general,
+      apiGateway: cfg 
+    })
+    return this;
+  }
 
 
   setTsOutputType<U>() {

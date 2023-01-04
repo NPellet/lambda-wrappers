@@ -77,6 +77,9 @@ This package provides an opiniated stack to insert additional logic in handling 
     - [Dealing with String Secrets](#dealing-with-string-secrets)
     - [Providing a secret list to the manager](#providing-a-secret-list-to-the-manager)
     - [Providing alternative secret sources](#providing-alternative-secret-sources)
+  - [Configuring runtime](#configuring-runtime)
+    - [Manager level](#manager-level)
+    - [Wrapper handler level](#wrapper-handler-level)
   - [Specificifities](#specificifities)
     - [API Gateway](#api-gateway)
       - [Input](#input)
@@ -687,6 +690,53 @@ api.needsSecret("HashicorpVault", "injectedKey", "Secret", "Key", {
 
 Which can then be consumed by the handler as `injectedKey`
 
+## Configuring runtime
+
+There is a certain level of configuration you can use in order to control the behaviour, notably of unhandled errors, of the wrappers. For example, you may not wish for unhandled errors to raise an exception with Sentry, or register with Opentelemetry. You may also wish to decide what happens when schema validation fails. Those configurations can be done at the manager level (again, to be used across your organisation/services) and can be overridden on a per-lambda basis.
+
+### Manager level
+
+Simply call the following:
+
+```typescript
+
+const mgr = new LambdaFactoryManager().setRuntimeConfig({
+	"_general": { // General configuration for all types of even sources
+		"recordExceptionOnLambdaFail": true // When your inner wrapper throws an unhandled error, should we record the exception ?
+	},
+	"apiGateway": {
+		"recordExceptionOnValidationFail": true // When the schema validation fails, should we record the exception ?
+	},
+	"eventBridge": {
+		"failLambdaOnValidationFail": true, // When the validation fails, should we make the lambda fail (true) or just return and do nothing (false) ?
+		"recordExceptionOnValidationFail": true // When the schema validation fails, should we record the exception ?
+	},
+	"sns": {
+		"recordExceptionOnValidationFail": true, // When the schema validation fails, should we record the exception ?
+    "silenceRecordOnValidationFail": false // When the schema validation fails, should we tag the record for a retry ? 
+	},
+	"sqs": {
+		"recordExceptionOnValidationFail": true, // When the schema validation fails, should we record the exception ?
+    "silenceRecordOnValidationFail": false // When the schema validation fails, should we tag the record for a retry ? 
+	}
+})
+```
+
+Notes:
+- For SNS and SQS, if you want to use dead-letter queues, then `silenceRecordOnValidationFail` should be set to `false`. `true` will just not execute your handler and exit silently. For the DLQ to work, the record needs to fail, and therefore you need to retry it.
+
+
+### Wrapper handler level
+
+For each wrapper handler (one for each event source), you can call the same function with two parameters:
+```typescript
+wrapperFactory.configureRuntime( SpecificRuntimeConfig, GeneralRuntimeConfig )
+```
+
+Where ```SpecificRuntimeConfig``` matches the config for the API Gateway, EB, SNS and SQS (see section "Manager level") and `GeneralRuntimeConfig` matches the config under the key `_general` (again, see above for an example of the payload)
+
+
+
 ## Specificifities
 ### API Gateway
 
@@ -747,6 +797,7 @@ The input type of the event bridge is of type `AwsEventBridgeEvent<T>`, and the 
 
 ```typescript
 declare const data: AwsEventBridgeEvent<any>;
+
 
 data.getData() // => T
 data.getSource() // Returns the event source field

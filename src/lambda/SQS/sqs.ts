@@ -12,7 +12,6 @@ import { LambdaInitSecretHandler } from '../../util/LambdaHandler';
 import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
 import { BaseSchema } from 'yup';
-import { recordException } from '../../util/exceptions';
 import { TOrSchema } from '../../util/types';
 import { wrapTelemetrySQS } from './Telemetry/Wrapper';
 import { flush } from '../utils/telemetry';
@@ -47,7 +46,11 @@ export const createSQSHandler = <
       await validateRecord(_record, configuration.yupSchemaInput);
     } catch (e) {
 
-      throw e;
+      if( configuration.sources?.sqs?.silenceRecordOnValidationFail ) {
+        return;
+      } else {
+        throw e;
+      }
     }
 
     return wrappedHandler(_record, context, () => {});

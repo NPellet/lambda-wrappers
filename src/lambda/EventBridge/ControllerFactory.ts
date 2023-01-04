@@ -28,8 +28,8 @@ export class EventBridgeHandlerWrapperFactory<
     return api;
   }
 
-  setConfig( cfg: SourceConfigEB, general: SourceConfigGeneral ) {
-    super.setSourceConfig( {
+  configureRuntime( cfg: SourceConfigEB, general: SourceConfigGeneral ) {
+    super._configureRuntime( {
       _general: general,
       eventBridge: cfg 
     })

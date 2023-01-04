@@ -11,7 +11,7 @@ import { defaultSourceConfig } from '../util/defaultConfig';
 export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
   private _disableSentry: boolean;
   protected _messageType: MessageType;
-  sourceCfg: SourceConfig;
+  runtimeCfg: SourceConfig;
 
   constructor(protected mgr: LambdaFactoryManager<TSecretList>) {
   }
@@ -26,8 +26,8 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
     return this;
   }
 
-  protected setSourceConfig( cfg: SourceConfig ) {
-    this.sourceCfg = cfg;
+  protected _configureRuntime( cfg: SourceConfig ) {
+    this.runtimeCfg = cfg;
     return this;
   }
 
@@ -61,7 +61,7 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
     const secrets = cfg.secretInjection;
     const expandedSecrets = this.expandSecrets( secrets );
 
-    return {...cfg, secretInjection: expandedSecrets, sources: _.defaultsDeep( {}, defaultSourceConfig, this.mgr.sourcesCfg, this.sourceCfg)};
+    return {...cfg, secretInjection: expandedSecrets, sources: _.defaultsDeep( {}, defaultSourceConfig, this.mgr.runtimeCfg, this.runtimeCfg)};
   }
   /**
    * Adds pre-secrets to the list of user-defined secrets

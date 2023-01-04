@@ -1,5 +1,5 @@
 import { BaseSchema, InferType } from 'yup';
-import { HandlerConfiguration } from '../config';
+import { HandlerConfiguration, SourceConfigGeneral, SourceConfigSNS } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import { SecretConfig, SecretsContentOf, TAllSecretRefs, TSecretRef } from '../utils/secrets_manager';
 import { createSNSHandler } from './sns';
@@ -104,6 +104,14 @@ export class SNSHandlerWrapperFactory<
     const api = this.setTsInputType<Buffer>();
     api._messageType = MessageType.Binary;
     return api;
+  }
+
+  configureRuntime( cfg: SourceConfigSNS, general: SourceConfigGeneral ) {
+    super._configureRuntime( {
+      _general: general,
+      sns: cfg 
+    })
+    return this;
   }
 
 

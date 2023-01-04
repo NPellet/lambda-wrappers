@@ -17,7 +17,7 @@ import {
   ROOT_CONTEXT,
 } from '@opentelemetry/api';
 import { AWSXRayPropagator } from '@opentelemetry/propagator-aws-xray';
-import { APIGatewayEvent, Context, EventBridgeEvent, SNSEventRecord } from 'aws-lambda';
+import { APIGatewayEvent, Context, EventBridgeEvent, SNSEvent, SNSEventRecord } from 'aws-lambda';
 
 export const contextSetter = {
   set(carrier: any, key: string, value: string) {
@@ -185,6 +185,10 @@ export const testSNSRecord: SNSEventRecord = {
     "UnsubscribeUrl": ""
   }
 };
+
+export const testSNSEvent: SNSEvent = {
+  Records: [ testSNSRecord ]
+}
 
 export const LambdaContext: Context = {
   awsRequestId: 'abc',

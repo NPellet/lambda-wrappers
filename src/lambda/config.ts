@@ -12,12 +12,30 @@ export type SourceConfigEB = Partial<{
   recordExceptionOnValidationFail: boolean
 }>;
 
+
+export type SourceConfigSNS = Partial<{  
+  recordExceptionOnValidationFail: boolean,
+  silenceRecordOnValidationFail: boolean
+}>;
+
+export type SourceConfigSQS = Partial<{  
+  recordExceptionOnValidationFail: boolean,
+  silenceRecordOnValidationFail: boolean
+}>;
+
+export type SourceConfigAPIGateway = Partial<{  
+  recordExceptionOnValidationFail: boolean
+}>;
+
 export type SourceConfigGeneral = {
   recordExceptionOnLambdaFail: boolean,
 }
 
 export type SourceConfig = Partial<{
   eventBridge: SourceConfigEB,
+  apiGateway: SourceConfigAPIGateway,
+  sns: SourceConfigSNS,
+  sqs: SourceConfigSQS,
   _general: SourceConfigGeneral
 }>;
 

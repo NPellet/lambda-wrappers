@@ -1,5 +1,5 @@
 import { BaseSchema, InferType } from 'yup';
-import { HandlerConfiguration } from '../config';
+import { HandlerConfiguration, SourceConfigGeneral, SourceConfigSQS } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import { SecretConfig, SecretsContentOf, TAllSecretRefs, TSecretRef } from '../utils/secrets_manager';
 import { createSQSHandler } from './sqs';
@@ -105,6 +105,14 @@ export class SQSHandlerWrapperFactory<
     const api = this.setTsInputType<Buffer>();
     api._messageType = MessageType.Binary;
     return api;
+  }
+
+  configureRuntime( cfg: SourceConfigSQS, general: SourceConfigGeneral ) {
+    super._configureRuntime( {
+      _general: general,
+      sqs: cfg 
+    })
+    return this;
   }
 
   createHandler(controllerFactory: ConstructorOf<
