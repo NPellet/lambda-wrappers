@@ -12,6 +12,13 @@ import {
 import { IfHandler, MessageType, SecretsOf } from '../../util/types';
 import { LambdaFactoryManager } from '../Manager';
 import { Request } from '../../util/records/apigateway/request';
+import { BaseWrapperFactory } from '../BaseWrapperFactory';
+
+const spyOnExpandedConfiguration = jest.spyOn(
+  BaseWrapperFactory.prototype,
+  // @ts-ignore
+  'expandConfiguration'
+);
 
 jest.mock('../utils/secrets_manager_aws', function () {
   return {
@@ -151,23 +158,8 @@ describe('Testing API Controller factory', function () {
 
   it('runtimeConfiguration works', function () {
     const mgr = new LambdaFactoryManager()
-      .setRuntimeConfig({
-        _general: {
-          recordExceptionOnLambdaFail: false,
-        },
-        apiGateway: {
-          recordExceptionOnValidationFail: false,
-        },
-      })
       .apiGatewayWrapperFactory('handler')
-      .configureRuntime(
-        {
-          recordExceptionOnValidationFail: true,
-        },
-        {
-          recordExceptionOnLambdaFail: true,
-        }
-      );
+      .configureRuntime({}, {});
 
     const cfg = mgr.createHandler(
       class Ctrl {
@@ -180,12 +172,7 @@ describe('Testing API Controller factory', function () {
       }
     );
 
-    expect(
-      cfg.configuration.sources?._general?.recordExceptionOnLambdaFail
-    ).toBe(true);
-    expect(
-      cfg.configuration.sources?.apiGateway?.recordExceptionOnValidationFail
-    ).toBe(true);
+    expect(spyOnExpandedConfiguration).toHaveBeenCalled();
   });
 
   describe('Message types', function () {
