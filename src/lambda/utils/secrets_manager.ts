@@ -89,7 +89,7 @@ export const wrapHandlerSecretsManager = <T, TSecrets extends string, U>(
       }
 
       const awsSecrets = await fetchSecretsFromAWS( secretsToFetch.get('aws')! as SecretFetchCfg<string, undefined> );
-      Object.assign( secretsOut , awsSecrets );
+      Object.assign( secretsOut, awsSecrets );
 
       for( let [ source, _secretsToFetch ] of secretsToFetch ) {
         

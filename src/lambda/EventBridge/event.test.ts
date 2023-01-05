@@ -18,30 +18,29 @@ jest.mock('../../util/exceptions', function () {
     recordException: jest.fn(),
   };
 });
+import { recordException } from '../../util/exceptions';
 
-jest.mock('./telemetry/Wrapper', function() {
+jest.mock('./telemetry/Wrapper', function () {
 
-  const moduleContent= jest.requireActual('./telemetry/Wrapper');
+  const moduleContent = jest.requireActual('./telemetry/Wrapper');
   return {
     ...moduleContent,
-    wrapTelemetryEventBridge: jest.fn( moduleContent.wrapTelemetryEventBridge )
+    wrapTelemetryEventBridge: jest.fn(moduleContent.wrapTelemetryEventBridge)
   }
 })
 
 import { wrapTelemetryEventBridge } from "./telemetry/Wrapper";
-import { recordException } from '../../util/exceptions';
 import { SpanKind, SpanStatusCode } from "@opentelemetry/api";
 
-const mockInit = jest.fn(async () => {});
+const mockInit = jest.fn(async () => { });
 
-const mockHandler = jest.fn(async () => {});
+const mockHandler = jest.fn(async () => { });
 
 describe("Event bridge handler", function () {
   it("Calls init once", async () => {
     const handler = createEventBridgeHandler(mockHandler, {
       initFunction: mockInit,
       type: LambdaType.GENERIC,
-
       messageType: MessageType.Binary,
       secretInjection: {},
     });
@@ -49,21 +48,21 @@ describe("Event bridge handler", function () {
     const event = _.cloneDeep(testEventBridgeEvent);
     event.detail[AWSXRAY_TRACE_ID_HEADER] = sampledAwsHeader;
 
-    await handler(event, LambdaContext, () => {});
+    await handler(event, LambdaContext, () => { });
 
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockHandler).toHaveBeenCalledTimes(1);
 
-    await handler(event, LambdaContext, () => {});
+    await handler(event, LambdaContext, () => { });
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockHandler).toHaveBeenCalledTimes(2);
   });
 
   it("Checking schema validation", async () => {
 
-    const handler = createEventBridgeHandler(async ( event ) => {
-      expect( event.getDetailType() ).toBe( testEventBridgeEvent["detail-type"] );
-      expect( event.getSource() ).toBe( testEventBridgeEvent.source );
+    const handler = createEventBridgeHandler(async (event) => {
+      expect(event.getDetailType()).toBe(testEventBridgeEvent["detail-type"]);
+      expect(event.getSource()).toBe(testEventBridgeEvent.source);
     }, {
       initFunction: mockInit,
       type: LambdaType.GENERIC,
@@ -71,58 +70,97 @@ describe("Event bridge handler", function () {
       messageType: MessageType.Binary,
       secretInjection: {},
     });
-    await handler(testEventBridgeEvent, LambdaContext, () => {});
+    await handler(testEventBridgeEvent, LambdaContext, () => { });
   });
 
   it("Checking schema validation", async () => {
-    
+
     const handler = createEventBridgeHandler(
       async (request) => {
         const data = await request.getData();
         return;
       },
       {
-        initFunction: async () => {},
+        initFunction: async () => { },
         messageType: MessageType.Binary,
         yupSchemaInput: yup.object({
           field: yup.number().required(),
         }),
+        sources: {
+          eventBridge: {
+            failLambdaOnValidationFail: true,
+            recordExceptionOnValidationFail: true,
+          },
+          _general: {
+            recordExceptionOnLambdaFail: true
+          }
+        }
       }
     );
 
     await expect(
-      handler(testEventBridgeEvent, LambdaContext, () => {})
+      handler(testEventBridgeEvent, LambdaContext, () => { })
     ).rejects.toBeDefined();
 
     const validObjectEvent = _.cloneDeep(testEventBridgeEvent);
     validObjectEvent.detail = { field: 23 };
 
     await expect(
-      handler(validObjectEvent, LambdaContext, () => {})
+      handler(validObjectEvent, LambdaContext, () => { })
     ).resolves.toBeUndefined();
 
-    expect( recordException ).toHaveBeenCalled(); 
+    expect(recordException).toHaveBeenCalled();
   });
 
-  it("Unhandled exceptions lead to exception capture", async() => {
+  it("Unhandled exceptions lead to exception capture", async () => {
 
     const handler = createEventBridgeHandler(
       async (request) => {
         throw new Error("Unhandled exception");
       },
       {
-        initFunction: async () => {},
+        initFunction: async () => { },
         messageType: MessageType.Binary,
+
       }
     );
 
     await expect(
-      handler(testEventBridgeEvent, LambdaContext, () => {})
-    ).rejects.toBeDefined(); 
+      handler(testEventBridgeEvent, LambdaContext, () => { })
+    ).rejects.toBeDefined();
 
-    expect( recordException ).toHaveBeenCalled();
-      
+    expect(recordException).toHaveBeenCalled();
   });
+
+  it("Wrapped spans are properly created", async () => {
+
+
+    const event = _.cloneDeep(testEventBridgeEvent);
+    event.detail[AWSXRAY_TRACE_ID_HEADER] = sampledAwsHeader;
+
+    const handler = createEventBridgeHandler(
+      async (request) => {
+      },
+      {
+        opentelemetry: true,
+        messageType: MessageType.Binary,
+      }
+    );
+
+
+    await handler(event, LambdaContext, () => { });
+    expect(wrapTelemetryEventBridge).toHaveBeenCalled();
+
+    const spans = memoryExporter.getFinishedSpans();
+    expect(spans.length).toBe(2);
+    expect(spans[0].status.code).toBe(SpanStatusCode.UNSET);
+    expect(spans[0].kind).toBe(SpanKind.SERVER);
+    expect(spans[1].status.code).toBe(SpanStatusCode.UNSET);
+    expect(spans[0].kind).toBe(SpanKind.SERVER);
+
+    expect(spans[0].parentSpanId).toBe(spans[1].spanContext().spanId);
+
+  })
 
   test("Telemetry wrapper is called depending on otel flag", async () => {
 
@@ -135,24 +173,10 @@ describe("Event bridge handler", function () {
       }
     );
 
-    const event = _.cloneDeep(testEventBridgeEvent);
-    event.detail[AWSXRAY_TRACE_ID_HEADER] = sampledAwsHeader;
-
-
-    await handler(event, LambdaContext, () => {});
-    expect( wrapTelemetryEventBridge ).toHaveBeenCalled();
-
-    const spans = memoryExporter.getFinishedSpans();
-    expect(spans.length).toBe(2);
-    expect(spans[0].status.code).toBe(SpanStatusCode.UNSET);
-    expect(spans[0].kind).toBe(SpanKind.SERVER);
-    expect(spans[1].status.code).toBe(SpanStatusCode.UNSET);
-    expect(spans[0].kind).toBe(SpanKind.SERVER);
-
-    expect(spans[0].parentSpanId).toBe(spans[1].spanContext().spanId);
+    await handler(testEventBridgeEvent, LambdaContext, () => { });
+    expect(wrapTelemetryEventBridge).toHaveBeenCalled();
 
     jest.clearAllMocks();
-
 
     const handler2 = createEventBridgeHandler(
       async (request) => {
@@ -163,8 +187,55 @@ describe("Event bridge handler", function () {
       }
     );
 
-    await handler2(testEventBridgeEvent, LambdaContext, () => {});
-    expect( wrapTelemetryEventBridge ).not.toHaveBeenCalled();
+    await handler2(testEventBridgeEvent, LambdaContext, () => { });
+    expect(wrapTelemetryEventBridge).not.toHaveBeenCalled();
+  })
+
+  it("Validation failure records exception", async () => {
+
+    const handler = createEventBridgeHandler(
+      async (request) => {
+      },
+      {
+        sources: {
+          eventBridge: {
+            "recordExceptionOnValidationFail": true,
+            "failLambdaOnValidationFail": true
+          }
+        },
+        yupSchemaInput: yup.object({
+          field: yup.number().required(),
+        }),
+        messageType: MessageType.Object,
+      }
+    );
+
+    await expect( handler(testEventBridgeEvent, LambdaContext, () => { }) ).rejects.toBeDefined();
+    expect( recordException ).toHaveBeenCalled()
+
+    jest.clearAllMocks();
+
+
+    const handler2 = createEventBridgeHandler(
+      async (request) => {
+      },
+      {
+        sources: {
+          eventBridge: {
+            "recordExceptionOnValidationFail": false,
+            "failLambdaOnValidationFail": false
+          }
+        },
+
+        yupSchemaInput: yup.object({
+          field: yup.number().required(),
+        }),
+        messageType: MessageType.Object,      }
+    );
+
+    
+    await expect( handler2(testEventBridgeEvent, LambdaContext, () => { }) ).resolves.toBeUndefined();
+    expect( recordException ).not.toHaveBeenCalled()
 
   })
 });

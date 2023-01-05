@@ -1,6 +1,15 @@
-import { LambdaContext } from '../test_utils/utils';
+import { LambdaContext, testApiGatewayEvent } from '../test_utils/utils';
 import { MessageType } from '../util/types';
 import { LambdaType } from './config';
+
+
+jest.mock('../util/exceptions', function () {
+  return {
+    recordException: jest.fn(),
+  };
+});
+import { recordException } from '../util/exceptions';
+
 
 jest.mock('./utils/secrets_manager', () => {
   const mod = jest.requireActual('./utils/secrets_manager');
@@ -107,6 +116,55 @@ describe('Testing runtime wrapper', () => {
     expect(wrapSentry).toHaveBeenCalledTimes(1);
   });
 
+
+  it("Configuration recordExceptionOnLambdaFail controls the exception", async () => {
+    const _handler = async (event, init, secrets, context, callback) => {
+      throw new Error();
+    };
+    const handler = wrapGenericHandler(
+      _handler,
+      {
+        sources: {
+          _general: {
+            "recordExceptionOnLambdaFail": true
+          }
+        },
+        type: LambdaType.GENERIC,
+        messageType: MessageType.Binary,
+      }
+    );
+
+    try {
+      await handler( testApiGatewayEvent, LambdaContext, () => {});
+    } catch( e ) {
+
+    }
+
+    expect( recordException ).toHaveBeenCalled();
+
+    jest.clearAllMocks()
+
+    const handler2 = wrapGenericHandler(
+      _handler,
+      {
+        sources: {
+          _general: {
+            "recordExceptionOnLambdaFail": false
+          }
+        },
+        type: LambdaType.GENERIC,
+        messageType: MessageType.Binary,
+      }
+    );
+
+    try {
+      await handler2( testApiGatewayEvent, LambdaContext, () => {});
+    } catch( e ) {
+
+    }
+
+    expect( recordException ).not.toHaveBeenCalled();
+  });
   /*
   let wrappedHandlerWithSecrets = wrapHandlerSecretsManager(
     wrappedHandler,

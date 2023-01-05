@@ -4,6 +4,7 @@ import { SNSHandlerWrapperFactory } from "./SNS/ControllerFactory";
 import { SQSHandlerWrapperFactory } from "./SQS/ControllerFactory";
 import {  METABase, SecretFetchCfg, SecretsContentOf, TAllSecretRefs, TSecretRef } from "./utils/secrets_manager";
 import { NodeOptions } from '@sentry/node';
+import { SourceConfig } from "./config";
 
 type awsPreSecret = {
 	secret: string,
@@ -11,18 +12,24 @@ type awsPreSecret = {
 	secretKey?: string
 };
 
+
 export type SecretFetcher<KEYS extends string, META extends METABase, AWSKEYS extends string = string> = ( secretsToFetch: SecretFetchCfg<KEYS, META>, awsSecrets: Partial<Record<AWSKEYS, string>> ) => Promise<Partial<Record<KEYS, string>>>
 
 export class LambdaFactoryManager<T extends TAllSecretRefs> {
 
+	runtimeCfg: SourceConfig | undefined = undefined;
 	sentryCfg: NodeOptions = {};
 	secretFetchers: Record<keyof T, SecretFetcher<string, any>>
 	preSecrets: Record<keyof T, awsPreSecret>
 
-	constructor() {
-		
-	}
+	constructor() {	}
+
 	public async init() {}
+
+	public setRuntimeConfig( cfg: SourceConfig ) {
+		this.runtimeCfg = cfg;
+		return this;
+	}
 
 	public setAWSSecrets<U extends TSecretRef> ( _: U ) {
 		type AWS = {
@@ -34,6 +41,7 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
 		type N = string extends keyof T ?  AWS : T & AWS
 		const newMgr = new LambdaFactoryManager<N>();
 		newMgr.sentryCfg = this.sentryCfg;
+		newMgr.runtimeCfg = this.runtimeCfg;
 		// @ts-ignore
 		newMgr.secretFetchers = this.secretFetchers;
 		
@@ -72,7 +80,8 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
 			newMgr.sentryCfg = _self.sentryCfg;
 			newMgr.secretFetchers = { ..._self.secretFetchers, [sourceName]: fetcher };
 			newMgr.preSecrets = { ..._self.preSecrets, [sourceName]: secrets };
-
+			newMgr.runtimeCfg = _self.runtimeCfg;
+			
 			//@ts-ignore // TODO: Find whether static asserts might exist in typescript ?
 			return newMgr;
 		}
@@ -124,3 +133,4 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
 		return wrapper.setHandler( handler );
 	}
 }
+

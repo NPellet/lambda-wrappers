@@ -12,12 +12,12 @@ import { LambdaInitSecretHandler } from '../../util/LambdaHandler';
 import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
 import { BaseSchema } from 'yup';
-import { recordException } from '../../util/exceptions';
 import { TOrSchema } from '../../util/types';
 import { wrapTelemetrySQS } from './Telemetry/Wrapper';
 import { flush } from '../utils/telemetry';
 import { validateRecord } from '../../util/validateRecord';
 import { AwsSQSRecord, failSQSRecord } from '../../util/records/sqs/record';
+import { recordException } from '../../util/exceptions';
 
 export const createSQSHandler = <
   TInput,
@@ -46,29 +46,43 @@ export const createSQSHandler = <
     try {
       await validateRecord(_record, configuration.yupSchemaInput);
     } catch (e) {
-      return failSQSRecord(_record);
+
+
+      if( configuration.sources?.sqs?.recordExceptionOnValidationFail ) {
+        recordException( e );
+      }
+
+      if( configuration.sources?.sqs?.silenceRecordOnValidationFail ) {
+        return;
+      } else {
+        throw e;
+      }
     }
 
-    try {
-      return await wrappedHandler(_record, context, () => {});
-    } catch (e) {
-      return failSQSRecord(_record);
-    }
+    return wrappedHandler(_record, context, () => {});
   };
 
   if (configuration.opentelemetry) {
     innerLoop = wrapTelemetrySQS(innerLoop);
   }
 
+
+  const _innerLoop = async ( record, context ) => {
+    try {
+      const out = await innerLoop( record, context )
+      return out;
+    } catch( e ) {
+      // Do notrecord. Automatically recorded
+      const _record = new AwsSQSRecord<V>(record, configuration.messageType);
+      return failSQSRecord(_record);
+    }
+  }
+
   return async (event: SQSEvent, context: Context, callback: Callback) => {
     log.info(`Received SQS event with  ${event.Records.length} records.`);
 
-    const sqsErrors: SQSBatchResponse = {
-      batchItemFailures: [],
-    };
-
     const out = (await Promise.allSettled(
-      event.Records.map((record) => innerLoop(record, context))
+      event.Records.map((record) => _innerLoop(record, context))
     ).then((maybeItemFailures) =>
       maybeItemFailures
         .map((o) => {

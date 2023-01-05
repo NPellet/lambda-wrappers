@@ -46,18 +46,23 @@ export const wrapTelemetrySQS = <T, U>(
 
     // The handler here cannot fail (see sqs.ts implementation)
     /* try { */
-    const out = await otelapi.context.with(
-      otelapi.trace.setSpan(parentContext, span),
-      () => handler(event, context)
-    );
 
-    if (out) {
+    try {
+      const out = await otelapi.context.with(
+        otelapi.trace.setSpan(parentContext, span),
+        () => handler(event, context)
+      );
+     
+      span.end();
+      return out;
+
+    } catch( e ) {
+
       log.error('SQS wrapper reports a failed SQS message');
       span.setStatus({ code: SpanStatusCode.ERROR });
+      span.end();
+      throw e;
     }
-
-    span.end();
-    return out;
     /*} catch (e) {
       span.setStatus({ code: SpanStatusCode.ERROR });
       span.end();

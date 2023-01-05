@@ -1,5 +1,5 @@
 import { BaseSchema, InferType } from 'yup';
-import { HandlerConfiguration } from '../config';
+import { HandlerConfiguration, SourceConfigGeneral, SourceConfigSQS } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import { SecretConfig, SecretsContentOf, TAllSecretRefs, TSecretRef } from '../utils/secrets_manager';
 import { createSQSHandler } from './sqs';
@@ -107,6 +107,14 @@ export class SQSHandlerWrapperFactory<
     return api;
   }
 
+  configureRuntime( cfg: SourceConfigSQS, general: SourceConfigGeneral ) {
+    super._configureRuntime( {
+      _general: general,
+      sqs: cfg 
+    })
+    return this;
+  }
+
   createHandler(controllerFactory: ConstructorOf<
     SQSCtrlInterface<typeof this>
   >) {
@@ -125,7 +133,8 @@ export class SQSHandlerWrapperFactory<
       ) => Promise<void | SQSBatchItemFailure>;
     };
 
-    const configuration: HandlerConfiguration<TInterface, SInput, TSecrets> =
+    const configuration: HandlerConfiguration<TInterface, SInput, any, TSecrets> =
+    this.expandConfiguration(
       {
         opentelemetry: true,
         sentry: true,
@@ -136,7 +145,7 @@ export class SQSHandlerWrapperFactory<
           return controllerFactory.init(secrets);
         },
         messageType: this._messageType
-      };
+      });
 
       const handler = createSQSHandler<INPUT, TInterface, TSecrets, SInput>(
         async (event, init, secrets, c) => {

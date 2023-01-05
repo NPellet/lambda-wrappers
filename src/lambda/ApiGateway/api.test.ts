@@ -180,6 +180,37 @@ describe('API Gateway: Telemetry', function () {
     expect(spans[0].parentSpanId).toBe(spans[1].spanContext().spanId);
   });
 
+
+  test("Telemetry wrapper is called depending on otel flag", async () => {
+
+    createApiGatewayHandler(
+      async (request) => {
+        return HTTPResponse.OK_NO_CONTENT();
+      },
+
+      {
+        opentelemetry: true,
+        messageType: MessageType.Binary,
+      }
+    );
+
+    expect( wrapTelemetryApiGateway ).toHaveBeenCalled();
+
+    jest.clearAllMocks();
+
+     createApiGatewayHandler(
+      async (request) => {
+        return HTTPResponse.OK_NO_CONTENT();
+      },
+      {
+        opentelemetry: false,
+        messageType: MessageType.Binary,
+      }
+    );
+
+    expect( wrapTelemetryApiGateway ).not.toHaveBeenCalled();
+  })
+
   it('A normal HTTP Error does not create an exception, puts the outer span to Error when returning 500', async () => {
     const handler = createApiGatewayHandler(errorLHandler, cfg);
 

@@ -1,5 +1,5 @@
 import { BaseSchema, InferType } from 'yup';
-import { HandlerConfiguration } from '../config';
+import { HandlerConfiguration, SourceConfigGeneral, SourceConfigSNS } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import { SecretConfig, SecretsContentOf, TAllSecretRefs, TSecretRef } from '../utils/secrets_manager';
 import { createSNSHandler } from './sns';
@@ -106,6 +106,14 @@ export class SNSHandlerWrapperFactory<
     return api;
   }
 
+  configureRuntime( cfg: SourceConfigSNS, general: SourceConfigGeneral ) {
+    super._configureRuntime( {
+      _general: general,
+      sns: cfg 
+    })
+    return this;
+  }
+
 
   createHandler(controllerFactory: ConstructorOf<
     SNSCtrlInterface<typeof this>
@@ -125,8 +133,8 @@ export class SNSHandlerWrapperFactory<
       ) => Promise<void>;
     };
 
-    const configuration: HandlerConfiguration<TInterface, SInput, TSecrets> =
-      {
+    const configuration: HandlerConfiguration<TInterface, SInput, any, TSecrets> =
+    this.expandConfiguration({
         opentelemetry: true,
         sentry: true,
         yupSchemaInput: this._inputSchema,
@@ -136,7 +144,7 @@ export class SNSHandlerWrapperFactory<
           return controllerFactory.init(secrets);
         },
         messageType: this._messageType
-      };
+      });
 
     const handler = createSNSHandler<INPUT, TInterface, TSecrets, SInput>(
       async (event, init, secrets) => {

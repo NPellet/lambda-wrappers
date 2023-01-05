@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { LambdaContext, memoryExporter } from '../../test_utils/utils';
 import * as yup from 'yup';
-import { SQSBatchResponse, SQSRecord } from 'aws-lambda';
+import { SQSRecord } from 'aws-lambda';
 import { createSQSHandler } from './sqs';
 
 jest.mock('../../util/exceptions', function () {
@@ -39,7 +39,7 @@ describe('Testing SQS Handler wrapper', function () {
   });
 
   it('Basic functionality works', async () => {
-    const handler = createSQSHandler(async (data, init, secrets) => {}, {
+    const handler = createSQSHandler(async (data, init, secrets) => { }, {
 
       messageType: MessageType.Object,
     });
@@ -50,7 +50,7 @@ describe('Testing SQS Handler wrapper', function () {
           Records: [testRecord],
         },
         LambdaContext,
-        () => {}
+        () => { }
       )
     ).resolves.toMatchObject({ batchItemFailures: [] });
   });
@@ -69,7 +69,7 @@ describe('Testing SQS Handler wrapper', function () {
           Records: [{ ...testRecord, body: 'abc' }],
         },
         LambdaContext,
-        () => {}
+        () => { }
       )
     ).resolves.toMatchObject({
       batchItemFailures: [
@@ -81,7 +81,7 @@ describe('Testing SQS Handler wrapper', function () {
   });
 
   it('Failed input schema outputs a batchItemFailure but does not record exception', async () => {
-    const handler = createSQSHandler(async (data, init, secrets) => {}, {
+    const handler = createSQSHandler(async (data, init, secrets) => { }, {
       yupSchemaInput: yup.object({
         requiredInputString: yup.string().required(),
         aNumber: yup.number(),
@@ -96,7 +96,7 @@ describe('Testing SQS Handler wrapper', function () {
           Records: [testRecord],
         },
         LambdaContext,
-        () => {}
+        () => { }
       )
     ).resolves.toMatchObject({
       batchItemFailures: [
@@ -123,7 +123,7 @@ describe('Testing SQS Handler wrapper', function () {
           Records: [testRecord],
         },
         LambdaContext,
-        () => {}
+        () => { }
       )
     ).resolves.toMatchObject({
       batchItemFailures: [
@@ -138,7 +138,7 @@ describe('Testing SQS Handler wrapper', function () {
 
 describe('Testing SQS Opentelemetry', function () {
   it('Properly wraps open telemetry', async () => {
-    const handler = createSQSHandler(async (data, init, secrets) => {}, {
+    const handler = createSQSHandler(async (data, init, secrets) => { }, {
       opentelemetry: true,
 
       messageType: MessageType.Object,
@@ -150,7 +150,7 @@ describe('Testing SQS Opentelemetry', function () {
           Records: [testRecord, testRecord],
         },
         LambdaContext,
-        () => {}
+        () => { }
       )
     ).resolves.toMatchObject({
       batchItemFailures: [],
@@ -170,7 +170,7 @@ describe('Testing SQS Opentelemetry', function () {
       {
         opentelemetry: true,
 
-      messageType: MessageType.Object,
+        messageType: MessageType.Object,
       }
     );
 
@@ -180,7 +180,7 @@ describe('Testing SQS Opentelemetry', function () {
           Records: [testRecord],
         },
         LambdaContext,
-        () => {}
+        () => { }
       )
     ).resolves.toBeTruthy();
 
@@ -202,7 +202,7 @@ describe('Testing SQS Opentelemetry', function () {
           aNumber: yup.number(),
         }),
 
-      messageType: MessageType.Object,
+        messageType: MessageType.Object,
       }
     );
 
@@ -212,7 +212,7 @@ describe('Testing SQS Opentelemetry', function () {
           Records: [testRecord],
         },
         LambdaContext,
-        () => {}
+        () => { }
       )
     ).resolves.toBeTruthy();
 
@@ -221,3 +221,85 @@ describe('Testing SQS Opentelemetry', function () {
     expect(spans[0].status.code).toBe(SpanStatusCode.ERROR);
   });
 });
+
+
+
+describe("SQS: Runtime config", function () {
+
+
+  it("Validation failure silences the lambda", async () => {
+
+    const handler = createSQSHandler(async () => { }, {
+      "sources": {
+        "sqs": {
+          "silenceRecordOnValidationFail": true
+        }
+      },
+      messageType: MessageType.String,
+      yupSchemaInput: yup.object({
+        field: yup.number().required(),
+      }),
+    });
+
+    await expect(handler({ Records: [testRecord] }, LambdaContext, () => { })).resolves.toStrictEqual({ batchItemFailures: []})
+
+
+    const handler2 = createSQSHandler(async () => { }, {
+      "sources": {
+        "sqs": {
+          "silenceRecordOnValidationFail": false
+        }
+      },
+      messageType: MessageType.String,
+      yupSchemaInput: yup.object({
+        field: yup.number().required(),
+      }),
+    })
+
+    await expect(handler2({ Records: [testRecord] }, LambdaContext, () => { })).resolves.toStrictEqual({ batchItemFailures: [{ itemIdentifier: 'abc'}]})
+  })
+
+
+  it("Validation failure records exception", async () => {
+
+    const handler = createSQSHandler(
+      async (request) => { },
+      {
+        sources: {
+          sqs: {
+            recordExceptionOnValidationFail: true,
+            silenceRecordOnValidationFail: true
+          }
+        },
+        yupSchemaInput: yup.object({
+          field: yup.number().required(),
+        }),
+        messageType: MessageType.String,
+      }
+    );
+    await handler({ Records: [testRecord] }, LambdaContext, () => { });
+    expect(recordException).toHaveBeenCalled()
+
+    jest.clearAllMocks();
+
+    const handler2 = createSQSHandler(
+      async (request) => { },
+      {
+        sources: {
+          sqs: {
+            recordExceptionOnValidationFail: false,
+            silenceRecordOnValidationFail: true
+          }
+        },
+
+        yupSchemaInput: yup.object({
+          field: yup.number().required(),
+        }),
+        messageType: MessageType.String,
+      });
+
+    await handler2({ Records: [testRecord] }, LambdaContext, () => { });
+
+    expect(recordException).not.toHaveBeenCalled()
+  })
+})

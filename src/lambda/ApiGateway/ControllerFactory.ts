@@ -1,5 +1,5 @@
 import { BaseSchema } from 'yup';
-import { HandlerConfiguration } from '../config';
+import { HandlerConfiguration, SourceConfigAPIGateway, SourceConfigGeneral } from '../config';
 import { HTTPError, HTTPResponse } from '../../util/records/apigateway/response';
 import { Request } from '../../util/records/apigateway/request';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
@@ -113,6 +113,14 @@ export class APIGatewayHandlerWrapperFactory<
   }
 
 
+  configureRuntime( cfg: SourceConfigAPIGateway, general: SourceConfigGeneral ) {
+    super._configureRuntime( {
+      _general: general,
+      apiGateway: cfg 
+    })
+    return this;
+  }
+
 
   setTsOutputType<U>() {
     const api = this.fork<TInput, U, TSecrets, THandler, SInput, SOutput>();
@@ -140,26 +148,19 @@ export class APIGatewayHandlerWrapperFactory<
       ) => Promise<HTTPResponse<TOrSchema<TOutput, SOutput>> | HTTPError>;
     };
 
-    const secrets = this.expandSecrets( this._secrets );
-
-    const configuration: HandlerConfiguration<
-      IF,
-      SInput,
-      SOutput,
-      TSecrets
-    > = {
+    const configuration: HandlerConfiguration<IF, SInput, SOutput, TSecrets> = this.expandConfiguration( {
       opentelemetry: true,
       sentry: true,
       yupSchemaInput: this._inputSchema,
       yupSchemaOutput: this._outputSchema,
-      secretInjection: secrets,
+      secretInjection: this._secrets,
       secretFetchers: this.mgr.secretFetchers ?? {},
       initFunction: async (secrets) => {
         await this.init();
         return controllerFactory.init(secrets);
       },
       messageType: this._messageType
-    };
+    } );
 
     const handler = createApiGatewayHandler<
       TOrSchema<TInput, SInput>,
