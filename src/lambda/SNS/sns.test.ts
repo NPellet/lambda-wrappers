@@ -44,14 +44,22 @@ describe('SNS: Telemetry', function () {
 });
 
 describe('SNS: Runtime config', function () {
-  it('General behaviour', async () => {
-    const handler = createSNSHandler(async () => {}, {
-      messageType: MessageType.String,
-    });
+  it('Basic behaviour resolved the handler without exception', async () => {
+    let called: boolean = false;
+    const handler = createSNSHandler(
+      async () => {
+        called = true;
+      },
+      {
+        messageType: MessageType.String,
+      }
+    );
 
     await expect(
       handler(testSNSEvent, LambdaContext, () => {})
     ).resolves.toBeUndefined();
+
+    expect(called).toBe(true);
   });
 
   it('Validation failure silences the lambda', async () => {
