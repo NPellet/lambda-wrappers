@@ -12,7 +12,7 @@ Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic
 
 ## Breaking changes in v2.x
 
-The only changes between v2.x and v1.x are in the secrets manager.
+The only changes between v2.x and v1.x are in the handling of the secrets.
 For the documentation of v1.x, see [documentation](https://www.npmjs.com/package/aws-lambda-handlers/v/1.0.31)
 
 Version 2 introduces a small breaking change when working with AWS secrets. In v2, it is possible to define custom secret fetchers other than target other sources than the AWS Secret manager.
@@ -128,19 +128,21 @@ npm i aws-lambda-wrappers
 Start by sharing a wrapper manager across all your lambda functions. This is useful to share configuration across your organisation.
 
 Currently the manager is used for:
-  - Setting a global Sentry configuration
-  - Setting the list of available AWS secrets
-  - Setting another source of secrets as well as how to retrieve them
+
+- Setting a global Sentry configuration
+- Setting the list of available AWS secrets
+- Setting another source of secrets as well as how to retrieve them
 
 ```typescript
 // path/to/manager.ts
-import { LambdaFactoryManager } from 'aws-lambda-wrappers'
+import { LambdaFactoryManager } from 'aws-lambda-wrappers';
 const mgr = new LambdaFactoryManager();
 // We'll import the manager later on !
 export default mgr;
 ```
 
 ### 2. Create a route / event handler using the manager
+
 It is good practice to separate the logic (a controller) from the handler itself (the entrypoint exposed to AWS), which allows you to swap controllers or implement multiple lambdas with a single controller. <br>
 Ideally, the controller route should be `require`-able without it executing any service logic. This allows you to expose "meta-information" that can be used by other tools (for example, automatically add IAM permissions in a CDK code by loading the `configuration` object, or building an OpenAPI v3 spec, etc.)
 
@@ -148,28 +150,32 @@ Start by the handler file: import the manager you just exported into a new file 
 
 ```typescript
 // path/to/route.ts
-import manager from './path/to/manager' // You can also use an npm module to share the mgr across your org
-const wrapperFactory = manager.apiGatewayWrapperFactory( "handler_name" ).setTsInputType<string>();
+import manager from './path/to/manager'; // You can also use an npm module to share the mgr across your org
+const wrapperFactory = manager
+  .apiGatewayWrapperFactory('handler_name')
+  .setTsInputType<string>();
 
-import { Controller } from './path/to/controller'
-export const { handler, configuration } = wrapperFactory.createHandler( Controller )
-export type Interface = CtrlInterfaceOf<typeof wrapperFactory>
+import { Controller } from './path/to/controller';
+export const { handler, configuration } =
+  wrapperFactory.createHandler(Controller);
+export type Interface = CtrlInterfaceOf<typeof wrapperFactory>;
 ```
 
 ### 3. Create a controller
 
 You can now write your controller, which must implement the interface exported by the Lambda wrapper (we called it `Interface`)
+
 ```typescript
 // path/to/controller.ts
-import { Interface } from './path/to/route'
+import { Interface } from './path/to/route';
 
 class Controller implements Interface {
   static async init() {
     return new Controller();
   }
-  handler_name: IfHandler<Interface> = async( data, secrets ) => {
+  handler_name: IfHandler<Interface> = async (data, secrets) => {
     // Write your logic here
-  }
+  };
 }
 ```
 
@@ -180,6 +186,7 @@ And that's it for the most basic implementation ! You may now use `path/to/route
 In this section we explore the benefits that our approach brings.
 
 ### Triggering from different AWS sources
+
 Wrapper factory constructors are available for
 
 - API Gateway:
@@ -199,16 +206,16 @@ Wrapper factory constructors are available for
     manager.snsWrapperFactory( handler: string );
   ```
 
-The differences exist because the input types and output types are not the same whether the lambda is triggered by either of those event sources, and because the error handling is different (for example, the lambda triggered by the API Gateway should never fail, but the EventBridge lambda may be allowed fail). In addition, the SQS loop is unrolled (you implement only the method for the record, not for the whole event, which contains many records) for error management purposes. 
+The differences exist because the input types and output types are not the same whether the lambda is triggered by either of those event sources, and because the error handling is different (for example, the lambda triggered by the API Gateway should never fail, but the EventBridge lambda may be allowed fail). In addition, the SQS loop is unrolled (you implement only the method for the record, not for the whole event, which contains many records) for error management purposes.
 
 ### Notes on immutability
 
 Both the `LambdaFactoryManager` and the derived `APIGatewayWrapperFactory` and others are **mostly** immutable (understand by it that you cannot safely rely on their immutability either). It is important to understand that most of the methods return a new instance:
 
 ```typescript
-const apiWrapperFactory = new LambdaFactoryManager().apiGatewayWrapperFactory()
+const apiWrapperFactory = new LambdaFactoryManager().apiGatewayWrapperFactory();
 
-const apiWrapperFactory2 = api.needsSecret( /*...*/ );
+const apiWrapperFactory2 = api.needsSecret(/*...*/);
 
 // apiWrapperFactory2 is of "similar" type as apiWrapperFactorty, and will require the secret
 // apiWrapperFactory will NOT require the secret
@@ -217,12 +224,12 @@ const apiWrapperFactory2 = api.needsSecret( /*...*/ );
 api.needsSecret(); // Not assigned to a variable
 ```
 
-
 ### Handler method name
+
 The string parameter passed to the constructor function defines which method must be implemented by the constructor:
 
 ```typescript
-type HandlerIf = CtrlInterfaceOf<wrapperFactory>
+type HandlerIf = CtrlInterfaceOf<wrapperFactory>;
 
 /* HandlerIf is of type
 {
@@ -234,57 +241,71 @@ type HandlerIf = CtrlInterfaceOf<wrapperFactory>
 The handler can be further composed to enhance the type safety and runtime safety of the controller:
 
 ```typescript
-
 const wrapperFactory = manager
-  .apiGatewayWrapperFactory( "handler_name" )
+  .apiGatewayWrapperFactory('handler_name')
   .setTsInputType<Animal>()
-  .setOutputSchema( yup.object( {
-    handled: yup.boolean()
-  }));
+  .setOutputSchema(
+    yup.object({
+      handled: yup.boolean(),
+    })
+  );
 
-export type InterfaceHandler = CtrlInterfaceOf< typeof wrapperFactory >
+export type InterfaceHandler = CtrlInterfaceOf<typeof wrapperFactory>;
 
 // Creating the handler and the configuration
 
-import Controller from './path/to/controller'
-export const { handler, configuration } = wrapperFactory.createWrapper( Controller )
+import Controller from './path/to/controller';
+export const { handler, configuration } =
+  wrapperFactory.createWrapper(Controller);
 ```
-
 
 ## Detailed Usage
 
 ### Main exports
 
 This package exposes 3 main objects you may want to import:
-- class ```LambdaFactoryManager```, which you use to create any handler
-- type ```CtrlInterfaceOf```, which derives the WrapperFactory into a TS interface to be implemented by the controller
-- type ```IfHandler```, which stands for "interface handler", and informs the controller handler about the parameter type (see examples).
 
-
+- class `LambdaFactoryManager`, which you use to create any handler
+- type `CtrlInterfaceOf`, which derives the WrapperFactory into a TS interface to be implemented by the controller
+- type `IfHandler`, which stands for "interface handler", and informs the controller handler about the parameter type (see examples).
 
 ### Complete example
 
 ```typescript
 //====================================================================
 // route.ts
-import manager from 'path/to/manager'
+import manager from 'path/to/manager';
 import { MyController } from 'path/to/controller';
 import { CtrlInterfaceOf } from 'aws-lambda-handlers';
 
 // API Route definition file
-const handlerWrapperFactory = manager.apiGatewayWrapperFactory('handle')
+const handlerWrapperFactory = manager
+  .apiGatewayWrapperFactory('handle')
   .setTsInputType<INPUT_TYPE>() // Injects type safety, overrides yup schema
   .setTsOutputType<OUTPUT_TYPE>() // Injects type safety, overrides yup schema
   .setInputSchema(yupSchema) // Of type yup
   .setOutputSchema(yupSchema) // Of type yup
-  .needsSecret('aws', 'process_env_key', 'SecretName', 'adminApiKey', undefined, true) // Fetches the secrets during a cold start
-  .needsSecret('aws', 'process_env_other_key', 'SecretName', 'apiKey', undefined, true);
+  .needsSecret(
+    'aws',
+    'process_env_key',
+    'SecretName',
+    'adminApiKey',
+    undefined,
+    true
+  ) // Fetches the secrets during a cold start
+  .needsSecret(
+    'aws',
+    'process_env_other_key',
+    'SecretName',
+    'apiKey',
+    undefined,
+    true
+  );
 
-type controllerInterface = CtrlInterfaceOf<
-  typeof handlerWrapperFactory
->;
+type controllerInterface = CtrlInterfaceOf<typeof handlerWrapperFactory>;
 
-export const { handler, configuration } = handlerWrapperFactory.createHandler(MyController);
+export const { handler, configuration } =
+  handlerWrapperFactory.createHandler(MyController);
 export { controllerInterface }; // Export the type to be reimported by the route implementation
 
 //====================================================================
@@ -322,9 +343,7 @@ Once the wrapper factory has been created, you can extract its interface type us
 
 ```typescript
 // API Gateway handler
-type controllerInterface = CtrlInterfaceOf<
-  typeof APIHandlerWrapperFactory
->;
+type controllerInterface = CtrlInterfaceOf<typeof APIHandlerWrapperFactory>;
 
 // Event bridge handler
 type controllerInterface = CtrlInterfaceOf<
@@ -332,17 +351,11 @@ type controllerInterface = CtrlInterfaceOf<
 >;
 
 // SNS handler
-type controllerInterface = CtrlInterfaceOf<
-  typeof snsHandlerWrapperFactory
->;
+type controllerInterface = CtrlInterfaceOf<typeof snsHandlerWrapperFactory>;
 
 // SQS handler
-type controllerInterface = CtrlInterfaceOf<
-  typeof sqsHandlerWrapperFactory
->;
-
+type controllerInterface = CtrlInterfaceOf<typeof sqsHandlerWrapperFactory>;
 ```
-
 
 ### Implementing a controller
 
@@ -352,23 +365,20 @@ Implementing a Controller has 2 requirements:
 - Provide the method mandated by the route
 
 ```typescript
-import { InterfaceHandler } from './path/to/interface'
+import { InterfaceHandler } from './path/to/interface';
 
 export class Controller implements InterfaceHandler {
-
-  constructor( private myResource: MyResource ) {
-
-  }
+  constructor(private myResource: MyResource) {}
 
   static async init() {
     // Acquires MyResource only during a cold start
-    return new Controller( new MyResource() );
+    return new Controller(new MyResource());
   }
 
   // Inherits the method parameter types and return type from the interface. See for details
-  handler_name: IfHandler<InterfaceHandler> = async ( data, secrets ) => {
+  handler_name: IfHandler<InterfaceHandler> = async (data, secrets) => {
     return HTTPResponse.OK_NOT_CONTENT();
-  }
+  };
 }
 ```
 
@@ -392,16 +402,22 @@ Routes definitions (1 file per handler, or more, but then you'd have to rename a
 // Create.ts
 import Controller from 'path/to/controller';
 const createHandlerWrapperFactory = manager.apiGatewayWrapperFactory('create');
-export type controllerInterface = CtrlInterfaceOf<typeof createHandlerWrapperFactory>;
-export const { handler, configuration } = createHandlerWrapperFactory.createHandler(Controller);
+export type controllerInterface = CtrlInterfaceOf<
+  typeof createHandlerWrapperFactory
+>;
+export const { handler, configuration } =
+  createHandlerWrapperFactory.createHandler(Controller);
 ```
 
 ```typescript
 // Read.ts
 import Controller from 'path/to/controller';
 const readHandlerWrapperFactory = manager.apiGatewayWrapperFactory('read');
-export type controllerInterface = CtrlInterfaceOf<typeof readHandlerWrapperFactory>;
-export const { handler, configuration } = readHandlerWrapperFactory.createHandler(Controller);
+export type controllerInterface = CtrlInterfaceOf<
+  typeof readHandlerWrapperFactory
+>;
+export const { handler, configuration } =
+  readHandlerWrapperFactory.createHandler(Controller);
 
 // Update.ts...
 // Delete.ts...
@@ -438,7 +454,6 @@ When specifying a yup schema using `setInputSchema` and `setOutputSchema`, but w
 
 On another note, the schema validation can be asynchronous. It is validated before your handler is called and its validation is finished before your handler is executed. If the validation fails, your wrapped handler will not be executed.
 
-
 ## JSON, String, Number or Buffer ?
 
 The API Gateway, SNS and SQS pass the message body (or request as a string), and we need to make some guesswork to determine if it should be JSON parsed, base64 parsed, number parsed or not parsed at all.
@@ -446,6 +461,7 @@ The API Gateway, SNS and SQS pass the message body (or request as a string), and
 Here are the rules we generally apply:
 
 - If you have called `setInputSchema`, the handler will look at the schema type:
+
   - If it's an `ObjectSchema`, it will run JSON.parse before validation
   - If it's a `StringSchema`, it will run no parsing before validation
   - If it's a `NumberSchema`, it will run parseFloat before validation
@@ -454,7 +470,6 @@ Here are the rules we generally apply:
 - If `setNumberInputType`, `setStringInputType` or `setBinaryInputType` is used instead of `setTsInputType`, then the handler will parse a float, nothing and a base64 buffer, respectively
 
 - If nothing is called, there will do no parsing and the type will unknown anyway. In other words, you will get a string for API Gateway, SQS and SNS, and potentially a JSON for the Event Bridge.
-
 
 ## Using Sentry
 
@@ -465,11 +480,13 @@ The way to configure Sentry is to do it on the manager level:
 
 ```typescript
 // path/to/manager.ts
-import { LambdaFactoryManager } from 'aws-lambda-wrappers'
-const mgr = new LambdaFactoryManager()
-  .configureSentry({
-    enabled: true
-  }, true);
+import { LambdaFactoryManager } from 'aws-lambda-wrappers';
+const mgr = new LambdaFactoryManager().configureSentry(
+  {
+    enabled: true,
+  },
+  true
+);
 
 // We'll import the manager later on !
 export default mgr;
@@ -479,10 +496,11 @@ It would be a common pattern to have a shared Sentry configuration for your whol
 
 ```typescript
 // Import an org-wide manager
-import manager from '@myorg/my-lambda-manager' // Image you published your utility manager there
-const myNewManager = manager.configureSentryDSN( MY_SENTRY_DSN )
-export default myNewManager // Optional
+import manager from '@myorg/my-lambda-manager'; // Image you published your utility manager there
+const myNewManager = manager.configureSentryDSN(MY_SENTRY_DSN);
+export default myNewManager; // Optional
 ```
+
 Because the configuration is mutable, lambda handlers can still reference `@myorg/my-lambda-manager` and inherit the correct DSN.
 
 ### Disabling Sentry
@@ -501,6 +519,7 @@ Another cool feature of those lambda wrappers is that secrets from the AWS Secre
 Secrets are fetched during a cold start, of after a 2h cache has expired, but never in between.
 
 They are exposed in two ways:
+
 - Injected into process.env
 - Available in the controller method (the 2nd argument)
 
@@ -515,19 +534,18 @@ controllerFactory.needsSecret(
 );
 
 class Controller implements RouteHandler {
-
-  handler: IfHandler<RouteHandler> = async ( data, secrets ) => {
-
+  handler: IfHandler<RouteHandler> = async (data, secrets) => {
     // secrets is of type Record<"key", string>
     // secrets.key is available as type "string" for use
     // process.env.key is also available for use
-  }
+  };
 }
 ```
 
 ### Dealing with Key-Value Secrets
 
 AWS Secrets can be of JSON type. It is pretty common to store a simple key-value structure in AWS, which we support for retrieval:
+
 ```typescript
 controllerFactory.needsSecret(
   source,
@@ -556,8 +574,6 @@ controllerFactory.needsSecret(
 );
 ```
 
-
-
 When the last parameter of the `needsSecret` method is true, the secret is required and the lambda will fail if it can't be found. When false, the method will be called, but the secret may be undefined.
 
 ### Providing a secret list to the manager
@@ -565,31 +581,33 @@ When the last parameter of the `needsSecret` method is true, the secret is requi
 Imagine an object `aws_secrets` contains the list of all available secrets in the format
 
 ```typescript
-
 enum ENUM_OF_SECRET_NAME {
-  "SecretKey",
-  "SecretOtherKey"
+  'SecretKey',
+  'SecretOtherKey',
 }
 
 export const aws_secrets = {
   secretName: ENUM_OF_SECRET_NAME,
-  otherSecretName: ENUM_OF_OTHER_SECRET_NAME
-}
+  otherSecretName: ENUM_OF_OTHER_SECRET_NAME,
+};
 ```
+
 (This format can automatically be generated using the package `aws-secrets-manager-aot`)
 
 By setting the secret list into the manager, they can provide type safety when calling `needsSecret`:
 
 ```typescript
-import { LambdaFactoryManager } from 'aws-lambda-wrappers'
-const mgr = new LambdaFactoryManager().setAWSSecrets( aws_secrets );
+import { LambdaFactoryManager } from 'aws-lambda-wrappers';
+const mgr = new LambdaFactoryManager().setAWSSecrets(aws_secrets);
 // Imagine a list of secrets, indexed by secret name on the first level, and secret key (for key-value secrets) on the second level
 
-export default mgr
+export default mgr;
 
 ///
 
-mgr.apiGatewayWrapperFactory('read').needsSecret("aws", "key", "secretName", "SecretKey");
+mgr
+  .apiGatewayWrapperFactory('read')
+  .needsSecret('aws', 'key', 'secretName', 'SecretKey');
 ```
 
 Autocompletion of the secret name:
@@ -599,7 +617,6 @@ Autocompletion of the secret name:
 Autocompletion of the secret key:
 
 ![Autocompletion](./doc/secret_key_autocompletion.png)
-
 
 ### Providing alternative secret sources
 
@@ -638,8 +655,8 @@ const otherSecrets = {
 const mgr = new LambdaFactoryManager()
   .setAWSSecrets( awsSecrets )
   .addSecretSource<META>()( // Note here the "special" syntax, due to the fact that typescript doesn't have partial type inference at the time of writing
-      "HashicorpVault", 
-      otherSecrets, 
+      "HashicorpVault",
+      otherSecrets,
       async ( toFetch, awsSecrets ) => {
           /*
             toFetch is of type
@@ -668,10 +685,10 @@ const mgr = new LambdaFactoryManager()
       ( aws ) => { // aws is a convenience function helping with auto-completion, based on the secrets passed to the manager in .setAWSSecrets()
         return {
             // With auto-completion if you're using VSCode :) !
-            "authKey": aws("Hashicorp", "Auth", true), 
+            "authKey": aws("Hashicorp", "Auth", true),
             "otherKey": aws("Hashicorp", "OtherInfo" ) // Required defaults to true
         };
-      }  
+      }
     );
 ```
 
@@ -683,9 +700,16 @@ When the service consumes, the manager, the developer may now call:
 
 ```typescript
 // Auto-completion here as well !
-api.needsSecret("HashicorpVault", "injectedKey", "Secret", "Key", {
-  metaKey: "metaVal"
-}, true );
+api.needsSecret(
+  'HashicorpVault',
+  'injectedKey',
+  'Secret',
+  'Key',
+  {
+    metaKey: 'metaVal',
+  },
+  true
+);
 ```
 
 Which can then be consumed by the handler as `injectedKey`
@@ -699,45 +723,45 @@ There is a certain level of configuration you can use in order to control the be
 Simply call the following:
 
 ```typescript
-
 const mgr = new LambdaFactoryManager().setRuntimeConfig({
-	"_general": { // General configuration for all types of even sources
-		"recordExceptionOnLambdaFail": true // When your inner wrapper throws an unhandled error, should we record the exception ?
-	},
-	"apiGateway": {
-		"recordExceptionOnValidationFail": true // When the schema validation fails, should we record the exception ?
-	},
-	"eventBridge": {
-		"failLambdaOnValidationFail": true, // When the validation fails, should we make the lambda fail (true) or just return and do nothing (false) ?
-		"recordExceptionOnValidationFail": true // When the schema validation fails, should we record the exception ?
-	},
-	"sns": {
-		"recordExceptionOnValidationFail": true, // When the schema validation fails, should we record the exception ?
-    "silenceRecordOnValidationFail": false // When the schema validation fails, should we tag the record for a retry ? 
-	},
-	"sqs": {
-		"recordExceptionOnValidationFail": true, // When the schema validation fails, should we record the exception ?
-    "silenceRecordOnValidationFail": false // When the schema validation fails, should we tag the record for a retry ? 
-	}
-})
+  _general: {
+    // General configuration for all types of even sources
+    recordExceptionOnLambdaFail: true, // When your inner wrapper throws an unhandled error, should we record the exception ?
+  },
+  apiGateway: {
+    recordExceptionOnValidationFail: true, // When the schema validation fails, should we record the exception ?
+  },
+  eventBridge: {
+    failLambdaOnValidationFail: true, // When the validation fails, should we make the lambda fail (true) or just return and do nothing (false) ?
+    recordExceptionOnValidationFail: true, // When the schema validation fails, should we record the exception ?
+  },
+  sns: {
+    recordExceptionOnValidationFail: true, // When the schema validation fails, should we record the exception ?
+    silenceRecordOnValidationFail: false, // When the schema validation fails, should we tag the record for a retry ?
+  },
+  sqs: {
+    recordExceptionOnValidationFail: true, // When the schema validation fails, should we record the exception ?
+    silenceRecordOnValidationFail: false, // When the schema validation fails, should we tag the record for a retry ?
+  },
+});
 ```
 
 Notes:
-- For SNS and SQS, if you want to use dead-letter queues, then `silenceRecordOnValidationFail` should be set to `false`. `true` will just not execute your handler and exit silently. For the DLQ to work, the record needs to fail, and therefore you need to retry it.
 
+- For SNS and SQS, if you want to use dead-letter queues, then `silenceRecordOnValidationFail` should be set to `false`. `true` will just not execute your handler and exit silently. For the DLQ to work, the record needs to fail, and therefore you need to retry it.
 
 ### Wrapper handler level
 
 For each wrapper handler (one for each event source), you can call the same function with two parameters:
+
 ```typescript
-wrapperFactory.configureRuntime( SpecificRuntimeConfig, GeneralRuntimeConfig )
+wrapperFactory.configureRuntime(SpecificRuntimeConfig, GeneralRuntimeConfig);
 ```
 
-Where ```SpecificRuntimeConfig``` matches the config for the API Gateway, EB, SNS and SQS (see section "Manager level") and `GeneralRuntimeConfig` matches the config under the key `_general` (again, see above for an example of the payload)
-
-
+Where `SpecificRuntimeConfig` matches the config for the API Gateway, EB, SNS and SQS (see section "Manager level") and `GeneralRuntimeConfig` matches the config under the key `_general` (again, see above for an example of the payload)
 
 ## Specificifities
+
 ### API Gateway
 
 #### Input
@@ -760,27 +784,31 @@ const raw = request.getRawData()
 To return an API Gateway Response, you are expected to return a `HTTPResponse`, using the static constructors:
 
 ```typescript
-return HTTPResponse.OK(/* your data */)
+return HTTPResponse.OK(/* your data */);
 // or
 return HTTPResponse.OK_NO_CONTENT();
 // or
 // ... other static methods
 ```
+
 If you set an output type with `setTsOutputType`, typescript will enforce static type safety in your response and you must conform to it.
 
 If you set an output schema with `setOutputSchema`, javascript will validate your payload. If the payload does not validate, an HTTPError 422 will be sent to the upstream caller, in order to protect it from failing further.
 
-To reply with a managed Error, use the static constructor methods on `HTTPError`, which take an Error or a string in their static constructor methods. 
+To reply with a managed Error, use the static constructor methods on `HTTPError`, which take an Error or a string in their static constructor methods.
 
 ```typescript
 return HTTPError.BAD_REQUEST(error);
 // or
 return HTTPError.BAD_REQUEST('Failure !');
 ```
+
 Errors can be "acceptable" or "anormal". An anormal error will be registered with Sentry and Opentelemetry, and should indicate a condition that your service shouldn't enter. If this condition is a consequence of an invalid payload, do not set the error to anormal. This is a problem with the sender of the request. To make an error anormal, just to do following
+
 ```typescript
 return HTTPError.BAD_REQUEST(error).anormal();
 ```
+
 Note: `HTTPError.INTERNAL_ERROR()` is by default anormal.
 
 In summary, the API Gateway handler should return `Promise<HTTPError | HTTPResponse<T>>`:
@@ -798,11 +826,10 @@ The input type of the event bridge is of type `AwsEventBridgeEvent<T>`, and the 
 ```typescript
 declare const data: AwsEventBridgeEvent<any>;
 
-
-data.getData() // => T
-data.getSource() // Returns the event source field
-data.getDetailType() // Returns the event detail-type field
-data.getRawData() // Returns the raw underlying EventBridgeEvent<string, T> object
+data.getData(); // => T
+data.getSource(); // Returns the event source field
+data.getDetailType(); // Returns the event detail-type field
+data.getRawData(); // Returns the raw underlying EventBridgeEvent<string, T> object
 ```
 
 #### Output
@@ -810,6 +837,7 @@ data.getRawData() // Returns the raw underlying EventBridgeEvent<string, T> obje
 The event bridge lambda is not expect to return anything, but you may return if you so wishes. The value will be discarded.
 
 In the following cases will Sentry and Opentelemetry pick up errors:
+
 - When the schema doesn't validate the data
 - When an unhandled exception is thrown from the lambda
 
