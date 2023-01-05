@@ -161,7 +161,8 @@ describe('Testing API Controller factory', function () {
       .apiGatewayWrapperFactory('handler')
       .configureRuntime({}, { recordExceptionOnLambdaFail: true });
 
-    expect(wrapper.runtimeCfg).toMatchObject({
+    // @ts-ignore
+    expect(wrapper._runtimeCfg).toMatchObject({
       _general: { recordExceptionOnLambdaFail: true },
     });
 

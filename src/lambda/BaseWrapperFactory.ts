@@ -14,13 +14,18 @@ import { defaultSourceConfig } from '../util/defaultConfig';
 export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
   private _disableSentry: boolean;
   protected _messageType: MessageType;
-  runtimeCfg: SourceConfig;
+  public _runtimeCfg: SourceConfig;
+  public _handler: string;
+  public _secrets: Record<string, SecretConfig<any>>;
 
   constructor(protected mgr: LambdaFactoryManager<TSecretList>) {}
 
   protected fork(newEl: BaseWrapperFactory<TSecretList>) {
     newEl._disableSentry = this._disableSentry;
     newEl._messageType = this._messageType;
+    newEl._handler = this._handler;
+    newEl._runtimeCfg = this._runtimeCfg;
+    newEl._secrets = this._secrets;
   }
 
   public sentryDisable() {
@@ -29,7 +34,7 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
   }
 
   protected _configureRuntime(cfg: SourceConfig) {
-    this.runtimeCfg = cfg;
+    this._runtimeCfg = cfg;
     return this;
   }
 
@@ -58,7 +63,7 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
       secretInjection: expandedSecrets,
       sources: _.defaultsDeep(
         {},
-        this.runtimeCfg,
+        this._runtimeCfg,
         this.mgr.runtimeCfg,
         defaultSourceConfig
       ),
@@ -100,5 +105,23 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     if (this.sentryIsEnabled()) {
       AWSLambda.init(this.mgr.sentryCfg);
     }
+  }
+
+  protected _needsSecret(
+    source: string,
+    key: string,
+    secretName: string,
+    secretKey: string | undefined,
+    meta: any,
+    required: boolean
+  ) {
+    this._secrets = this._secrets || {};
+    this._secrets[key] = {
+      secret: secretName as string,
+      source,
+      meta,
+      secretKey: secretKey as string | undefined,
+      required,
+    };
   }
 }

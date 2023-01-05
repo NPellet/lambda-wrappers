@@ -20,6 +20,7 @@ describe('Testing API Controller factory', function () {
   it('All properties get copied', function () {
     const fac = new LambdaFactoryManager().snsWrapperFactory('ahandler');
     expect(fac).toBeInstanceOf(SNSHandlerWrapperFactory);
+    // @ts-ignore
     expect(fac._handler).toBe('ahandler');
 
     const fac2 = fac
@@ -31,7 +32,7 @@ describe('Testing API Controller factory', function () {
           a: yup.number(),
         })
       );
-
+    // @ts-ignore
     expect(fac2._handler).toBe('ahandler');
     expect(fac2._inputSchema).toBeInstanceOf(yup.ObjectSchema);
     expect(fac2._secrets.key).toStrictEqual({
@@ -115,7 +116,8 @@ describe('Testing API Controller factory', function () {
       .snsWrapperFactory('handler')
       .configureRuntime({}, { recordExceptionOnLambdaFail: true });
 
-    expect(wrapper.runtimeCfg).toMatchObject({
+    // @ts-ignore
+    expect(wrapper._runtimeCfg).toMatchObject({
       _general: { recordExceptionOnLambdaFail: true },
     });
 

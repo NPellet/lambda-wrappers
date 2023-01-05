@@ -68,7 +68,7 @@ describe('Testing BaseWrapperFactory features', function () {
   test('ExpandConfiguration expands in correct order', function () {
     class Fac extends BaseWrapperFactory<{}> {
       public cfg() {
-        this.runtimeCfg = {
+        this._runtimeCfg = {
           _general: {
             recordExceptionOnLambdaFail: true,
           },
@@ -79,7 +79,7 @@ describe('Testing BaseWrapperFactory features', function () {
       }
 
       public cfgEmpty() {
-        this.runtimeCfg = {};
+        this._runtimeCfg = {};
         return this.expandConfiguration({
           messageType: MessageType.Binary,
         });
@@ -87,7 +87,7 @@ describe('Testing BaseWrapperFactory features', function () {
 
       public cfgNull() {
         // @ts-ignore
-        this.runtimeCfg = undefined;
+        this._runtimeCfg = undefined;
         return this.expandConfiguration({
           messageType: MessageType.Binary,
         });
