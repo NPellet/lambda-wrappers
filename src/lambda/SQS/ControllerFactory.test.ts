@@ -155,6 +155,7 @@ describe('Testing SQS Wrapper factory', function () {
       },
     });
     // Verifying attribute has been copied
+    // @ts-ignore
     expect(controllerFactory._handler).toBe('create');
   });
 
@@ -165,6 +166,7 @@ describe('Testing SQS Wrapper factory', function () {
       .setHandler('create')
       .setTsInputType<null>();
 
+    // @ts-ignore
     expect(controllerFactory._handler).toBe('create');
   });
 
@@ -173,7 +175,8 @@ describe('Testing SQS Wrapper factory', function () {
       .sqsWrapperFactory('handler')
       .configureRuntime({}, { recordExceptionOnLambdaFail: true });
 
-    expect(wrapper.runtimeCfg).toMatchObject({
+    // @ts-ignore
+    expect(wrapper._runtimeCfg).toMatchObject({
       _general: { recordExceptionOnLambdaFail: true },
     });
 
