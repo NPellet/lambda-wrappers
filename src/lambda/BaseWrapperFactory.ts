@@ -1,20 +1,22 @@
-import { SecretConfig, TAllSecretRefs, TSecretRef } from './utils/secrets_manager';
+import {
+  SecretConfig,
+  TAllSecretRefs,
+  TSecretRef,
+} from './utils/secrets_manager';
 import type { LambdaFactoryManager } from './Manager';
-import { AWSLambda } from "@sentry/serverless";
+import { AWSLambda } from '@sentry/serverless';
 import { MessageType } from '../util/types';
 import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from 'yup';
 import { HandlerConfiguration, SourceConfig } from './config';
 import _ from 'lodash';
 import { defaultSourceConfig } from '../util/defaultConfig';
 
-
-export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
+export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
   private _disableSentry: boolean;
   protected _messageType: MessageType;
   runtimeCfg: SourceConfig;
 
-  constructor(protected mgr: LambdaFactoryManager<TSecretList>) {
-  }
+  constructor(protected mgr: LambdaFactoryManager<TSecretList>) {}
 
   protected fork(newEl: BaseWrapperFactory<TSecretList>) {
     newEl._disableSentry = this._disableSentry;
@@ -26,17 +28,16 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
     return this;
   }
 
-  protected _configureRuntime( cfg: SourceConfig ) {
+  protected _configureRuntime(cfg: SourceConfig) {
     this.runtimeCfg = cfg;
     return this;
   }
 
   protected sentryIsEnabled() {
-    return (!this._disableSentry && !("DISABLE_SENTRY" in process.env))
+    return !this._disableSentry && !('DISABLE_SENTRY' in process.env);
   }
 
   protected setMessageTypeFromSchema(schema: BaseSchema) {
-
     if (schema instanceof StringSchema) {
       this._messageType = MessageType.String;
     } else if (schema instanceof NumberSchema) {
@@ -46,48 +47,50 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
     }
   }
 
-  protected expandConfiguration<IF, SInput, SOutput, TSecrets extends string>( cfg: HandlerConfiguration<
-    IF,
-    SInput,
-    SOutput,
-    TSecrets
-  > ) : HandlerConfiguration<
-  IF,
-  SInput,
-  SOutput,
-  TSecrets
-> {
-
+  protected expandConfiguration<IF, SInput, SOutput, TSecrets extends string>(
+    cfg: HandlerConfiguration<IF, SInput, SOutput, TSecrets>
+  ): HandlerConfiguration<IF, SInput, SOutput, TSecrets> {
     const secrets = cfg.secretInjection;
-    const expandedSecrets = this.expandSecrets( secrets );
+    const expandedSecrets = this.expandSecrets(secrets);
 
-    return {...cfg, secretInjection: expandedSecrets, sources: _.defaultsDeep( {}, defaultSourceConfig, this.mgr.runtimeCfg, this.runtimeCfg)};
+    return {
+      ...cfg,
+      secretInjection: expandedSecrets,
+      sources: _.defaultsDeep(
+        {},
+        this.runtimeCfg,
+        this.mgr.runtimeCfg,
+        defaultSourceConfig
+      ),
+    };
   }
   /**
    * Adds pre-secrets to the list of user-defined secrets
    * @param secretsIn The secrets defined by the needsSecret() calls
    * @returns A list of expanded secrets (input secrets + necessary secrets to prefetch)
    */
-  protected expandSecrets( secretsIn: Record<string, SecretConfig<any>> | undefined ) {
+  protected expandSecrets(
+    secretsIn: Record<string, SecretConfig<any>> | undefined
+  ) {
     const sources = new Set<string>();
 
-    if( ! secretsIn ) {
+    if (!secretsIn) {
       return {};
     }
 
-    for( let i in secretsIn ) {
-      const source = secretsIn[ i ].source;
-      if( ! source || source === "aws" ) {
+    for (let i in secretsIn) {
+      const source = secretsIn[i].source;
+      if (!source || source === 'aws') {
         continue;
       }
 
-      sources.add( source );
+      sources.add(source);
     }
 
-    const secrets = Object.assign( {}, secretsIn );
-    if( this.mgr.preSecrets ) {
-      for( let source of sources.values() ) {
-        Object.assign( secrets, this.mgr.preSecrets[ source ] || {} );
+    const secrets = Object.assign({}, secretsIn);
+    if (this.mgr.preSecrets) {
+      for (let source of sources.values()) {
+        Object.assign(secrets, this.mgr.preSecrets[source] || {});
       }
     }
     return secrets;
@@ -95,7 +98,7 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs>{
 
   protected async init() {
     if (this.sentryIsEnabled()) {
-      AWSLambda.init(this.mgr.sentryCfg)
+      AWSLambda.init(this.mgr.sentryCfg);
     }
   }
 }

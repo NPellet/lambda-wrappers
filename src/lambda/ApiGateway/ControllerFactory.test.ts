@@ -151,6 +151,14 @@ describe('Testing API Controller factory', function () {
 
   it('runtimeConfiguration works', function () {
     const mgr = new LambdaFactoryManager()
+      .setRuntimeConfig({
+        _general: {
+          recordExceptionOnLambdaFail: false,
+        },
+        apiGateway: {
+          recordExceptionOnValidationFail: false,
+        },
+      })
       .apiGatewayWrapperFactory('handler')
       .configureRuntime(
         {
