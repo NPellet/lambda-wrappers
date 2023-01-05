@@ -157,11 +157,15 @@ describe('Testing API Controller factory', function () {
   });
 
   it('runtimeConfiguration works', function () {
-    const mgr = new LambdaFactoryManager()
+    const wrapper = new LambdaFactoryManager()
       .apiGatewayWrapperFactory('handler')
-      .configureRuntime({}, {});
+      .configureRuntime({}, { recordExceptionOnLambdaFail: true });
 
-    const cfg = mgr.createHandler(
+    expect(wrapper.runtimeCfg).toMatchObject({
+      _general: { recordExceptionOnLambdaFail: true },
+    });
+
+    const cfg = wrapper.createHandler(
       class Ctrl {
         static async init() {
           return new Ctrl();

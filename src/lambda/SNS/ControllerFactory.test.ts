@@ -111,19 +111,24 @@ describe('Testing API Controller factory', function () {
   });
 
   test('Runtime Configuration works', function () {
-    const { configuration } = new LambdaFactoryManager()
+    const wrapper = new LambdaFactoryManager()
       .snsWrapperFactory('handler')
-      .configureRuntime({}, {})
-      .createHandler(
-        class Ctrl {
-          static async init() {
-            return new Ctrl();
-          }
-          async handler() {
-            return;
-          }
+      .configureRuntime({}, { recordExceptionOnLambdaFail: true });
+
+    expect(wrapper.runtimeCfg).toMatchObject({
+      _general: { recordExceptionOnLambdaFail: true },
+    });
+
+    const { configuration } = wrapper.createHandler(
+      class Ctrl {
+        static async init() {
+          return new Ctrl();
         }
-      );
+        async handler() {
+          return;
+        }
+      }
+    );
 
     expect(spyOnExpandedConfiguration).toHaveBeenCalled();
   });
