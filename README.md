@@ -401,6 +401,7 @@ Routes definitions (1 file per handler, or more, but then you'd have to rename a
 ```typescript
 // Create.ts
 import Controller from 'path/to/controller';
+import manager from 'path/to/manager';
 const createHandlerWrapperFactory = manager.apiGatewayWrapperFactory('create');
 export type controllerInterface = CtrlInterfaceOf<
   typeof createHandlerWrapperFactory
@@ -412,6 +413,7 @@ export const { handler, configuration } =
 ```typescript
 // Read.ts
 import Controller from 'path/to/controller';
+import manager from 'path/to/manager';
 const readHandlerWrapperFactory = manager.apiGatewayWrapperFactory('read');
 export type controllerInterface = CtrlInterfaceOf<
   typeof readHandlerWrapperFactory
@@ -439,6 +441,7 @@ export class Controller // The controller must now implement 4 interfaces, 1 for
     return new Controller();
   }
 
+  // Implement your business logic below
   create: IfHandler<createInterface> = async (payload, secrets) => {};
   read: IfHandler<readInterface> = async (payload, secrets) => {};
   update: IfHandler<updateInterface> = async (payload, secrets) => {};
