@@ -14,12 +14,15 @@ import {
 import { HandlerConfiguration, LambdaType } from '../config';
 import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
-import { HTTPError, HTTPResponse } from '../../util/records/apigateway/response';
+import {
+  HTTPError,
+  HTTPResponse,
+} from '../../util/records/apigateway/response';
 import { wrapTelemetryApiGateway } from './telemetry/Wrapper';
 import otelapi, { SpanStatusCode } from '@opentelemetry/api';
 import { Request } from '../../util/records/apigateway/request';
-import { config } from 'process';
-
+import { wrapLatencyMetering } from '../utils/telemetry';
+import { getApiGatewayTelemetryAttributes } from './telemetry/Meter';
 /**
  * Make sure that the return format of the lambda matches what is expected from the API Gateway
  * @param handler
@@ -78,7 +81,7 @@ export const createApiGatewayHandler = <
       if (responseData instanceof Error) {
         if (responseData.stack) {
           outData = responseData.stack;
-        } else if( responseData.message ) {
+        } else if (responseData.message) {
           outData = responseData.message;
         } else {
           outData = String(responseData);
@@ -147,7 +150,7 @@ export const createApiGatewayHandler = <
     ...configuration,
   });
 
-  const apiGatewayHandler = async function handleAPIGateway(
+  let apiGatewayHandler = async function handleAPIGateway(
     event: APIGatewayEvent,
     context: Context,
     callback: Callback
@@ -177,15 +180,14 @@ export const createApiGatewayHandler = <
         return {
           statusCode: 500,
           headers: {},
-          body:
-            `Lambda input data malformed. Raw input data was "${request.getBody()}. Error was: ${e}`
+          body: `Lambda input data malformed. Raw input data was "${request.getBody()}. Error was: ${e}`,
         };
       }
 
       if (configuration.yupSchemaInput) {
         try {
           await configuration.yupSchemaInput.validate(data);
-          console.log("Valid !");
+          console.log('Valid !');
         } catch (e) {
           log.warn(
             `Lambda's input schema failed to validate. Returning statusCode 500 to the API Gateway`
@@ -252,6 +254,10 @@ export const createApiGatewayHandler = <
       };
     }
   };
+  apiGatewayHandler = wrapLatencyMetering(
+    apiGatewayHandler,
+    getApiGatewayTelemetryAttributes
+  );
 
   if (configuration.opentelemetry) {
     const wrapped = wrapTelemetryApiGateway(apiGatewayHandler);
@@ -261,4 +267,3 @@ export const createApiGatewayHandler = <
   }
   // return wrapAsyncStorage(apiGatewayHandler);
 };
-

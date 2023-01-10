@@ -11,8 +11,11 @@ import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
 import { BaseSchema } from 'yup';
 import { TOrSchema } from '../../util/types';
-import { wrapTelemetrySNS } from './telemetry/Wrapper';
-import { flush } from '../utils/telemetry';
+import {
+  getSNSTelemetryAttributes,
+  wrapTelemetrySNS,
+} from './telemetry/Wrapper';
+import { flush, wrapLatencyMetering } from '../utils/telemetry';
 import { AwsSNSRecord } from '../../util/records/sns/record';
 import { validateRecord } from '../../util/validateRecord';
 import { recordException } from '../../util/exceptions';
@@ -37,7 +40,7 @@ export const createSNSHandler = <
     ...configuration,
   });
 
-  const SNSWrappedHandler = async (
+  let SNSWrappedHandler = async (
     event: SNSEvent,
     context: Context,
     callback: Callback
@@ -69,6 +72,11 @@ export const createSNSHandler = <
       return;
     }
   };
+
+  SNSWrappedHandler = wrapLatencyMetering(
+    SNSWrappedHandler,
+    getSNSTelemetryAttributes
+  );
 
   if (configuration.opentelemetry) {
     return wrapTelemetrySNS(SNSWrappedHandler);

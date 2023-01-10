@@ -6,7 +6,11 @@ import { wrapGenericHandler } from '../Wrapper';
 import { BaseSchema, InferType, ObjectSchema } from 'yup';
 import { AwsEventBridgeEvent } from '../../util/records/eventbridge/eventbridge';
 import { recordException } from '../../util/exceptions';
-import { wrapTelemetryEventBridge } from './telemetry/Wrapper';
+import {
+  getEBTelemetryAttributes,
+  wrapTelemetryEventBridge,
+} from './telemetry/Wrapper';
+import { wrapLatencyMetering } from '../utils/telemetry';
 
 export const createEventBridgeHandler = <
   T,
@@ -35,7 +39,7 @@ export const createEventBridgeHandler = <
     ...configuration,
   });
 
-  const handler: Handler<EventBridgeEvent<string, V>> = async (
+  let EBWrappedHandler = async (
     event: EventBridgeEvent<string, V>,
     context: Context,
     callback: Callback
@@ -51,17 +55,19 @@ export const createEventBridgeHandler = <
       try {
         await configuration.yupSchemaInput.validate(_event.getData());
       } catch (e) {
-
-        log.warn(
-          `Lambda's input schema failed to validate.`
-        );
+        log.warn(`Lambda's input schema failed to validate.`);
         log.debug(e);
-        
-        if( configuration.sources?.eventBridge?.recordExceptionOnValidationFail ) {
-          recordException( e )
+
+        if (
+          configuration.sources?.eventBridge?.recordExceptionOnValidationFail
+        ) {
+          recordException(e);
         }
 
-        if( configuration.sources?.eventBridge?.failLambdaOnValidationFail ?? true ) {
+        if (
+          configuration.sources?.eventBridge?.failLambdaOnValidationFail ??
+          true
+        ) {
           throw e;
         }
 
@@ -72,12 +78,15 @@ export const createEventBridgeHandler = <
     return wrappedHandler(_event, context, callback);
   };
 
+  EBWrappedHandler = wrapLatencyMetering(
+    EBWrappedHandler,
+    getEBTelemetryAttributes
+  );
 
   if (configuration.opentelemetry) {
-    const wrapped = wrapTelemetryEventBridge(handler);
+    const wrapped = wrapTelemetryEventBridge(EBWrappedHandler);
     return wrapped;
   } else {
-    return handler;
+    return EBWrappedHandler;
   }
-
 };

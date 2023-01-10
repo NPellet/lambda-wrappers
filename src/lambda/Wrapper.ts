@@ -4,13 +4,16 @@ import {
   LambdaInitSecretHandler,
   LambdaSecretsHandler,
 } from '../util/LambdaHandler';
-import { HandlerConfigurationWithType } from './config';
+import { HandlerConfigurationWithType, METER_NAME } from './config';
 import { log } from './utils/logger';
 import { wrapHandlerSecretsManager } from './utils/secrets_manager';
 import { wrapSentry } from './utils/sentry';
-import { wrapTelemetryLambda } from './utils/telemetry';
+import {
+  getFaasTelemetryAttributes,
+  wrapTelemetryLambda,
+} from './utils/telemetry';
 import { ObjectSchema } from 'yup';
-
+import * as api from '@opentelemetry/api';
 export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
   handler: LambdaInitSecretHandler<U, TInit, TSecrets, V>,
   init?: (secrets: Record<TSecrets, string>) => Promise<TInit>
@@ -59,8 +62,7 @@ export const wrapGenericHandler = <
   TSecrets extends string
 >(
   handler: LambdaInitSecretHandler<T, TInit, TSecrets, U>,
-  configuration: HandlerConfigurationWithType<TInit, SInput, SOutput, TSecrets>,
-
+  configuration: HandlerConfigurationWithType<TInit, SInput, SOutput, TSecrets>
 ) => {
   // Needs to wrap before the secrets manager, because secrets should be available in the init phase
   let wrappedHandler = wrapBaseLambdaHandler(
@@ -68,7 +70,10 @@ export const wrapGenericHandler = <
     configuration.initFunction
   );
 
-  wrappedHandler = wrapRuntime(wrappedHandler, configuration.sources?._general?.recordExceptionOnLambdaFail);
+  wrappedHandler = wrapRuntime(
+    wrappedHandler,
+    configuration.sources?._general?.recordExceptionOnLambdaFail
+  );
   let wrappedHandlerWithSecrets = wrapHandlerSecretsManager(
     wrappedHandler,
     configuration.secretInjection ?? {},
@@ -89,14 +94,28 @@ const wrapRuntime = <T, TSecrets extends string, U>(
   handler: LambdaSecretsHandler<T, TSecrets, U>,
   recordExceptionOnFailure: boolean = true
 ) => {
+  const lambda_exec_counter = api.metrics
+    .getMeter(METER_NAME)
+    .createCounter('lambda_executions', {
+      valueType: api.ValueType.INT,
+    });
+  const lambda_error_counter = api.metrics
+    .getMeter(METER_NAME)
+    .createCounter('lambda_errors', {
+      valueType: api.ValueType.INT,
+    });
+
   return async function (event, secrets, context) {
+    const attributes = getFaasTelemetryAttributes(context);
+
     try {
       log.debug('Executing innermost handler');
+      lambda_exec_counter.add(1, attributes);
       return await handler(event, secrets, context);
     } catch (e) {
       log.error('Innermost lambda handler function has failed');
       log.error(e);
-
+      lambda_error_counter.add(1, attributes);
       log.debug('Recording diagnostic information and rethrowing');
       if (recordExceptionOnFailure) {
         recordException(e);
@@ -105,21 +124,3 @@ const wrapRuntime = <T, TSecrets extends string, U>(
     }
   };
 };
-/*
-export const localAsyncStorage = new AsyncLocalStorage<{
-  errorBag: ErrorBag;
-}>();
-
-export const wrapAsyncStorage = <T, U>(handler: (...args: T[]) => U) => {
-  return function (...args: T[]) {
-    return localAsyncStorage.run(
-      {
-        errorBag: new ErrorBag(),
-      },
-      () => {
-        return handler(...args);
-      }
-    );
-  };
-};
-*/

@@ -23,13 +23,9 @@ export class SNSHandlerWrapperFactory<
   SInput extends BaseSchema | undefined = undefined
 > extends BaseWrapperFactory<TSecretList> {
   public _inputSchema: SInput;
-  public __shimInput: TInput;
-  // public _handler: THandler;
   protected _messageType: MessageType = MessageType.String;
 
   setInputSchema<U extends BaseSchema>(schema: U) {
-    const constructor = this.constructor;
-
     const api = this.fork<TInput, TSecrets, THandler, U>();
     api._inputSchema = schema;
     api.setMessageTypeFromSchema(schema);

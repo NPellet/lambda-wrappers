@@ -32,7 +32,7 @@ export class APIGatewayHandlerWrapperFactory<
   public _secrets: Record<TSecrets, SecretConfig<any>>;
   //public _handler: THandler;
   public _inputSchema: SInput;
-  public __shimInput: TInput;
+  public: TInput;
   public __shimOutput: TOutput;
   protected _messageType: MessageType = MessageType.String;
 

@@ -13,8 +13,11 @@ import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
 import { BaseSchema } from 'yup';
 import { TOrSchema } from '../../util/types';
-import { wrapTelemetrySQS } from './Telemetry/Wrapper';
-import { flush } from '../utils/telemetry';
+import {
+  getSQSTelemetryAttributes,
+  wrapTelemetrySQS,
+} from './Telemetry/Wrapper';
+import { flush, wrapLatencyMetering } from '../utils/telemetry';
 import { validateRecord } from '../../util/validateRecord';
 import { AwsSQSRecord, failSQSRecord } from '../../util/records/sqs/record';
 import { recordException } from '../../util/exceptions';
@@ -46,13 +49,11 @@ export const createSQSHandler = <
     try {
       await validateRecord(_record, configuration.yupSchemaInput);
     } catch (e) {
-
-
-      if( configuration.sources?.sqs?.recordExceptionOnValidationFail ) {
-        recordException( e );
+      if (configuration.sources?.sqs?.recordExceptionOnValidationFail) {
+        recordException(e);
       }
 
-      if( configuration.sources?.sqs?.silenceRecordOnValidationFail ) {
+      if (configuration.sources?.sqs?.silenceRecordOnValidationFail) {
         return;
       } else {
         throw e;
@@ -66,19 +67,22 @@ export const createSQSHandler = <
     innerLoop = wrapTelemetrySQS(innerLoop);
   }
 
-
-  const _innerLoop = async ( record, context ) => {
+  const _innerLoop = async (record, context) => {
     try {
-      const out = await innerLoop( record, context )
+      const out = await innerLoop(record, context);
       return out;
-    } catch( e ) {
+    } catch (e) {
       // Do notrecord. Automatically recorded
       const _record = new AwsSQSRecord<V>(record, configuration.messageType);
       return failSQSRecord(_record);
     }
-  }
+  };
 
-  return async (event: SQSEvent, context: Context, callback: Callback) => {
+  let SQSWrappedHandler = async (
+    event: SQSEvent,
+    context: Context,
+    callback: Callback
+  ) => {
     log.info(`Received SQS event with  ${event.Records.length} records.`);
 
     const out = (await Promise.allSettled(
@@ -108,4 +112,11 @@ export const createSQSHandler = <
       batchItemFailures: out,
     };
   };
+
+  SQSWrappedHandler = wrapLatencyMetering(
+    SQSWrappedHandler,
+    getSQSTelemetryAttributes
+  );
+
+  return SQSWrappedHandler;
 };

@@ -79,3 +79,5 @@ export const enum LambdaType {
   SQS,
   GENERIC,
 }
+
+export const METER_NAME = 'aws-lambda-handlers';

@@ -1,8 +1,12 @@
-import otelapi, { trace, SpanKind, SpanStatusCode } from "@opentelemetry/api";
-import { Callback, Context, EventBridgeEvent, Handler } from "aws-lambda";
-import { log } from "../../utils/logger";
-import { flush, tracer } from "../../utils/telemetry";
-import { telemetryFindEventBridgeParent } from "./ParentContext";
+import otelapi, { trace, SpanKind, SpanStatusCode } from '@opentelemetry/api';
+import { Callback, Context, EventBridgeEvent, Handler } from 'aws-lambda';
+import { log } from '../../utils/logger';
+import {
+  flush,
+  getFaasTelemetryAttributes,
+  tracer,
+} from '../../utils/telemetry';
+import { telemetryFindEventBridgeParent } from './ParentContext';
 
 export const wrapTelemetryEventBridge = <T>(
   handler: Handler<EventBridgeEvent<string, T>>
@@ -18,15 +22,14 @@ export const wrapTelemetryEventBridge = <T>(
       {
         kind: SpanKind.SERVER,
         attributes: {
-          ["lendis.eventbridge.source"]: event.source,
-          ["lendis.eventbridge.type"]: event["detail-type"],
+          ['lendis.eventbridge.source']: event.source,
+          ['lendis.eventbridge.type']: event['detail-type'],
         },
       },
       parentCtx
     );
 
     try {
-      
       const out = await otelapi.context.with(
         trace.setSpan(parentCtx, eventBridgeSpan),
         () => {
@@ -38,9 +41,7 @@ export const wrapTelemetryEventBridge = <T>(
       eventBridgeSpan.end();
       await flush();
       return out;
-
     } catch (e) {
-      
       log.error('EventBridge lambda execution has errored. Goodbye');
       eventBridgeSpan.setStatus({ code: SpanStatusCode.ERROR });
       eventBridgeSpan.end();
@@ -48,5 +49,18 @@ export const wrapTelemetryEventBridge = <T>(
 
       throw e;
     }
+  };
+};
+
+export const getEBTelemetryAttributes = (
+  event: EventBridgeEvent<string, any>,
+  out: any,
+  context: Context
+) => {
+  return {
+    //  source: event.Records[0].EventSource,
+    source: event.source,
+    detailType: event['detail-type'],
+    ...getFaasTelemetryAttributes(context),
   };
 };
