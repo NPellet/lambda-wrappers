@@ -254,6 +254,7 @@ export const createApiGatewayHandler = <
       };
     }
   };
+
   apiGatewayHandler = wrapLatencyMetering(
     apiGatewayHandler,
     getApiGatewayTelemetryAttributes
