@@ -184,7 +184,7 @@ export const wrapLatencyMetering = <T, U>(
       return out;
     } finally {
       const ellapsed = process.hrtime(time);
-      const ellapsed_micro = ellapsed[0] * 1000 + ellapsed[1] / 1000000;
+      const ellapsed_micro = ellapsed[0] + ellapsed[1] / 1000000000;
 
       instrument?.record(ellapsed_micro, attributeGetter(data, out, ctx));
     }
