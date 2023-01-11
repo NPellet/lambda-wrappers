@@ -28,6 +28,8 @@ export type MetricNames = {
   lambda_cold_start: string;
   lambda_exec_time: string;
   http_requests_total: string;
+  sns_records_total: string;
+  sqs_records_total: string;
 };
 
 export type ConfigGeneral = Partial<{
