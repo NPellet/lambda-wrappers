@@ -19,15 +19,22 @@ Version 2 introduces a small breaking change when working with AWS secrets. In v
 Therefore, we had to introduce a change in the following signatures:
 
 ```typescript
-// Was:
-new LambdaFactoryManager().setSecrets( /*...*/ )
-// Now:
-new LamndaFactoryManager().setAWSSecrets( /*...*/ )
+// 1.x:
+new LambdaFactoryManager().setSecrets(/*...*/);
+// 2.x:
+new LambdaFactoryManager().setAWSSecrets(/*...*/);
 ////////////////////////////
-// Was:
-factory..needsSecret('key', 'secretName', 'secretKey', required) // required is bool
-// Is:
-factory.needsSecret('aws', 'key', 'secretName', 'secretKey', undefined, required )
+// 1.x:
+factory.needsSecret('key', 'secretName', 'secretKey', required); // required is bool
+// 2.x:
+factory.needsSecret(
+  'aws',
+  'key',
+  'secretName',
+  'secretKey',
+  undefined,
+  required
+);
 ```
 
 The reason behind those changes in reflected in the following documentation (under [Secret injection](#secret-injection))
@@ -98,7 +105,7 @@ This package provides an opiniated stack to insert additional logic in handling 
 
 ## How it works
 
-The idea behind this framework is to declare a **Lambda Manager**, which may be common across all your microservices. It alllows you to define which secrets are available, configure secret sources for other secret managers than the one provided by AWS and configure a base Sentry configuration for all your lambdas in all your services. The lambda manager is a common source of **Handler Wrappers**, for the API Gateway, SQS, SNS or for the EventBridge.
+With this framework, you start by declaring a **Lambda Manager**, which may be common across all your microservices. It allows to define which secrets are generally available (thereby getting autocompletion), configure secret sources for secret managers other than AWS and configure a base Sentry configuration for all your lambdas in all your services. The lambda manager is a common source of **Handler Wrappers**, for the API Gateway, SQS, SNS or for the EventBridge.
 
 Then, in each service, use the **Lambda Manager** to define a **Handler Wrapper**, which can be further configured (this time on a per-lambda basis) with secrets, static typings and schema validation. The **Handler Wrapper** provides a typescript interface which you should implement using a **Controller** (as simple as class defining 2 methods)
 
@@ -109,7 +116,7 @@ It may sound a bit overly complex, but after using it a bit, it will all make se
 ## <a name='Installation'></a>Installation
 
 ```bash
-npm i aws-lambda-wrappers
+npm i aws-lambda-handlers
 ```
 
 ## Features

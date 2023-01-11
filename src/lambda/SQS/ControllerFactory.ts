@@ -1,7 +1,7 @@
 import { BaseSchema, InferType } from 'yup';
 import {
   HandlerConfiguration,
-  SourceConfigGeneral,
+  ConfigGeneral,
   SourceConfigSQS,
 } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
@@ -96,7 +96,7 @@ export class SQSHandlerWrapperFactory<
     return api;
   }
 
-  configureRuntime(cfg: SourceConfigSQS, general: SourceConfigGeneral) {
+  configureRuntime(cfg: SourceConfigSQS, general: ConfigGeneral) {
     super._configureRuntime({
       _general: general,
       sqs: cfg,

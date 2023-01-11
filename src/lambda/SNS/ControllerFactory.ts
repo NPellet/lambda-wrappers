@@ -1,7 +1,7 @@
 import { BaseSchema, InferType } from 'yup';
 import {
   HandlerConfiguration,
-  SourceConfigGeneral,
+  ConfigGeneral,
   SourceConfigSNS,
 } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
@@ -102,7 +102,7 @@ export class SNSHandlerWrapperFactory<
     return api;
   }
 
-  configureRuntime(cfg: SourceConfigSNS, general: SourceConfigGeneral) {
+  configureRuntime(cfg: SourceConfigSNS, general: ConfigGeneral) {
     super._configureRuntime({
       _general: general,
       sns: cfg,

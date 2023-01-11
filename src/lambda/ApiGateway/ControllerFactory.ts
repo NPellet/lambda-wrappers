@@ -2,7 +2,7 @@ import { BaseSchema } from 'yup';
 import {
   HandlerConfiguration,
   SourceConfigAPIGateway,
-  SourceConfigGeneral,
+  ConfigGeneral,
 } from '../config';
 import {
   HTTPError,
@@ -118,7 +118,7 @@ export class APIGatewayHandlerWrapperFactory<
     newObj._outputSchema = this._outputSchema;
   }
 
-  configureRuntime(cfg: SourceConfigAPIGateway, general: SourceConfigGeneral) {
+  configureRuntime(cfg: SourceConfigAPIGateway, general: ConfigGeneral) {
     super._configureRuntime({
       _general: general,
       apiGateway: cfg,

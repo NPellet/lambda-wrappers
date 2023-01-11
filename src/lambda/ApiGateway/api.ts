@@ -1,6 +1,5 @@
 import {
   APIGatewayEvent,
-  APIGatewayProxyEvent,
   APIGatewayProxyResult,
   Callback,
   Context,
@@ -257,11 +256,15 @@ export const createApiGatewayHandler = <
 
   apiGatewayHandler = wrapLatencyMetering(
     apiGatewayHandler,
-    getApiGatewayTelemetryAttributes
+    getApiGatewayTelemetryAttributes,
+    configuration.sources?._general
   );
 
   if (configuration.opentelemetry) {
-    const wrapped = wrapTelemetryApiGateway(apiGatewayHandler);
+    const wrapped = wrapTelemetryApiGateway(
+      apiGatewayHandler,
+      configuration.sources?._general
+    );
     return wrapped;
   } else {
     return apiGatewayHandler;

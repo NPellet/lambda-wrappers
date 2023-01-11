@@ -21,15 +21,19 @@ import {
 import { flush, tracer } from '../../utils/telemetry';
 import { log } from '../../utils/logger';
 import { getApiGatewayTelemetryAttributes } from './Meter';
+import { ConfigGeneral, METER_NAME } from '../../config';
 
 export const wrapTelemetryApiGateway = <T, U>(
-  handler: Handler<APIGatewayProxyEvent, APIGatewayProxyResult>
+  handler: Handler<APIGatewayProxyEvent, APIGatewayProxyResult>,
+  config: ConfigGeneral | undefined
 ) => {
-  const http_response_counter = metrics
-    .getMeter('aws-lambda-handlers')
-    .createCounter('http_response', {
-      valueType: otelapi.ValueType.INT,
-    });
+  const http_response_counter = config?.metricNames?.http_statuscode_total
+    ? metrics
+        .getMeter(METER_NAME)
+        .createCounter(config?.metricNames?.http_statuscode_total, {
+          valueType: otelapi.ValueType.INT,
+        })
+    : undefined;
 
   return async function (
     event: APIGatewayProxyEvent,
@@ -111,7 +115,7 @@ export const wrapTelemetryApiGateway = <T, U>(
         span.setStatus({ code: SpanStatusCode.ERROR });
       }
 
-      http_response_counter.add(
+      http_response_counter?.add(
         1,
         getApiGatewayTelemetryAttributes(event, out, context)
       );

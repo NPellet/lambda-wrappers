@@ -80,7 +80,8 @@ export const createEventBridgeHandler = <
 
   EBWrappedHandler = wrapLatencyMetering(
     EBWrappedHandler,
-    getEBTelemetryAttributes
+    getEBTelemetryAttributes,
+    configuration.sources?._general
   );
 
   if (configuration.opentelemetry) {

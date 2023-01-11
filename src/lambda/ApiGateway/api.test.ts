@@ -53,7 +53,12 @@ describe('API Gateway. Sanitizing outputs', function () {
   const cfg: HandlerConfiguration = {
     type: LambdaType.GENERIC,
     secretInjection: {},
-    messageType: MessageType.Number
+    sources: {
+      _general: {
+        recordExceptionOnLambdaFail: true,
+      },
+    },
+    messageType: MessageType.Number,
   };
 
   afterEach(() => {
@@ -86,7 +91,7 @@ describe('API Gateway. Sanitizing outputs', function () {
     expect(out.body).toContain('The lambda execution for the API Gateway ');
     expect(recordException).toHaveBeenCalled();
   });
-  
+
   it('Reports stack trace when HTTPError has payload of instance Error', async () => {
     const handler = createApiGatewayHandler(unauthorizedWithErrorLHandler, cfg);
     const out = await handler(event, LambdaContext, () => {});
@@ -147,12 +152,11 @@ describe('API Gateway. Sanitizing outputs', function () {
 });
 
 describe('API Gateway: Telemetry', function () {
-  
   const cfg: HandlerConfiguration = {
     type: LambdaType.API_GATEWAY,
     secretInjection: {},
     opentelemetry: true,
-    messageType: MessageType.Number
+    messageType: MessageType.Number,
   };
 
   afterEach(() => {
@@ -180,9 +184,7 @@ describe('API Gateway: Telemetry', function () {
     expect(spans[0].parentSpanId).toBe(spans[1].spanContext().spanId);
   });
 
-
-  test("Telemetry wrapper is called depending on otel flag", async () => {
-
+  test('Telemetry wrapper is called depending on otel flag', async () => {
     createApiGatewayHandler(
       async (request) => {
         return HTTPResponse.OK_NO_CONTENT();
@@ -194,11 +196,11 @@ describe('API Gateway: Telemetry', function () {
       }
     );
 
-    expect( wrapTelemetryApiGateway ).toHaveBeenCalled();
+    expect(wrapTelemetryApiGateway).toHaveBeenCalled();
 
     jest.clearAllMocks();
 
-     createApiGatewayHandler(
+    createApiGatewayHandler(
       async (request) => {
         return HTTPResponse.OK_NO_CONTENT();
       },
@@ -208,8 +210,8 @@ describe('API Gateway: Telemetry', function () {
       }
     );
 
-    expect( wrapTelemetryApiGateway ).not.toHaveBeenCalled();
-  })
+    expect(wrapTelemetryApiGateway).not.toHaveBeenCalled();
+  });
 
   it('A normal HTTP Error does not create an exception, puts the outer span to Error when returning 500', async () => {
     const handler = createApiGatewayHandler(errorLHandler, cfg);
@@ -270,14 +272,18 @@ describe('API Gateway: Telemetry', function () {
 
 describe('API Gateway: Checking schemas', () => {
   it('Deserialization errors are handled', async () => {
-    const handler = createApiGatewayHandler(async (request) => {
-      return HTTPResponse.OK('Ok');
-    }, {
-      messageType: MessageType.Object,});
+    const handler = createApiGatewayHandler(
+      async (request) => {
+        return HTTPResponse.OK('Ok');
+      },
+      {
+        messageType: MessageType.Object,
+      }
+    );
 
     const wrongObjectGatewayEvent = _.cloneDeep(testApiGatewayEvent);
     wrongObjectGatewayEvent.body = 'Wrong json[]';
-  //  wrongObjectGatewayEvent.headers['Content-Type'] = 'application/json';
+    //  wrongObjectGatewayEvent.headers['Content-Type'] = 'application/json';
 
     await expect(
       handler(wrongObjectGatewayEvent, LambdaContext, () => {})
@@ -302,9 +308,8 @@ describe('API Gateway: Checking schemas', () => {
       }
     );
 
-
-    const clonedTest = _.cloneDeep( testApiGatewayEvent );
-    clonedTest.body = JSON.stringify({"b": "c"})
+    const clonedTest = _.cloneDeep(testApiGatewayEvent);
+    clonedTest.body = JSON.stringify({ b: 'c' });
     await expect(
       handler(clonedTest, LambdaContext, () => {})
     ).resolves.toMatchObject({
@@ -339,8 +344,7 @@ describe('API Gateway: Checking schemas', () => {
         return HTTPResponse.OK(data);
       },
       {
-
-      messageType: MessageType.String,
+        messageType: MessageType.String,
         yupSchemaOutput: yup.object({
           outputField: yup.number().required(),
         }),

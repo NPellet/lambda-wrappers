@@ -75,7 +75,8 @@ export const createSNSHandler = <
 
   SNSWrappedHandler = wrapLatencyMetering(
     SNSWrappedHandler,
-    getSNSTelemetryAttributes
+    getSNSTelemetryAttributes,
+    configuration.sources?._general
   );
 
   if (configuration.opentelemetry) {

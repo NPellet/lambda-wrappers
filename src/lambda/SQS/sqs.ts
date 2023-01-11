@@ -115,7 +115,8 @@ export const createSQSHandler = <
 
   SQSWrappedHandler = wrapLatencyMetering(
     SQSWrappedHandler,
-    getSQSTelemetryAttributes
+    getSQSTelemetryAttributes,
+    configuration.sources?._general
   );
 
   return SQSWrappedHandler;
