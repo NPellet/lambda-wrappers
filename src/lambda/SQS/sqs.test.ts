@@ -1,5 +1,9 @@
 import _ from 'lodash';
-import { LambdaContext, memoryExporter } from '../../test_utils/utils';
+import {
+  LambdaContext,
+  memoryExporter,
+  testSQSRecord,
+} from '../../test_utils/utils';
 import * as yup from 'yup';
 import { SQSRecord } from 'aws-lambda';
 import { createSQSHandler } from './sqs';
@@ -15,24 +19,6 @@ import { recordException } from '../../util/exceptions';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { MessageType } from '../../util/types';
 
-const testRecord: SQSRecord = {
-  messageId: 'abc',
-  receiptHandle: 'abc',
-  body: JSON.stringify({ b: 'abc' }),
-  attributes: {
-    AWSTraceHeader: 'abc',
-    ApproximateReceiveCount: 'abc',
-    SentTimestamp: 'abc',
-    SenderId: 'abc',
-    ApproximateFirstReceiveTimestamp: 'abc',
-  },
-  messageAttributes: {},
-  md5OfBody: 'abc',
-  eventSource: 'abc',
-  eventSourceARN: 'abc',
-  awsRegion: 'abc',
-};
-
 describe('Testing SQS Handler wrapper', function () {
   afterEach(() => {
     jest.clearAllMocks();
@@ -46,7 +32,7 @@ describe('Testing SQS Handler wrapper', function () {
     await expect(
       handler(
         {
-          Records: [testRecord],
+          Records: [testSQSRecord],
         },
         LambdaContext,
         () => {}
@@ -67,7 +53,7 @@ describe('Testing SQS Handler wrapper', function () {
     await expect(
       handler(
         {
-          Records: [{ ...testRecord, body: 'abc' }],
+          Records: [{ ...testSQSRecord, body: 'abc' }],
         },
         LambdaContext,
         () => {}
@@ -75,7 +61,7 @@ describe('Testing SQS Handler wrapper', function () {
     ).resolves.toMatchObject({
       batchItemFailures: [
         {
-          itemIdentifier: testRecord.messageId,
+          itemIdentifier: testSQSRecord.messageId,
         },
       ],
     });
@@ -94,7 +80,7 @@ describe('Testing SQS Handler wrapper', function () {
     await expect(
       handler(
         {
-          Records: [testRecord],
+          Records: [testSQSRecord],
         },
         LambdaContext,
         () => {}
@@ -102,7 +88,7 @@ describe('Testing SQS Handler wrapper', function () {
     ).resolves.toMatchObject({
       batchItemFailures: [
         {
-          itemIdentifier: testRecord.messageId,
+          itemIdentifier: testSQSRecord.messageId,
         },
       ],
     });
@@ -128,7 +114,7 @@ describe('Testing SQS Handler wrapper', function () {
     await expect(
       handler(
         {
-          Records: [testRecord],
+          Records: [testSQSRecord],
         },
         LambdaContext,
         () => {}
@@ -136,7 +122,7 @@ describe('Testing SQS Handler wrapper', function () {
     ).resolves.toMatchObject({
       batchItemFailures: [
         {
-          itemIdentifier: testRecord.messageId,
+          itemIdentifier: testSQSRecord.messageId,
         },
       ],
     });
@@ -155,7 +141,7 @@ describe('Testing SQS Opentelemetry', function () {
     await expect(
       handler(
         {
-          Records: [testRecord, testRecord],
+          Records: [testSQSRecord, testSQSRecord],
         },
         LambdaContext,
         () => {}
@@ -185,7 +171,7 @@ describe('Testing SQS Opentelemetry', function () {
     await expect(
       handler(
         {
-          Records: [testRecord],
+          Records: [testSQSRecord],
         },
         LambdaContext,
         () => {}
@@ -217,7 +203,7 @@ describe('Testing SQS Opentelemetry', function () {
     await expect(
       handler(
         {
-          Records: [testRecord],
+          Records: [testSQSRecord],
         },
         LambdaContext,
         () => {}
@@ -245,7 +231,7 @@ describe('SQS: Runtime config', function () {
     });
 
     await expect(
-      handler({ Records: [testRecord] }, LambdaContext, () => {})
+      handler({ Records: [testSQSRecord] }, LambdaContext, () => {})
     ).resolves.toStrictEqual({ batchItemFailures: [] });
 
     const handler2 = createSQSHandler(async () => {}, {
@@ -261,7 +247,7 @@ describe('SQS: Runtime config', function () {
     });
 
     await expect(
-      handler2({ Records: [testRecord] }, LambdaContext, () => {})
+      handler2({ Records: [testSQSRecord] }, LambdaContext, () => {})
     ).resolves.toStrictEqual({
       batchItemFailures: [{ itemIdentifier: 'abc' }],
     });
@@ -280,7 +266,7 @@ describe('SQS: Runtime config', function () {
       }),
       messageType: MessageType.String,
     });
-    await handler({ Records: [testRecord] }, LambdaContext, () => {});
+    await handler({ Records: [testSQSRecord] }, LambdaContext, () => {});
     expect(recordException).toHaveBeenCalled();
 
     jest.clearAllMocks();
@@ -299,7 +285,7 @@ describe('SQS: Runtime config', function () {
       messageType: MessageType.String,
     });
 
-    await handler2({ Records: [testRecord] }, LambdaContext, () => {});
+    await handler2({ Records: [testSQSRecord] }, LambdaContext, () => {});
 
     expect(recordException).not.toHaveBeenCalled();
   });

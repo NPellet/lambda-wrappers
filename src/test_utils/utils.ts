@@ -27,6 +27,7 @@ import {
   EventBridgeEvent,
   SNSEvent,
   SNSEventRecord,
+  SQSEvent,
 } from 'aws-lambda';
 import { APIGatewayHandlerWrapperFactory } from '../lambda/ApiGateway/ControllerFactory';
 
@@ -209,6 +210,28 @@ export const testSNSRecord: SNSEventRecord = {
     Type: '',
     UnsubscribeUrl: '',
   },
+};
+
+export const testSQSRecord = {
+  messageId: 'abc',
+  receiptHandle: 'abc',
+  body: JSON.stringify({ b: 'abc' }),
+  attributes: {
+    AWSTraceHeader: 'abc',
+    ApproximateReceiveCount: 'abc',
+    SentTimestamp: 'abc',
+    SenderId: 'abc',
+    ApproximateFirstReceiveTimestamp: 'abc',
+  },
+  messageAttributes: {},
+  md5OfBody: 'abc',
+  eventSource: 'abc',
+  eventSourceARN: 'abc',
+  awsRegion: 'abc',
+};
+
+export const testSQSEvent: SQSEvent = {
+  Records: [testSQSRecord, testSQSRecord],
 };
 
 export const testSNSEvent: SNSEvent = {

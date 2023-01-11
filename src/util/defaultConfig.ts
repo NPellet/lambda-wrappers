@@ -9,6 +9,8 @@ export const defaultSourceConfig: SourceConfig = {
       lambda_cold_start: 'lambda_coldstart_total',
       lambda_exec_time: 'lambda_exec_time',
       http_requests_total: 'http_requests_total',
+      sns_records_total: 'sns_records_total',
+      sqs_records_total: 'sqs_records_total',
     },
   },
   eventBridge: {
