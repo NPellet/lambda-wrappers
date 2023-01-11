@@ -64,7 +64,7 @@ export const createSQSHandler = <
   };
 
   if (configuration.opentelemetry) {
-    innerLoop = wrapTelemetrySQS(innerLoop);
+    innerLoop = wrapTelemetrySQS(innerLoop, configuration.sources?._general);
   }
 
   const _innerLoop = async (record, context) => {

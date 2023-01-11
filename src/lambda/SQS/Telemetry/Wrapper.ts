@@ -11,16 +11,25 @@ import { getFaasTelemetryAttributes, tracer } from '../../utils/telemetry';
 import { log } from '../../utils/logger';
 import { telemetryFindSQSParent } from './ParentContext';
 import { getAwsResourceFromArn } from '../../../util/aws';
+import { ConfigGeneral, METER_NAME } from '../../config';
 
 export const wrapTelemetrySQS = <T, U>(
   handler: (
     record: SQSRecord,
     context: Context
-  ) => Promise<void | SQSBatchItemFailure>
+  ) => Promise<void | SQSBatchItemFailure>,
+  config: ConfigGeneral | undefined
 ) => {
+  const sqs_message_counter = config?.metricNames?.sqs_records_total
+    ? otelapi.metrics
+        .getMeter(METER_NAME)
+        .createCounter(config?.metricNames?.sqs_records_total, {
+          valueType: otelapi.ValueType.INT,
+        })
+    : undefined;
+
   return async function (event: SQSRecord, context: Context) {
     const parentContext = telemetryFindSQSParent(event);
-    const eventData = event;
 
     let attributes: Attributes = {
       [SemanticAttributes.MESSAGE_TYPE]: MessageTypeValues.RECEIVED,
@@ -33,7 +42,10 @@ export const wrapTelemetrySQS = <T, U>(
       [SemanticAttributes.MESSAGE_ID]: event.messageId,
     };
 
-    event.eventSource;
+    sqs_message_counter?.add(
+      1,
+      getSQSRecordTelemetryAttributes(event, context)
+    );
 
     const span = tracer.startSpan(
       'SQS: ' + getAwsResourceFromArn(event.eventSourceARN),
@@ -69,13 +81,24 @@ export const wrapTelemetrySQS = <T, U>(
   };
 };
 
+export const getSQSRecordTelemetryAttributes = (
+  record: SQSRecord,
+  context: Context
+) => {
+  return {
+    region: record.awsRegion,
+    source: record.eventSource,
+    ...getFaasTelemetryAttributes(context),
+  };
+};
+
 export const getSQSTelemetryAttributes = (
   event: SQSEvent,
   out: any,
   context: Context
 ) => {
   return {
-    num_records: String(event.Records.length),
+    //num_records: String(event.Records.length),
     ...getFaasTelemetryAttributes(context),
   };
 };

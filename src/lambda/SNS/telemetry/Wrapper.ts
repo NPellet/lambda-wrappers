@@ -23,8 +23,20 @@ import {
 import { telemetryFindSNSParent } from './ParentContext';
 import { getAwsResourceFromArn } from '../../../util/aws';
 import { log } from '../../utils/logger';
+import { ConfigGeneral, METER_NAME } from '../../config';
 
-export const wrapTelemetrySNS = <T, U>(handler: Handler<SNSEvent>) => {
+export const wrapTelemetrySNS = <T, U>(
+  handler: Handler<SNSEvent>,
+  config: ConfigGeneral | undefined
+) => {
+  const sns_message_counter = config?.metricNames?.sns_records_total
+    ? otelapi.metrics
+        .getMeter(METER_NAME)
+        .createCounter(config?.metricNames?.sns_records_total, {
+          valueType: otelapi.ValueType.INT,
+        })
+    : undefined;
+
   return async function (
     event: SNSEvent,
     context: Context,
@@ -52,6 +64,10 @@ export const wrapTelemetrySNS = <T, U>(handler: Handler<SNSEvent>) => {
       parentContext
     );
 
+    sns_message_counter?.add(
+      1,
+      getSNSTelemetryAttributes(event, undefined, context)
+    );
     // No flushing, we're in the inner loop
     try {
       const out = await otelapi.context.with(
@@ -78,6 +94,7 @@ export const getSNSTelemetryAttributes = (
 ) => {
   return {
     //  source: event.Records[0].EventSource,
+    source: event.Records[0].EventSource,
     topic: event.Records[0].Sns.TopicArn,
     ...getFaasTelemetryAttributes(context),
   };

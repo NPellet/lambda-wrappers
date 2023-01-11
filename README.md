@@ -53,51 +53,53 @@ AWS Lambda's are a great piece of engineering and makes our life easier, but the
 This package provides an opiniated stack to insert additional logic in handling lambdas triggered from the API Gateway, the Event Bridge, SQS and SNS (and we will be adding more sources later !).
 
 <!-- vscode-markdown-toc -->
-
-- [Breaking changes in v2.x](#Breakingchangesinv2.x)
-- [Why ?](#Why)
-- [How it works](#Howitworks)
-- [Installation](#Installation)
-- [Features](#Features)
-- [Demo Usage](#DemoUsage)
-  - [1. Create a service-wide (or cross-service) manager](#Createaservice-wideorcross-servicemanager)
-  - [2. Create a route / event handler using the manager](#Createarouteeventhandlerusingthemanager)
-  - [3. Create a controller](#Createacontroller)
-- [Details](#Details)
-  - [Triggering from different AWS sources](#TriggeringfromdifferentAWSsources)
-  - [Notes on immutability](#Notesonimmutability)
-  - [Handler method name](#Handlermethodname)
-- [Detailed Usage](#DetailedUsage)
-  - [Main exports](#Mainexports)
-  - [Complete example](#Completeexample)
-  - [Notes on the Wrapper Factory](#NotesontheWrapperFactory)
-  - [Other notes](#Othernotes)
-  - [Implementing a controller](#Implementingacontroller)
-  - [Implementing multiple routes / events in a controller](#Implementingmultiplerouteseventsinacontroller)
-- [Type system](#Typesystem)
-- [JSON, String, Number or Buffer ?](#JSONStringNumberorBuffer)
-- [Metering](#Metering)
-  - [General metrics](#Generalmetrics)
-  - [API Gateway](#APIGateway)
-- [Using Sentry](#UsingSentry)
-  - [Disabling Sentry](#DisablingSentry)
-- [Secret injection](#Secretinjection)
-  - [Dealing with Key-Value Secrets](#DealingwithKey-ValueSecrets)
-  - [Dealing with String Secrets](#DealingwithStringSecrets)
-  - [Providing a secret list to the manager](#Providingasecretlisttothemanager)
-  - [Providing alternative secret sources](#Providingalternativesecretsources)
-- [Configuring runtime](#Configuringruntime)
-  - [Manager level](#Managerlevel)
-  - [Wrapper handler level](#Wrapperhandlerlevel)
-- [Specificifities](#Specificifities)
-  - [API Gateway](#APIGateway-1)
-    - [Input](#Input)
-    - [Output](#Output)
-    - [Error handling](#Errorhandling)
-  - [Event Bridge](#EventBridge)
-    - [Input](#Input-1)
-    - [Output](#Output-1)
-- [A note on error handling in controllers](#Anoteonerrorhandlingincontrollers)
+- [AWS Lambda Wrappers](#aws-lambda-wrappers)
+  - [Breaking changes in v2.x](#breaking-changes-in-v2x)
+  - [Why ?](#why-)
+  - [How it works](#how-it-works)
+  - [Installation](#installation)
+  - [Features](#features)
+  - [Demo Usage](#demo-usage)
+    - [1. Create a service-wide (or cross-service) manager](#1-create-a-service-wide-or-cross-service-manager)
+    - [2. Create a route / event handler using the manager](#2-create-a-route--event-handler-using-the-manager)
+    - [3. Create a controller](#3-create-a-controller)
+  - [Details](#details)
+    - [Triggering from different AWS sources](#triggering-from-different-aws-sources)
+    - [Notes on immutability](#notes-on-immutability)
+    - [Handler method name](#handler-method-name)
+  - [Detailed Usage](#detailed-usage)
+    - [Main exports](#main-exports)
+    - [Complete example](#complete-example)
+    - [Notes on the Wrapper Factory](#notes-on-the-wrapper-factory)
+    - [Other notes](#other-notes)
+    - [Implementing a controller](#implementing-a-controller)
+    - [Implementing multiple routes / events in a controller](#implementing-multiple-routes--events-in-a-controller)
+  - [Type system](#type-system)
+  - [JSON, String, Number or Buffer ?](#json-string-number-or-buffer-)
+  - [Metering](#metering)
+    - [General metrics](#general-metrics)
+    - [API Gateway](#api-gateway)
+    - [SNS](#sns)
+    - [SQS](#sqs)
+  - [Using Sentry](#using-sentry)
+    - [Disabling Sentry](#disabling-sentry)
+  - [Secret injection](#secret-injection)
+    - [Dealing with Key-Value Secrets](#dealing-with-key-value-secrets)
+    - [Dealing with String Secrets](#dealing-with-string-secrets)
+    - [Providing a secret list to the manager](#providing-a-secret-list-to-the-manager)
+    - [Providing alternative secret sources](#providing-alternative-secret-sources)
+  - [Configuring runtime](#configuring-runtime)
+    - [Manager level](#manager-level)
+    - [Wrapper handler level](#wrapper-handler-level)
+  - [Specificifities](#specificifities)
+    - [API Gateway](#api-gateway-1)
+      - [Input](#input)
+      - [Output](#output)
+      - [Error handling](#error-handling)
+    - [Event Bridge](#event-bridge)
+      - [Input](#input-1)
+      - [Output](#output-1)
+  - [A note on error handling in controllers](#a-note-on-error-handling-in-controllers)
 
 <!-- vscode-markdown-toc-config
 	numbering=false
@@ -493,15 +495,29 @@ Note that you can change the name of the metrics using the `.configureRuntime()`
 
 - `lambda_exec_total` (counter): Number of total lambda invocations
 - `lambda_error_total` (counter): Number of errored invocations (any lambda that throws an unhandled error)
-- `lambda_cold_start` (counter): Number of cold starts
+- `lambda_cold_start_total` (counter): Number of cold starts
 - `lambda_exec_time` (counter): Execution time in seconds
 
 ### <a name='APIGateway'></a>API Gateway
 
 In addition, the API Gateway will record
 
-- `http_requests_total` (counter): HTTP Request (equals `lambda_exec_total`) with added cardinality by status code and by HTTP method
+- `http_requests_total` (counter): HTTP Request (equals `lambda_exec_total`) with added cardinality by:
+  - Status code (`status_code`)
+  - HTTP method (`method`)
 
+### <a name='SNS'></a>SNS
+
+- `sns_records_total` (counter): Total number of SNS records (equals `lambda_exec_total` given that SNS can receive only 1 record at the time) with added cardinality by
+  - Topic (`topic`)
+  - Event source (`source`)
+
+### <a name='SQS'></a>SQS
+
+- `sqs_records_total` (counter): Total number of SQS records (is larger or equal to `lambda_exec_total` given that SQS can process multiple records at the time) with added cardinality by
+  - Event source (`source`) (the name of the queue)
+  - AWS Region (`region`)
+  
 Note that an failed invocation counts towards a status 500
 
 ## <a name='UsingSentry'></a>Using Sentry

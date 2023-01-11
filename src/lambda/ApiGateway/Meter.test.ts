@@ -72,7 +72,7 @@ describe('Testing API Gateway metering', function () {
       metrics.find(
         (m) =>
           m.descriptor.name ===
-          defaultSourceConfig._general?.metricNames?.lambda_cold_start
+          defaultSourceConfig._general?.metricNames?.lambda_cold_start_total
       )?.dataPoints[0].value
     ).toBe(1);
 
