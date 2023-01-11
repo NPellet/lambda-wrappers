@@ -28,10 +28,10 @@ export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
   let isInit: boolean = false;
   let initValue: TInit;
 
-  const lambda_coldstart_counter = config?.metricNames?.lambda_cold_start
+  const lambda_coldstart_counter = config?.metricNames?.lambda_cold_start_total
     ? api.metrics
         .getMeter(METER_NAME)
-        .createCounter(config?.metricNames?.lambda_cold_start, {
+        .createCounter(config?.metricNames?.lambda_cold_start_total, {
           valueType: api.ValueType.INT,
         })
     : undefined;

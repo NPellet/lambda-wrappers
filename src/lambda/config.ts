@@ -25,7 +25,7 @@ export type SourceConfigAPIGateway = Partial<{
 export type MetricNames = {
   lambda_invocations: string;
   lambda_errors: string;
-  lambda_cold_start: string;
+  lambda_cold_start_total: string;
   lambda_exec_time: string;
   http_requests_total: string;
   sns_records_total: string;
