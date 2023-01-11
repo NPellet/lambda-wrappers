@@ -274,9 +274,9 @@ export const { handler, configuration } =
 
 This package exposes 3 main objects you may want to import:
 
-- class `LambdaFactoryManager`, which you use to create any handler
-- type `CtrlInterfaceOf`, which derives the WrapperFactory into a TS interface to be implemented by the controller
-- type `IfHandler`, which stands for "interface handler", and informs the controller handler about the parameter type (see examples).
+- `class LambdaFactoryManager`, which is used to create a WrapperFactory (1 type per event source), used to then create the AWS Lambda handler
+- `type CtrlInterfaceOf`, which derives the WrapperFactory into a TS interface to be implemented by the controller
+- `type IfHandler`, which stands for "interface handler", and informs the controller handler about the parameter type (see examples).
 
 ### <a name='Completeexample'></a>Complete example
 
@@ -336,7 +336,7 @@ export class MyController implements controllerInterface {
 
 ### <a name='NotesontheWrapperFactory'></a>Notes on the Wrapper Factory
 
-- `manager.apiGatewayWrapperFactory()` (and similarly for all other event sources) is to be done for every lambda that you wish to create. Its only argument defines the name of the handler function to be implemented in the controller
+- `manager.apiGatewayWrapperFactory()` (and similarly for all other event sources) must be called for every lambda that must be created. It takes a single argument: the name of the handler function to be implemented in the controller
 - `.setTsInputType<T>()` informs the interface on the input type you're expected to receive. We're not talking about the raw type (e.g. `APIGatewayEvent`), but rather
   - The `body` field for the API gateway (will be JSON.parse'd if the Content-Type is application/json)
   - The `detail` field for the Event Bridge
