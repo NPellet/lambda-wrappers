@@ -80,7 +80,7 @@ export const createSNSHandler = <
   );
 
   if (configuration.opentelemetry) {
-    return wrapTelemetrySNS(SNSWrappedHandler);
+    return wrapTelemetrySNS(SNSWrappedHandler, configuration.sources?._general);
   } else {
     return SNSWrappedHandler;
   }
