@@ -10,7 +10,7 @@
 
 Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup and Secret prefetching
 
-## Breaking changes in v2.x
+## <a name='Breakingchangesinv2.x'></a>Breaking changes in v2.x
 
 The only changes between v2.x and v1.x are in the handling of the secrets.
 For the documentation of v1.x, see [documentation](https://www.npmjs.com/package/aws-lambda-handlers/v/1.0.31)
@@ -39,7 +39,7 @@ factory.needsSecret(
 
 The reason behind those changes in reflected in the following documentation (under [Secret injection](#secret-injection))
 
-## Why ?
+## <a name='Why'></a>Why ?
 
 AWS Lambda's are a great piece of engineering and makes our life easier, but they're pretty "raw". For example, it would be pretty useful to:
 
@@ -54,48 +54,50 @@ This package provides an opiniated stack to insert additional logic in handling 
 
 <!-- vscode-markdown-toc -->
 
-- [AWS Lambda Wrappers](#aws-lambda-wrappers)
-  - [Breaking changes in v2.x](#breaking-changes-in-v2x)
-  - [Why ?](#why-)
-  - [How it works](#how-it-works)
-  - [Installation](#installation)
-  - [Features](#features)
-  - [Demo Usage](#demo-usage)
-    - [1. Create a service-wide (or cross-service) manager](#1-create-a-service-wide-or-cross-service-manager)
-    - [2. Create a route / event handler using the manager](#2-create-a-route--event-handler-using-the-manager)
-    - [3. Create a controller](#3-create-a-controller)
-  - [Details](#details)
-    - [Triggering from different AWS sources](#triggering-from-different-aws-sources)
-    - [Notes on immutability](#notes-on-immutability)
-    - [Handler method name](#handler-method-name)
-  - [Detailed Usage](#detailed-usage)
-    - [Main exports](#main-exports)
-    - [Complete example](#complete-example)
-    - [Notes on the Wrapper Factory](#notes-on-the-wrapper-factory)
-    - [Other notes](#other-notes)
-    - [Implementing a controller](#implementing-a-controller)
-    - [Implementing multiple routes / events in a controller](#implementing-multiple-routes--events-in-a-controller)
-  - [Type system](#type-system)
-  - [JSON, String, Number or Buffer ?](#json-string-number-or-buffer-)
-  - [Using Sentry](#using-sentry)
-    - [Disabling Sentry](#disabling-sentry)
-  - [Secret injection](#secret-injection)
-    - [Dealing with Key-Value Secrets](#dealing-with-key-value-secrets)
-    - [Dealing with String Secrets](#dealing-with-string-secrets)
-    - [Providing a secret list to the manager](#providing-a-secret-list-to-the-manager)
-    - [Providing alternative secret sources](#providing-alternative-secret-sources)
-  - [Configuring runtime](#configuring-runtime)
-    - [Manager level](#manager-level)
-    - [Wrapper handler level](#wrapper-handler-level)
-  - [Specificifities](#specificifities)
-    - [API Gateway](#api-gateway)
-      - [Input](#input)
-      - [Output](#output)
-      - [Error handling](#error-handling)
-    - [Event Bridge](#event-bridge)
-      - [Input](#input-1)
-      - [Output](#output-1)
-  - [A note on error handling in controllers](#a-note-on-error-handling-in-controllers)
+- [Breaking changes in v2.x](#Breakingchangesinv2.x)
+- [Why ?](#Why)
+- [How it works](#Howitworks)
+- [Installation](#Installation)
+- [Features](#Features)
+- [Demo Usage](#DemoUsage)
+  - [1. Create a service-wide (or cross-service) manager](#Createaservice-wideorcross-servicemanager)
+  - [2. Create a route / event handler using the manager](#Createarouteeventhandlerusingthemanager)
+  - [3. Create a controller](#Createacontroller)
+- [Details](#Details)
+  - [Triggering from different AWS sources](#TriggeringfromdifferentAWSsources)
+  - [Notes on immutability](#Notesonimmutability)
+  - [Handler method name](#Handlermethodname)
+- [Detailed Usage](#DetailedUsage)
+  - [Main exports](#Mainexports)
+  - [Complete example](#Completeexample)
+  - [Notes on the Wrapper Factory](#NotesontheWrapperFactory)
+  - [Other notes](#Othernotes)
+  - [Implementing a controller](#Implementingacontroller)
+  - [Implementing multiple routes / events in a controller](#Implementingmultiplerouteseventsinacontroller)
+- [Type system](#Typesystem)
+- [JSON, String, Number or Buffer ?](#JSONStringNumberorBuffer)
+- [Metering](#Metering)
+  - [General metrics:](#Generalmetrics:)
+  - [API Gateway](#APIGateway)
+- [Using Sentry](#UsingSentry)
+  - [Disabling Sentry](#DisablingSentry)
+- [Secret injection](#Secretinjection)
+  - [Dealing with Key-Value Secrets](#DealingwithKey-ValueSecrets)
+  - [Dealing with String Secrets](#DealingwithStringSecrets)
+  - [Providing a secret list to the manager](#Providingasecretlisttothemanager)
+  - [Providing alternative secret sources](#Providingalternativesecretsources)
+- [Configuring runtime](#Configuringruntime)
+  - [Manager level](#Managerlevel)
+  - [Wrapper handler level](#Wrapperhandlerlevel)
+- [Specificifities](#Specificifities)
+  - [API Gateway](#APIGateway-1)
+    - [Input](#Input)
+    - [Output](#Output)
+    - [Error handling](#Errorhandling)
+  - [Event Bridge](#EventBridge)
+    - [Input](#Input-1)
+    - [Output](#Output-1)
+- [A note on error handling in controllers](#Anoteonerrorhandlingincontrollers)
 
 <!-- vscode-markdown-toc-config
 	numbering=false
@@ -103,7 +105,7 @@ This package provides an opiniated stack to insert additional logic in handling 
 	/vscode-markdown-toc-config -->
 <!-- /vscode-markdown-toc -->
 
-## How it works
+## <a name='Howitworks'></a>How it works
 
 With this framework, you start by declaring a **Lambda Manager**, which may be common across all your microservices. It allows to define which secrets are generally available (thereby getting autocompletion), configure secret sources for secret managers other than AWS and configure a base Sentry configuration for all your lambdas in all your services. The lambda manager is a common source of **Handler Wrappers**, for the API Gateway, SQS, SNS or for the EventBridge.
 
@@ -119,7 +121,7 @@ It may sound a bit overly complex, but after using it a bit, it will all make se
 npm i aws-lambda-handlers
 ```
 
-## Features
+## <a name='Features'></a>Features
 
 - Strongly typed TS Interfaces to be implemented by Controllers
 - Optional payload input (and output) validation against a schema
@@ -128,9 +130,9 @@ npm i aws-lambda-handlers
 - Before executing a controller, secrets may be pre-fetched and provided to you
 - State can easily be persisted across invocations, and cold-start initialisation can be easily used for resource acquisition
 
-## Demo Usage
+## <a name='DemoUsage'></a>Demo Usage
 
-### 1. Create a service-wide (or cross-service) manager
+### <a name='Createaservice-wideorcross-servicemanager'></a>1. Create a service-wide (or cross-service) manager
 
 Start by sharing a wrapper manager across all your lambda functions. This is useful to share configuration across your organisation.
 
@@ -148,7 +150,7 @@ const mgr = new LambdaFactoryManager();
 export default mgr;
 ```
 
-### 2. Create a route / event handler using the manager
+### <a name='Createarouteeventhandlerusingthemanager'></a>2. Create a route / event handler using the manager
 
 It is good practice to separate the logic (a controller) from the handler itself (the entrypoint exposed to AWS), which allows you to swap controllers or implement multiple lambdas with a single controller. <br>
 Ideally, the controller route should be `require`-able without it executing any service logic. This allows you to expose "meta-information" that can be used by other tools (for example, automatically add IAM permissions in a CDK code by loading the `configuration` object, or building an OpenAPI v3 spec, etc.)
@@ -168,7 +170,7 @@ export const { handler, configuration } =
 export type Interface = CtrlInterfaceOf<typeof wrapperFactory>;
 ```
 
-### 3. Create a controller
+### <a name='Createacontroller'></a>3. Create a controller
 
 You can now write your controller, which must implement the interface exported by the Lambda wrapper (we called it `Interface`)
 
@@ -188,11 +190,11 @@ class Controller implements Interface {
 
 And that's it for the most basic implementation ! You may now use `path/to/route.handler` as a Lambda entry-point.
 
-## Details
+## <a name='Details'></a>Details
 
 In this section we explore the benefits that our approach brings.
 
-### Triggering from different AWS sources
+### <a name='TriggeringfromdifferentAWSsources'></a>Triggering from different AWS sources
 
 Wrapper factory constructors are available for
 
@@ -215,7 +217,7 @@ Wrapper factory constructors are available for
 
 The differences exist because the input types and output types are not the same whether the lambda is triggered by either of those event sources, and because the error handling is different (for example, the lambda triggered by the API Gateway should never fail, but the EventBridge lambda may be allowed fail). In addition, the SQS loop is unrolled (you implement only the method for the record, not for the whole event, which contains many records) for error management purposes.
 
-### Notes on immutability
+### <a name='Notesonimmutability'></a>Notes on immutability
 
 Both the `LambdaFactoryManager` and the derived `APIGatewayWrapperFactory` and others are **mostly** immutable (understand by it that you cannot safely rely on their immutability either). It is important to understand that most of the methods return a new instance:
 
@@ -231,7 +233,7 @@ const apiWrapperFactory2 = api.needsSecret(/*...*/);
 api.needsSecret(); // Not assigned to a variable
 ```
 
-### Handler method name
+### <a name='Handlermethodname'></a>Handler method name
 
 The string parameter passed to the constructor function defines which method must be implemented by the constructor:
 
@@ -266,9 +268,9 @@ export const { handler, configuration } =
   wrapperFactory.createWrapper(Controller);
 ```
 
-## Detailed Usage
+## <a name='DetailedUsage'></a>Detailed Usage
 
-### Main exports
+### <a name='Mainexports'></a>Main exports
 
 This package exposes 3 main objects you may want to import:
 
@@ -276,7 +278,7 @@ This package exposes 3 main objects you may want to import:
 - type `CtrlInterfaceOf`, which derives the WrapperFactory into a TS interface to be implemented by the controller
 - type `IfHandler`, which stands for "interface handler", and informs the controller handler about the parameter type (see examples).
 
-### Complete example
+### <a name='Completeexample'></a>Complete example
 
 ```typescript
 //====================================================================
@@ -364,7 +366,7 @@ type controllerInterface = CtrlInterfaceOf<typeof snsHandlerWrapperFactory>;
 type controllerInterface = CtrlInterfaceOf<typeof sqsHandlerWrapperFactory>;
 ```
 
-### Implementing a controller
+### <a name='Implementingacontroller'></a>Implementing a controller
 
 Implementing a Controller has 2 requirements:
 
@@ -399,7 +401,7 @@ Note on the following:
 - The IfHandler<> utility is provided because by default, implemented methods to do infer their parameter types from the implemented interface. See [this issue](https://github.com/Microsoft/TypeScript/issues/23911) for reference
 - Several routes can be implemented using `implements IfOfRouteA, IfOfRouteB, ...``
 
-### <a name='Implementingmultipleroutesinacontroller'></a>Implementing multiple routes / events in a controller
+### <a name='Implementingmultiplerouteseventsinacontroller'></a>Implementing multiple routes / events in a controller
 
 Depending on your design choices, you may decide to create a single controller for multiple routes, for example when handling CRUD operations. This can be achieved like that:
 
@@ -464,7 +466,7 @@ When specifying a yup schema using `setInputSchema` and `setOutputSchema`, but w
 
 On another note, the schema validation can be asynchronous. It is validated before your handler is called and its validation is finished before your handler is executed. If the validation fails, your wrapped handler will not be executed.
 
-## JSON, String, Number or Buffer ?
+## <a name='JSONStringNumberorBuffer'></a>JSON, String, Number or Buffer ?
 
 The API Gateway, SNS and SQS pass the message body (or request as a string), and we need to make some guesswork to determine if it should be JSON parsed, base64 parsed, number parsed or not parsed at all.
 
@@ -481,20 +483,20 @@ Here are the rules we generally apply:
 
 - If nothing is called, there will do no parsing and the type will unknown anyway. In other words, you will get a string for API Gateway, SQS and SNS, and potentially a JSON for the Event Bridge.
 
-## Metering
+## <a name='Metering'></a>Metering
 
 If you have configured the Opentelementry Metrics SDK, then the following metrics will automatically be acquired.
 
 Note that you can change the name of the metrics using the `.configureRuntime()` method (in the second argument, with type completion)
 
-### General metrics:
+### <a name='Generalmetrics:'></a>General metrics:
 
 - `lambda_exec_total` (counter): Number of total lambda invocations
 - `lambda_error_total` (counter): Number of errored invocations (any lambda that throws an unhandled error)
 - `lambda_cold_start` (counter): Number of cold starts
 - `lambda_exec_time` (counter): Execution time in seconds
 
-### API Gateway
+### <a name='APIGateway'></a>API Gateway
 
 In addition, the API Gateway will record
 
@@ -502,7 +504,7 @@ In addition, the API Gateway will record
 
 Note that an failed invocation counts towards a status 500
 
-## Using Sentry
+## <a name='UsingSentry'></a>Using Sentry
 
 Sentry's configuration is likely to be used across your organisation's microservices, save for its DSN, which is likely to be one per service.
 You may compose a manager using `.configureSentry( opts: Sentry.NodeOptions, expand: boolean )` (see [@sentry/node](https://www.npmjs.com/package/@sentry/node)), and compose it as many times as you see fit (Note that the configuration is mutable, i.e. the `configureSentry` method does not return a new manager)
@@ -534,7 +536,7 @@ export default myNewManager; // Optional
 
 Because the configuration is mutable, lambda handlers can still reference `@myorg/my-lambda-manager` and inherit the correct DSN.
 
-### Disabling Sentry
+### <a name='DisablingSentry'></a>Disabling Sentry
 
 Additionally, Sentry can be disabled on a per-lambda basis using
 
@@ -573,7 +575,7 @@ class Controller implements RouteHandler {
 }
 ```
 
-### Dealing with Key-Value Secrets
+### <a name='DealingwithKey-ValueSecrets'></a>Dealing with Key-Value Secrets
 
 AWS Secrets can be of JSON type. It is pretty common to store a simple key-value structure in AWS, which we support for retrieval:
 
@@ -590,7 +592,7 @@ controllerFactory.needsSecret(
 
 Note that the lambda will fail if the provided secret is NOT JSON-valid, except if the `required` parameter is `false`.
 
-### Dealing with String Secrets
+### <a name='DealingwithStringSecrets'></a>Dealing with String Secrets
 
 By setting `undefined` as the second parameter, the string version of the JSON is returned.
 
@@ -607,7 +609,7 @@ controllerFactory.needsSecret(
 
 When the last parameter of the `needsSecret` method is true, the secret is required and the lambda will fail if it can't be found. When false, the method will be called, but the secret may be undefined.
 
-### Providing a secret list to the manager
+### <a name='Providingasecretlisttothemanager'></a>Providing a secret list to the manager
 
 Imagine an object `aws_secrets` contains the list of all available secrets in the format
 
@@ -649,7 +651,7 @@ Autocompletion of the secret key:
 
 ![Autocompletion](./doc/secret_key_autocompletion.png)
 
-### Providing alternative secret sources
+### <a name='Providingalternativesecretsources'></a>Providing alternative secret sources
 
 Since v2, it is possible to specify an implementation for secret managers other than the AWS secrets manager (for example, Hashicorp Vault, or some secrets from GCP)
 
@@ -745,11 +747,11 @@ api.needsSecret(
 
 Which can then be consumed by the handler as `injectedKey`
 
-## Configuring runtime
+## <a name='Configuringruntime'></a>Configuring runtime
 
 There is a certain level of configuration you can use in order to control the behaviour, notably of unhandled errors, of the wrappers. For example, you may not wish for unhandled errors to raise an exception with Sentry, or register with Opentelemetry. You may also wish to decide what happens when schema validation fails. Those configurations can be done at the manager level (again, to be used across your organisation/services) and can be overridden on a per-lambda basis.
 
-### Manager level
+### <a name='Managerlevel'></a>Manager level
 
 Simply call the following:
 
@@ -781,7 +783,7 @@ Notes:
 
 - For SNS and SQS, if you want to use dead-letter queues, then `silenceRecordOnValidationFail` should be set to `false`. `true` will just not execute your handler and exit silently. For the DLQ to work, the record needs to fail, and therefore you need to retry it.
 
-### Wrapper handler level
+### <a name='Wrapperhandlerlevel'></a>Wrapper handler level
 
 For each wrapper handler (one for each event source), you can call the same function with two parameters:
 
@@ -791,11 +793,11 @@ wrapperFactory.configureRuntime(SpecificRuntimeConfig, GeneralRuntimeConfig);
 
 Where `SpecificRuntimeConfig` matches the config for the API Gateway, EB, SNS and SQS (see section "Manager level") and `GeneralRuntimeConfig` matches the config under the key `_general` (again, see above for an example of the payload)
 
-## Specificifities
+## <a name='Specificifities'></a>Specificifities
 
-### API Gateway
+### <a name='APIGateway-1'></a>API Gateway
 
-#### Input
+#### <a name='Input'></a>Input
 
 The payload passed to your handler is of type `Request<T>` ( where `T` is the static type set in `setTsInputType` or infered from the schema).
 
@@ -810,7 +812,7 @@ const payload = request.getData();
 const raw = request.getRawData()
 ```
 
-#### Output
+#### <a name='Output'></a>Output
 
 To return an API Gateway Response, you are expected to return a `HTTPResponse`, using the static constructors:
 
@@ -844,13 +846,13 @@ Note: `HTTPError.INTERNAL_ERROR()` is by default anormal.
 
 In summary, the API Gateway handler should return `Promise<HTTPError | HTTPResponse<T>>`:
 
-#### Error handling
+#### <a name='Errorhandling'></a>Error handling
 
 When your lambda throws an error, the wrapper will catch it and automatically reply with `HTTPResponse.INTERNAL_ERROR( error )`, which means it's considered "anormal" and will register the exception with Sentry as well as fail the Opentelemetry span. In other words, it's perfectly acceptable to let the handler fail.
 
-### Event Bridge
+### <a name='EventBridge'></a>Event Bridge
 
-#### Input
+#### <a name='Input-1'></a>Input
 
 The input type of the event bridge is of type `AwsEventBridgeEvent<T>`, and the following methods are exposed
 
@@ -863,7 +865,7 @@ data.getDetailType(); // Returns the event detail-type field
 data.getRawData(); // Returns the raw underlying EventBridgeEvent<string, T> object
 ```
 
-#### Output
+#### <a name='Output-1'></a>Output
 
 The event bridge lambda is not expect to return anything, but you may return if you so wishes. The value will be discarded.
 
