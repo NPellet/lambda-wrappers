@@ -34,7 +34,7 @@ const okHandler = async () => {
 const makeHandler = (
   _handler: () => Promise<HTTPError | HTTPResponse<any>>
 ) => {
-  const { configuration, handler } = new LambdaFactoryManager()
+  const { handler } = new LambdaFactoryManager()
     .apiGatewayWrapperFactory('handler')
     .createHandler(
       class Ctrl {

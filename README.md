@@ -481,6 +481,27 @@ Here are the rules we generally apply:
 
 - If nothing is called, there will do no parsing and the type will unknown anyway. In other words, you will get a string for API Gateway, SQS and SNS, and potentially a JSON for the Event Bridge.
 
+## Metering
+
+If you have configured the Opentelementry Metrics SDK, then the following metrics will automatically be acquired.
+
+Note that you can change the name of the metrics using the `.configureRuntime()` method (in the second argument, with type completion)
+
+### General metrics:
+
+- `lambda_exec_total` (counter): Number of total lambda invocations
+- `lambda_error_total` (counter): Number of errored invocations (any lambda that throws an unhandled error)
+- `lambda_cold_start` (counter): Number of cold starts
+- `lambda_exec_time` (counter): Execution time in seconds
+
+### API Gateway
+
+In addition, the API Gateway will record
+
+- `http_requests_total` (counter): HTTP Request (equals `lambda_exec_total`) with added cardinality by status code and by HTTP method
+
+Note that an failed invocation counts towards a status 500
+
 ## Using Sentry
 
 Sentry's configuration is likely to be used across your organisation's microservices, save for its DSN, which is likely to be one per service.
