@@ -77,7 +77,7 @@ This package provides an opiniated stack to insert additional logic in handling 
 - [Type system](#Typesystem)
 - [JSON, String, Number or Buffer ?](#JSONStringNumberorBuffer)
 - [Metering](#Metering)
-  - [General metrics:](#Generalmetrics:)
+  - [General metrics](#Generalmetrics)
   - [API Gateway](#APIGateway)
 - [Using Sentry](#UsingSentry)
   - [Disabling Sentry](#DisablingSentry)
@@ -489,7 +489,7 @@ If you have configured the Opentelementry Metrics SDK, then the following metric
 
 Note that you can change the name of the metrics using the `.configureRuntime()` method (in the second argument, with type completion)
 
-### <a name='Generalmetrics:'></a>General metrics:
+### <a name='Generalmetrics'></a>General metrics
 
 - `lambda_exec_total` (counter): Number of total lambda invocations
 - `lambda_error_total` (counter): Number of errored invocations (any lambda that throws an unhandled error)
