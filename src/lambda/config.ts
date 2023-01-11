@@ -27,7 +27,7 @@ export type MetricNames = {
   lambda_errors: string;
   lambda_cold_start: string;
   lambda_exec_time: string;
-  http_statuscode_total: string;
+  http_requests_total: string;
 };
 
 export type ConfigGeneral = Partial<{

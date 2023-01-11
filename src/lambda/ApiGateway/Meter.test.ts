@@ -96,7 +96,7 @@ describe('Testing API Gateway metering', function () {
     const response = metrics.find(
       (metric) =>
         metric.descriptor.name ==
-        defaultSourceConfig._general?.metricNames?.http_statuscode_total
+        defaultSourceConfig._general?.metricNames?.http_requests_total
     )?.dataPoints[0];
 
     expect(response?.value).toBe(1);
@@ -121,7 +121,7 @@ describe('Testing API Gateway metering', function () {
     const response = metrics.find(
       (metric) =>
         metric.descriptor.name ==
-        defaultSourceConfig._general?.metricNames?.http_statuscode_total
+        defaultSourceConfig._general?.metricNames?.http_requests_total
     )?.dataPoints[0];
 
     expect(response?.value).toBe(1);
@@ -145,7 +145,7 @@ describe('Testing API Gateway metering', function () {
     const response = metrics.find(
       (metric) =>
         metric.descriptor.name ==
-        defaultSourceConfig._general?.metricNames?.http_statuscode_total
+        defaultSourceConfig._general?.metricNames?.http_requests_total
     )?.dataPoints[0];
 
     expect(response?.value).toBe(1);

@@ -27,10 +27,10 @@ export const wrapTelemetryApiGateway = <T, U>(
   handler: Handler<APIGatewayProxyEvent, APIGatewayProxyResult>,
   config: ConfigGeneral | undefined
 ) => {
-  const http_response_counter = config?.metricNames?.http_statuscode_total
+  const http_response_counter = config?.metricNames?.http_requests_total
     ? metrics
         .getMeter(METER_NAME)
-        .createCounter(config?.metricNames?.http_statuscode_total, {
+        .createCounter(config?.metricNames?.http_requests_total, {
           valueType: otelapi.ValueType.INT,
         })
     : undefined;

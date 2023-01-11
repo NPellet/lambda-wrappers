@@ -8,7 +8,7 @@ export const defaultSourceConfig: SourceConfig = {
       lambda_errors: 'lambda_error_total',
       lambda_cold_start: 'lambda_coldstart_total',
       lambda_exec_time: 'lambda_exec_time',
-      http_statuscode_total: 'http_requests_total',
+      http_requests_total: 'http_requests_total',
     },
   },
   eventBridge: {
