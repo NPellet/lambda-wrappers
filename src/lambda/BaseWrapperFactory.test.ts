@@ -56,7 +56,7 @@ describe('Testing BaseWrapperFactory features', function () {
         }
       );
 
-    expect(configuration.sources?._general).toStrictEqual({
+    expect(configuration.sources?._general).toMatchObject({
       recordExceptionOnLambdaFail: true,
     });
 

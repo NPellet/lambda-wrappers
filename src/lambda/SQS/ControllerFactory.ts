@@ -1,16 +1,11 @@
 import { BaseSchema, InferType } from 'yup';
 import {
   HandlerConfiguration,
-  SourceConfigGeneral,
+  ConfigGeneral,
   SourceConfigSQS,
 } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
-import {
-  SecretConfig,
-  SecretsContentOf,
-  TAllSecretRefs,
-  TSecretRef,
-} from '../utils/secrets_manager';
+import { SecretsContentOf, TAllSecretRefs } from '../utils/secrets_manager';
 import { createSQSHandler } from './sqs';
 import { SQSBatchItemFailure } from 'aws-lambda';
 import { BaseWrapperFactory } from '../BaseWrapperFactory';
@@ -24,11 +19,9 @@ export class SQSHandlerWrapperFactory<
   SInput extends BaseSchema | undefined = undefined
 > extends BaseWrapperFactory<TSecretList> {
   public _inputSchema: SInput;
-  public __shimInput: TInput;
   protected _messageType: MessageType = MessageType.String;
 
   setInputSchema<U extends BaseSchema>(schema: U) {
-    const constructor = this.constructor;
     const api = this.fork<TInput, TSecrets, THandler, U>();
     api._inputSchema = schema;
     api.setMessageTypeFromSchema(schema);
@@ -56,14 +49,12 @@ export class SQSHandlerWrapperFactory<
 
     api._needsSecret(source, key, secretName, secretKey, meta, required);
     api._inputSchema = this._inputSchema;
-    //api._handler = this._handler;
     return api;
   }
 
   setHandler<T extends string>(handler: T) {
     const api = this.fork<TInput, TSecrets, T, SInput>();
     api._inputSchema = this._inputSchema;
-    //api._secrets = this._secrets;
     api._handler = handler;
     return api;
   }
@@ -78,8 +69,6 @@ export class SQSHandlerWrapperFactory<
     >
   ) {
     newObj._inputSchema = this._inputSchema;
-    //newObj._secrets = this._secrets;
-    //newObj._handler = this._handler;
   }
 
   setTsInputType<U>() {
@@ -107,7 +96,7 @@ export class SQSHandlerWrapperFactory<
     return api;
   }
 
-  configureRuntime(cfg: SourceConfigSQS, general: SourceConfigGeneral) {
+  configureRuntime(cfg: SourceConfigSQS, general: ConfigGeneral) {
     super._configureRuntime({
       _general: general,
       sqs: cfg,

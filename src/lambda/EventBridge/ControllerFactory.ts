@@ -1,9 +1,5 @@
 import { BaseSchema } from 'yup';
-import {
-  HandlerConfiguration,
-  SourceConfigEB,
-  SourceConfigGeneral,
-} from '../config';
+import { HandlerConfiguration, SourceConfigEB, ConfigGeneral } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
 import {
   SecretConfig,
@@ -23,7 +19,6 @@ export class EventBridgeHandlerWrapperFactory<
   SInput extends BaseSchema | undefined = undefined
 > extends BaseWrapperFactory<TSecretList> {
   public _inputSchema: SInput;
-  public __shimInput: TInput;
 
   setInputSchema<U extends BaseSchema>(schema: U) {
     const api = this.fork<TInput, TSecrets, THandler, U>();
@@ -33,7 +28,7 @@ export class EventBridgeHandlerWrapperFactory<
     return api;
   }
 
-  configureRuntime(cfg: SourceConfigEB, general: SourceConfigGeneral) {
+  configureRuntime(cfg: SourceConfigEB, general: ConfigGeneral) {
     super._configureRuntime({
       _general: general,
       eventBridge: cfg,

@@ -1,9 +1,12 @@
+import { Context as AWSLambdaContext } from 'aws-lambda';
+
 import {
   SpanKind,
   propagation,
   SpanStatusCode,
   TextMapGetter,
   ROOT_CONTEXT,
+  ValueType,
 } from '@opentelemetry/api';
 import api from '@opentelemetry/api';
 import { Callback, Context, Handler } from 'aws-lambda';
@@ -14,7 +17,7 @@ import {
 import { getAwsAccountFromArn } from '../../util/aws';
 import { AWSXRAY_TRACE_ID_HEADER } from '@opentelemetry/propagator-aws-xray';
 import { log } from './logger';
-import { loggers } from 'winston';
+import { ConfigGeneral, METER_NAME } from '../config';
 
 export const tracer = api.trace.getTracerProvider().getTracer('aws_lambda');
 
@@ -119,15 +122,71 @@ export const flush = async () => {
   }
 
   let meterProvider = api.metrics.getMeterProvider();
+
   // @ts-ignore
   if (meterProvider.forceFlush) {
     // @ts-ignore
     try {
       // @ts-ignore
       await meterProvider.forceFlush();
+
+      // @ts-ignore
+      if (meterProvider._sharedState?.metricCollectors) {
+        // @ts-ignore
+        for (let collector of meterProvider._sharedState.metricCollectors) {
+          if ('_metricReader' in collector) {
+            if ('_runOnce' in collector._metricReader) {
+              await collector._metricReader._runOnce();
+            }
+          }
+        }
+      }
     } catch (e) {
       log.error('Could not flush metrics');
       log.error(e);
     }
   }
+};
+
+/**
+ * Returns basic telemetry attributes based on a Lambda context
+ * @param context
+ * @returns
+ */
+export const getFaasTelemetryAttributes = (context: Context) => {
+  return {
+    faas: context.functionName,
+  };
+};
+
+export const wrapLatencyMetering = <T, U>(
+  func: (data: T, context: AWSLambdaContext, callback: Callback) => Promise<U>,
+  attributeGetter: (
+    data: T,
+    out: U | undefined,
+    context: AWSLambdaContext
+  ) => Record<string, string>,
+  config: ConfigGeneral | undefined
+) => {
+  return async function (data: T, ctx: AWSLambdaContext, cb: Callback) {
+    const latencyMeter = api.metrics.getMeter(METER_NAME);
+
+    const instrument = config?.metricNames?.lambda_exec_time
+      ? latencyMeter.createHistogram(config?.metricNames?.lambda_exec_time, {
+          valueType: ValueType.INT,
+        })
+      : undefined;
+
+    const time = process.hrtime();
+    let out: U | undefined = undefined;
+    try {
+      out = await func(data, ctx, cb);
+      return out;
+    } finally {
+      const ellapsed = process.hrtime(time);
+      const ellapsed_micro = ellapsed[0] + ellapsed[1] / 1000000000;
+
+      instrument?.record(ellapsed_micro, attributeGetter(data, out, ctx));
+    }
+  };
 };

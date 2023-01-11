@@ -10,17 +10,24 @@ import {
   exceptionHandler,
 } from '../../../test_utils/apigateway';
 import { APIGatewayProxyResult } from 'aws-lambda';
+import { defaultSourceConfig } from '../../../util/defaultConfig';
 
 describe('Telemetry: API Gateway wrapper handles all types of outputs', function () {
   it('Response is of instance Response', async () => {
-    const handler = wrapTelemetryApiGateway(successHandler);
+    const handler = wrapTelemetryApiGateway(
+      successHandler,
+      defaultSourceConfig._general
+    );
     const out = await handler(event, LambdaContext, () => {});
     expect(out).not.toBe(null);
     expect((out as APIGatewayProxyResult).body).toBe('Ok');
   });
 
   it('Handles 200', async () => {
-    const handler = wrapTelemetryApiGateway(successHandler);
+    const handler = wrapTelemetryApiGateway(
+      successHandler,
+      defaultSourceConfig._general
+    );
 
     await expect(
       handler(event, LambdaContext, () => {})
@@ -60,7 +67,10 @@ describe('Telemetry: API Gateway wrapper handles all types of outputs', function
   });
 
   it('Handles 500 ', async () => {
-    const handler = wrapTelemetryApiGateway(errorHandler);
+    const handler = wrapTelemetryApiGateway(
+      errorHandler,
+      defaultSourceConfig._general
+    );
     const out = await handler(event, LambdaContext, () => {});
 
     const spans = memoryExporter.getFinishedSpans();
@@ -69,7 +79,10 @@ describe('Telemetry: API Gateway wrapper handles all types of outputs', function
   });
 
   it('Handles exception ', async () => {
-    const handler = wrapTelemetryApiGateway(exceptionHandler);
+    const handler = wrapTelemetryApiGateway(
+      exceptionHandler,
+      defaultSourceConfig._general
+    );
     const out = await expect(
       handler(event, LambdaContext, () => {})
     ).rejects.toBeTruthy();

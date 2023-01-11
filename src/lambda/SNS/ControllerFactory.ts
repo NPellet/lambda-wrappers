@@ -1,7 +1,7 @@
 import { BaseSchema, InferType } from 'yup';
 import {
   HandlerConfiguration,
-  SourceConfigGeneral,
+  ConfigGeneral,
   SourceConfigSNS,
 } from '../config';
 import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
@@ -23,13 +23,9 @@ export class SNSHandlerWrapperFactory<
   SInput extends BaseSchema | undefined = undefined
 > extends BaseWrapperFactory<TSecretList> {
   public _inputSchema: SInput;
-  public __shimInput: TInput;
-  // public _handler: THandler;
   protected _messageType: MessageType = MessageType.String;
 
   setInputSchema<U extends BaseSchema>(schema: U) {
-    const constructor = this.constructor;
-
     const api = this.fork<TInput, TSecrets, THandler, U>();
     api._inputSchema = schema;
     api.setMessageTypeFromSchema(schema);
@@ -106,7 +102,7 @@ export class SNSHandlerWrapperFactory<
     return api;
   }
 
-  configureRuntime(cfg: SourceConfigSNS, general: SourceConfigGeneral) {
+  configureRuntime(cfg: SourceConfigSNS, general: ConfigGeneral) {
     super._configureRuntime({
       _general: general,
       sns: cfg,

@@ -4,20 +4,31 @@ import {
   ReadableSpan,
 } from '@opentelemetry/sdk-trace-base';
 import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import {
+  AggregationTemporality,
+  InMemoryMetricExporter,
+  MeterProvider,
+  MetricReader,
+  PeriodicExportingMetricReader,
+} from '@opentelemetry/sdk-metrics';
 
 import {
   Context as OtelContext,
   context,
-  propagation,
   trace,
+  metrics,
   SpanContext,
-  SpanKind,
-  SpanStatusCode,
   TextMapPropagator,
-  ROOT_CONTEXT,
 } from '@opentelemetry/api';
 import { AWSXRayPropagator } from '@opentelemetry/propagator-aws-xray';
-import { APIGatewayEvent, Context, EventBridgeEvent, SNSEvent, SNSEventRecord } from 'aws-lambda';
+import {
+  APIGatewayEvent,
+  Context,
+  EventBridgeEvent,
+  SNSEvent,
+  SNSEventRecord,
+} from 'aws-lambda';
+import { APIGatewayHandlerWrapperFactory } from '../lambda/ApiGateway/ControllerFactory';
 
 export const contextSetter = {
   set(carrier: any, key: string, value: string) {
@@ -48,6 +59,21 @@ provider.addSpanProcessor(new BatchSpanProcessor(memoryExporter));
 provider.register({
   propagator: new AWSXRayPropagator(),
 });
+
+let metricsExporter: InMemoryMetricExporter;
+export const getMeterExporter = () => {
+  return metricsExporter;
+};
+
+export const setupOtel = () => {
+  const metricsProvider = new MeterProvider();
+  metricsExporter = new InMemoryMetricExporter(AggregationTemporality.DELTA);
+  const metricsReader = new PeriodicExportingMetricReader({
+    exporter: metricsExporter,
+  });
+  metricsProvider.addMetricReader(metricsReader);
+  metrics.setGlobalMeterProvider(metricsProvider);
+};
 
 export const sampledAwsSpanContextHeader: SpanContext = {
   traceId: '8a3c60f7d188f8fa79d48a391a778fa6',
@@ -166,29 +192,28 @@ export const testApiGatewayEvent: APIGatewayEvent = {
   resource: '',
 };
 
-
 export const testSNSRecord: SNSEventRecord = {
-  "EventSource": "src",
-  "EventSubscriptionArn": "srcarn",
-  "EventVersion": "version",
-  "Sns": {
-    "Message": "Hello world",
-    "MessageAttributes": {},
-    "MessageId": "messageId",
-    "Signature": "",
-    "SignatureVersion": "",
-    "Timestamp": "",
-    "Subject": "subject",
-    "TopicArn": "topic",
-    "SigningCertUrl": "",
-    "Type": "",
-    "UnsubscribeUrl": ""
-  }
+  EventSource: 'src',
+  EventSubscriptionArn: 'srcarn',
+  EventVersion: 'version',
+  Sns: {
+    Message: 'Hello world',
+    MessageAttributes: {},
+    MessageId: 'messageId',
+    Signature: '',
+    SignatureVersion: '',
+    Timestamp: '',
+    Subject: 'subject',
+    TopicArn: 'topic',
+    SigningCertUrl: '',
+    Type: '',
+    UnsubscribeUrl: '',
+  },
 };
 
 export const testSNSEvent: SNSEvent = {
-  Records: [ testSNSRecord ]
-}
+  Records: [testSNSRecord],
+};
 
 export const LambdaContext: Context = {
   awsRequestId: 'abc',

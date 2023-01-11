@@ -1,4 +1,4 @@
-import { Context, SQSBatchItemFailure, SQSRecord } from 'aws-lambda';
+import { Context, SQSBatchItemFailure, SQSEvent, SQSRecord } from 'aws-lambda';
 import { Attributes, SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import * as otelapi from '@opentelemetry/api';
 import {
@@ -7,7 +7,7 @@ import {
   MessageTypeValues,
   SemanticAttributes,
 } from '@opentelemetry/semantic-conventions';
-import { tracer } from '../../utils/telemetry';
+import { getFaasTelemetryAttributes, tracer } from '../../utils/telemetry';
 import { log } from '../../utils/logger';
 import { telemetryFindSQSParent } from './ParentContext';
 import { getAwsResourceFromArn } from '../../../util/aws';
@@ -52,12 +52,10 @@ export const wrapTelemetrySQS = <T, U>(
         otelapi.trace.setSpan(parentContext, span),
         () => handler(event, context)
       );
-     
+
       span.end();
       return out;
-
-    } catch( e ) {
-
+    } catch (e) {
       log.error('SQS wrapper reports a failed SQS message');
       span.setStatus({ code: SpanStatusCode.ERROR });
       span.end();
@@ -68,5 +66,16 @@ export const wrapTelemetrySQS = <T, U>(
       span.end();
       throw e;
     }*/
+  };
+};
+
+export const getSQSTelemetryAttributes = (
+  event: SQSEvent,
+  out: any,
+  context: Context
+) => {
+  return {
+    num_records: String(event.Records.length),
+    ...getFaasTelemetryAttributes(context),
   };
 };

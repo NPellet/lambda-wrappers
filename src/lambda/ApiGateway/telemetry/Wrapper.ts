@@ -1,5 +1,4 @@
 import {
-  APIGatewayEvent,
   APIGatewayProxyEvent,
   APIGatewayProxyResult,
   Callback,
@@ -7,7 +6,12 @@ import {
   Handler,
 } from 'aws-lambda';
 import { telemetryFindApiGatewayParent } from './ParentContext';
-import { Attributes, SpanKind, SpanStatusCode } from '@opentelemetry/api';
+import {
+  Attributes,
+  SpanKind,
+  SpanStatusCode,
+  metrics,
+} from '@opentelemetry/api';
 
 import * as otelapi from '@opentelemetry/api';
 import {
@@ -16,10 +20,21 @@ import {
 } from '@opentelemetry/semantic-conventions';
 import { flush, tracer } from '../../utils/telemetry';
 import { log } from '../../utils/logger';
+import { getApiGatewayTelemetryAttributes } from './Meter';
+import { ConfigGeneral, METER_NAME } from '../../config';
 
 export const wrapTelemetryApiGateway = <T, U>(
-  handler: Handler<APIGatewayProxyEvent, APIGatewayProxyResult>
+  handler: Handler<APIGatewayProxyEvent, APIGatewayProxyResult>,
+  config: ConfigGeneral | undefined
 ) => {
+  const http_response_counter = config?.metricNames?.http_statuscode_total
+    ? metrics
+        .getMeter(METER_NAME)
+        .createCounter(config?.metricNames?.http_statuscode_total, {
+          valueType: otelapi.ValueType.INT,
+        })
+    : undefined;
+
   return async function (
     event: APIGatewayProxyEvent,
     context: Context,
@@ -100,13 +115,16 @@ export const wrapTelemetryApiGateway = <T, U>(
         span.setStatus({ code: SpanStatusCode.ERROR });
       }
 
+      http_response_counter?.add(
+        1,
+        getApiGatewayTelemetryAttributes(event, out, context)
+      );
+
       span.end();
       await flush();
       log.info('API Gateway lambda execution has finished. Goodbye');
       return out;
-    
     } catch (e) {
-
       span.setStatus({ code: SpanStatusCode.ERROR });
       span.end();
       await flush();

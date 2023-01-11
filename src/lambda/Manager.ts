@@ -11,6 +11,7 @@ import {
 } from './utils/secrets_manager';
 import { NodeOptions } from '@sentry/node';
 import { SourceConfig } from './config';
+import { BaseSchema } from 'yup';
 
 type awsPreSecret = {
   secret: string;
@@ -151,6 +152,7 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
       undefined,
       undefined
     >(this);
+
     return wrapper.setHandler(handler);
   }
 

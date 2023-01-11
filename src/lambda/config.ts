@@ -22,8 +22,17 @@ export type SourceConfigAPIGateway = Partial<{
   recordExceptionOnValidationFail: boolean;
 }>;
 
-export type SourceConfigGeneral = Partial<{
+export type MetricNames = {
+  lambda_invocations: string;
+  lambda_errors: string;
+  lambda_cold_start: string;
+  lambda_exec_time: string;
+  http_statuscode_total: string;
+};
+
+export type ConfigGeneral = Partial<{
   recordExceptionOnLambdaFail: boolean;
+  metricNames: Partial<MetricNames>;
 }>;
 
 export type SourceConfig = Partial<{
@@ -31,7 +40,7 @@ export type SourceConfig = Partial<{
   apiGateway: SourceConfigAPIGateway;
   sns: SourceConfigSNS;
   sqs: SourceConfigSQS;
-  _general: SourceConfigGeneral;
+  _general: ConfigGeneral;
 }>;
 
 export type HandlerConfiguration<
@@ -79,3 +88,5 @@ export const enum LambdaType {
   SQS,
   GENERIC,
 }
+
+export const METER_NAME = 'aws-lambda-handlers';

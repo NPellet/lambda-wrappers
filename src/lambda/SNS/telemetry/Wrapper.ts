@@ -15,16 +15,22 @@ import {
   MessageTypeValues,
   SemanticAttributes,
 } from '@opentelemetry/semantic-conventions';
-import { flush, tracer } from '../../utils/telemetry';
+import {
+  flush,
+  getFaasTelemetryAttributes,
+  tracer,
+} from '../../utils/telemetry';
 import { telemetryFindSNSParent } from './ParentContext';
 import { getAwsResourceFromArn } from '../../../util/aws';
 import { log } from '../../utils/logger';
 
-export const wrapTelemetrySNS = <T, U>(
-  handler: Handler<SNSEvent>
-) => {
-  return async function (event: SNSEvent, context: Context, callback: Callback) {
-    const record = event.Records[ 0 ];
+export const wrapTelemetrySNS = <T, U>(handler: Handler<SNSEvent>) => {
+  return async function (
+    event: SNSEvent,
+    context: Context,
+    callback: Callback
+  ) {
+    const record = event.Records[0];
 
     const parentContext = telemetryFindSNSParent(record);
 
@@ -50,20 +56,29 @@ export const wrapTelemetrySNS = <T, U>(
     try {
       const out = await otelapi.context.with(
         otelapi.trace.setSpan(parentContext, span),
-        () => handler(event, context,callback)
+        () => handler(event, context, callback)
       );
       span.end();
       await flush();
       return out;
-
-    } catch( e ) {
+    } catch (e) {
       log.error('Telemetry: SNS lambda execution has errored');
       span.setStatus({ code: SpanStatusCode.ERROR });
       span.end();
       await flush();
       throw e;
     }
+  };
+};
 
-    
+export const getSNSTelemetryAttributes = (
+  event: SNSEvent,
+  out: void,
+  context: Context
+) => {
+  return {
+    //  source: event.Records[0].EventSource,
+    topic: event.Records[0].Sns.TopicArn,
+    ...getFaasTelemetryAttributes(context),
   };
 };
