@@ -1,4 +1,4 @@
-# AWS Lambda Wrappers
+# AWS Lambda Handlers
 
 <a href="https://codecov.io/gh/NPellet/lambda-wrappers/branch/main/">
   <img alt="Codecov Status" src="https://img.shields.io/codecov/c/github/NPellet/lambda-wrappers">
@@ -53,7 +53,7 @@ AWS Lambda's are a great piece of engineering and makes our life easier, but the
 This package provides an opiniated stack to insert additional logic in handling lambdas triggered from the API Gateway, the Event Bridge, SQS and SNS (and we will be adding more sources later !).
 
 <!-- vscode-markdown-toc -->
-- [AWS Lambda Wrappers](#aws-lambda-wrappers)
+- [AWS Lambda Handlers](#aws-lambda-handlers)
   - [Breaking changes in v2.x](#breaking-changes-in-v2x)
   - [Why ?](#why-)
   - [How it works](#how-it-works)
@@ -155,7 +155,7 @@ Currently the manager is used for:
 
 ```typescript
 // path/to/manager.ts
-import { LambdaFactoryManager } from 'aws-lambda-wrappers';
+import { LambdaFactoryManager } from 'aws-lambda-handlers';
 const mgr = new LambdaFactoryManager();
 // We'll import the manager later on !
 export default mgr;
@@ -558,7 +558,7 @@ The way to configure Sentry is to do it on the manager level:
 
 ```typescript
 // path/to/manager.ts
-import { LambdaFactoryManager } from 'aws-lambda-wrappers';
+import { LambdaFactoryManager } from 'aws-lambda-handlers';
 const mgr = new LambdaFactoryManager().configureSentry(
   {
     enabled: true,
@@ -675,7 +675,7 @@ export const aws_secrets = {
 By setting the secret list into the manager, they can provide type safety when calling `needsSecret`:
 
 ```typescript
-import { LambdaFactoryManager } from 'aws-lambda-wrappers';
+import { LambdaFactoryManager } from 'aws-lambda-handlers';
 const mgr = new LambdaFactoryManager().setAWSSecrets(aws_secrets);
 // Imagine a list of secrets, indexed by secret name on the first level, and secret key (for key-value secrets) on the second level
 
