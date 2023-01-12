@@ -1,7 +1,7 @@
 import { BaseSchema, InferType } from 'yup';
 
 export type ConstructorOf<T> = {
-  init(secrets?: Record<string, string>): Promise<T>;
+  init(secrets: Record<string, string | undefined>): Promise<T>;
 };
 
 export type InstanceOf<T> = T extends ConstructorOf<infer U> ? U : never;

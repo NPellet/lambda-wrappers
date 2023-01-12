@@ -244,12 +244,7 @@ export type SNSCtrlInterface<T> = T extends SNSHandlerWrapperFactory<
   infer SInput,
   any
 >
-  ? {
-      [x in THandler]: (
-        payload: AwsSNSRecord<TOrSchema<TInput, SInput>>,
-        secrets?: Record<TSecrets, string | undefined>
-      ) => Promise<void>;
-    }
+  ? TSNSCtrlInterface<THandler, TInput, SInput, TSecrets>
   : never;
 
 type TSNSCtrlInterface<
@@ -260,6 +255,6 @@ type TSNSCtrlInterface<
 > = {
   [x in THandler]: (
     payload: AwsSNSRecord<TOrSchema<TInput, SInput>>,
-    secrets?: Record<TSecrets, string | undefined>
+    secrets: Record<TSecrets, string | undefined>
   ) => Promise<void>;
 };

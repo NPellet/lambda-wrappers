@@ -108,7 +108,7 @@ describe('Testing API Controller factory', function () {
 
     const out2 = await handler(apiGatewayEventClone, LambdaContext, () => {});
 
-    expect(mockHandler).toHaveBeenCalled(); // Validation doesn't pass
+    expect(mockHandler).toHaveBeenCalled(); // Validation passes
     expect(out2.statusCode).toBe(HTTPError.BAD_REQUEST('').getStatusCode());
   });
 

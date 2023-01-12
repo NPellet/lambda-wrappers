@@ -13,7 +13,7 @@ import { defaultSourceConfig } from '../util/defaultConfig';
 
 export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
   private _disableSentry: boolean;
-  protected _messageType: MessageType;
+  protected _messageType: MessageType = MessageType.Object;
   public _runtimeCfg: SourceConfig;
   public _handler: string;
   public _secrets: Record<string, SecretConfig<any>>;
@@ -63,6 +63,7 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
       initFunction: this._initFunction,
       ...cfg,
       secretInjection: expandedSecrets,
+      secretFetchers: this.mgr.secretFetchers ?? {},
       sources: _.defaultsDeep(
         {},
         this._runtimeCfg,
