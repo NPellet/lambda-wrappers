@@ -104,3 +104,23 @@ describe('Testing EventBridge wrapper factory', function () {
     expect(spyOnExpandedConfiguration).toHaveBeenCalled();
   });
 });
+
+describe('EB wrapFunc', function () {
+  test('Basic functionality', async () => {
+    const fn = jest.fn();
+
+    const out = new LambdaFactoryManager()
+      .eventBridgeWrapperFactory('my_handler')
+      .setTsInputType<{ a: number }>()
+      .wrapFunc(async function (payload, init, secrets) {
+        // All good
+        fn();
+      });
+
+    await expect(
+      out.my_handler(testEventBridgeEvent, LambdaContext, () => {})
+    ).resolves.toBeUndefined();
+
+    expect(fn).toHaveBeenCalled();
+  });
+});

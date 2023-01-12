@@ -20,7 +20,6 @@ export class SQSHandlerWrapperFactory<
   TInit = undefined
 > extends BaseWrapperFactory<TSecretList> {
   public _inputSchema: SInput;
-  protected _messageType: MessageType = MessageType.String;
 
   setInputSchema<U extends BaseSchema>(schema: U) {
     const api = this.fork<TInput, TSecrets, THandler, U, TInit>();
@@ -51,14 +50,12 @@ export class SQSHandlerWrapperFactory<
 
     api._needsSecret(source, key, secretName, secretKey, meta, required);
     api._inputSchema = this._inputSchema;
-    api._messageType = this._messageType;
     return api;
   }
 
   setHandler<T extends string>(handler: T) {
     const api = this.fork<TInput, TSecrets, T, SInput>();
     api._inputSchema = this._inputSchema;
-    api._messageType = this._messageType;
     api._handler = handler;
     return api;
   }
@@ -134,7 +131,6 @@ export class SQSHandlerWrapperFactory<
   initFunction<U>(func: (secrets: Record<TSecrets, string>) => Promise<U>) {
     const factory = this.fork<TInput, TSecrets, THandler, SInput, U>();
     factory._inputSchema = this._inputSchema;
-    factory._messageType = this._messageType;
     factory.setInitFunction(func);
     return factory;
   }
