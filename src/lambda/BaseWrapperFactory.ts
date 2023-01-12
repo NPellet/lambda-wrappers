@@ -17,6 +17,7 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
   public _runtimeCfg: SourceConfig;
   public _handler: string;
   public _secrets: Record<string, SecretConfig<any>>;
+  private _initFunction: (...args: any) => Promise<any>;
 
   constructor(protected mgr: LambdaFactoryManager<TSecretList>) {}
 
@@ -61,6 +62,7 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     return {
       ...cfg,
       secretInjection: expandedSecrets,
+      initFunction: this._initFunction,
       sources: _.defaultsDeep(
         {},
         this._runtimeCfg,
@@ -99,6 +101,13 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
       }
     }
     return secrets;
+  }
+
+  protected setInitFunction(func: (...args: any) => Promise<any>) {
+    this._initFunction = async (secrets) => {
+      await this.init();
+      return func(secrets);
+    };
   }
 
   protected async init() {

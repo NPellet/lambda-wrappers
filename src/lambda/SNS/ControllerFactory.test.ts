@@ -1,6 +1,10 @@
 import _ from 'lodash';
 
-import { LambdaContext, testSNSRecord } from '../../test_utils/utils';
+import {
+  LambdaContext,
+  testSNSEvent,
+  testSNSRecord,
+} from '../../test_utils/utils';
 import * as yup from 'yup';
 import {
   SNSCtrlInterface,
@@ -9,6 +13,7 @@ import {
 import { IfHandler, LambdaFactoryManager } from '..';
 import { MessageType } from '../../util/types';
 import { BaseWrapperFactory } from '../BaseWrapperFactory';
+import { _makeCompatibilityCheck } from '@opentelemetry/api/build/src/internal/semver';
 
 const spyOnExpandedConfiguration = jest.spyOn(
   BaseWrapperFactory.prototype,
@@ -199,5 +204,25 @@ describe('Testing API Controller factory', function () {
       ).setInputSchema(yup.object());
       expect(createConf(fac1).messageType).toBe(MessageType.Object);
     });
+  });
+});
+
+describe('Testing wrapFunc', function () {
+  test('Basic functionality', async () => {
+    const fn = jest.fn();
+
+    const out = new LambdaFactoryManager()
+      .snsWrapperFactory('my_handler')
+      .setTsInputType<{ a: number }>()
+      .wrapFunc(async function (payload, init, secrets) {
+        // All good
+        fn();
+      });
+
+    await expect(
+      out.my_handler(testSNSEvent, LambdaContext, () => {})
+    ).resolves.toBeUndefined();
+
+    expect(fn).toHaveBeenCalled();
   });
 });
