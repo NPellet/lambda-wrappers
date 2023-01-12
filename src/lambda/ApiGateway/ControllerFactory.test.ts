@@ -256,3 +256,28 @@ describe('Testing API Controller factory', function () {
     });
   });
 });
+
+describe('API Gateway wrapFunc', function () {
+  test('Basic functionality', async () => {
+    const fn = jest.fn();
+
+    const out = new LambdaFactoryManager()
+      .apiGatewayWrapperFactory('my_handler')
+      .setTsInputType<{ a: number }>()
+      .wrapFunc(async function (payload, init, secrets) {
+        // All good
+        fn();
+        return HTTPError.BAD_REQUEST();
+      });
+
+    await expect(
+      out.my_handler(
+        { ...testApiGatewayEvent, body: JSON.stringify({ a: '2' }) },
+        LambdaContext,
+        () => {}
+      )
+    ).resolves.toMatchObject({ statusCode: 400 });
+
+    expect(fn).toHaveBeenCalled();
+  });
+});
