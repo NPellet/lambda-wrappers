@@ -62,7 +62,7 @@ This package provides an opiniated stack to insert additional logic in handling 
   - [Demo Usage](#demo-usage)
     - [1. Create a service-wide (or cross-service) manager](#1-create-a-service-wide-or-cross-service-manager)
     - [The simple way](#the-simple-way)
-    - [2. Implement your business logic directly](#2-implement-your-business-logic-directly)
+      - [2. Implement your business logic directly](#2-implement-your-business-logic-directly)
     - [The more complete way:](#the-more-complete-way)
       - [2. Create a route / event handler using the manager](#2-create-a-route--event-handler-using-the-manager)
       - [3. Create a controller](#3-create-a-controller)
@@ -162,7 +162,7 @@ export default mgr;
 ```
 ### <a name='Thesimpleway'></a>The simple way
 
-### <a name='Implementyourbusinesslogicdirectly'></a>2. Implement your business logic directly
+#### <a name='Implementyourbusinesslogicdirectly'></a>2. Implement your business logic directly
 You can now create the route / event handler and specify its implementation as such:
 
 ```typescript
