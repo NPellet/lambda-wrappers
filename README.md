@@ -61,8 +61,10 @@ This package provides an opiniated stack to insert additional logic in handling 
   - [Features](#features)
   - [Demo Usage](#demo-usage)
     - [1. Create a service-wide (or cross-service) manager](#1-create-a-service-wide-or-cross-service-manager)
-    - [2. Create a route / event handler using the manager](#2-create-a-route--event-handler-using-the-manager)
-    - [3. Create a controller](#3-create-a-controller)
+    - [The simple way:](#the-simple-way)
+    - [The more complete way:](#the-more-complete-way)
+      - [2. Create a route / event handler using the manager](#2-create-a-route--event-handler-using-the-manager)
+      - [3. Create a controller](#3-create-a-controller)
   - [Details](#details)
     - [Triggering from different AWS sources](#triggering-from-different-aws-sources)
     - [Notes on immutability](#notes-on-immutability)
@@ -111,9 +113,15 @@ This package provides an opiniated stack to insert additional logic in handling 
 
 With this framework, you start by declaring a **Lambda Manager**, which may be common across all your microservices. It allows to define which secrets are generally available (thereby getting autocompletion), configure secret sources for secret managers other than AWS and configure a base Sentry configuration for all your lambdas in all your services. The lambda manager is a common source of **Handler Wrappers**, for the API Gateway, SQS, SNS or for the EventBridge.
 
-Then, in each service, use the **Lambda Manager** to define a **Handler Wrapper**, which can be further configured (this time on a per-lambda basis) with secrets, static typings and schema validation. The **Handler Wrapper** provides a typescript interface which you should implement using a **Controller** (as simple as class defining 2 methods)
+Then, in each service, use the **Lambda Manager** to define a **Handler Wrapper**, which can be further configured (this time on a per-lambda basis) with secrets, static typings and schema validation. 
 
-Finally, export the handler and the configuration using the **Handler Wrapper** and your defined **Controller** class.
+From there, you can go down two routes, depending on the level of complexity / project management you wish to follow:
+
+- **The simple route** uses functional programming. Directly wrap the function handler using the `wrapFunc` method and be done.
+- **The "better" route** uses OOP. Produce a controller which implements a defined interface (2 method required), allowing you to handle many routes per controller, and feed this controller to the **Handler Wrapper**.
+
+Finally, export the handler and expose it to AWS.
+
 
 It may sound a bit overly complex, but after using it a bit, it will all make sense.
 
@@ -151,8 +159,25 @@ const mgr = new LambdaFactoryManager();
 // We'll import the manager later on !
 export default mgr;
 ```
+### The simple way:
 
-### <a name='Createarouteeventhandlerusingthemanager'></a>2. Create a route / event handler using the manager
+You can now create the route / event handler and specify its implementation as such:
+
+```typescript
+import manager from './path/to/manager'; 
+// Note here how the name of the object is the one you set in the `apiGatewayWrapperFactory` method. It's also the handler you must configure in AWS
+export const { handler_name, configuration } = manager
+  .apiGatewayWrapperFactory('handler_name')
+  .setTsInputType<string>()
+  .wrapFunc( async ( data, init, secrets ) => {
+    // Business logic here
+    return HTTPResponse.OK_NO_CONTENT();
+  });
+
+```
+
+### The more complete way:
+#### <a name='Createarouteeventhandlerusingthemanager'></a>2. Create a route / event handler using the manager
 
 It is good practice to separate the logic (a controller) from the handler itself (the entrypoint exposed to AWS), which allows you to swap controllers or implement multiple lambdas with a single controller. <br>
 Ideally, the controller route should be `require`-able without it executing any service logic. This allows you to expose "meta-information" that can be used by other tools (for example, automatically add IAM permissions in a CDK code by loading the `configuration` object, or building an OpenAPI v3 spec, etc.)
@@ -172,7 +197,7 @@ export const { handler, configuration } =
 export type Interface = CtrlInterfaceOf<typeof wrapperFactory>;
 ```
 
-### <a name='Createacontroller'></a>3. Create a controller
+#### <a name='Createacontroller'></a>3. Create a controller
 
 You can now write your controller, which must implement the interface exported by the Lambda wrapper (we called it `Interface`)
 
