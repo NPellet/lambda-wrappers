@@ -60,9 +60,9 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     const expandedSecrets = this.expandSecrets(secrets);
 
     return {
+      initFunction: this._initFunction,
       ...cfg,
       secretInjection: expandedSecrets,
-      initFunction: this._initFunction,
       sources: _.defaultsDeep(
         {},
         this._runtimeCfg,

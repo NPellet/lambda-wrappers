@@ -58,6 +58,7 @@ export class SNSHandlerWrapperFactory<
 
     api._needsSecret(source, key, secretName, secretKey, meta, required);
     api._inputSchema = this._inputSchema;
+    api._messageType = this._messageType;
     return api;
   }
 
@@ -83,6 +84,7 @@ export class SNSHandlerWrapperFactory<
 
   setTsInputType<U>() {
     const api = this.fork<U, TSecrets, THandler, SInput, TInit>();
+    api._inputSchema = this._inputSchema;
     api._messageType = MessageType.Object;
 
     this.copyAll(api);
@@ -91,18 +93,21 @@ export class SNSHandlerWrapperFactory<
 
   setStringInputType() {
     const api = this.setTsInputType<string>();
+    api._inputSchema = this._inputSchema;
     api._messageType = MessageType.String;
     return api;
   }
 
   setNumberInputType() {
     const api = this.setTsInputType<number>();
+    api._inputSchema = this._inputSchema;
     api._messageType = MessageType.Number;
     return api;
   }
 
   setBinaryInputType() {
     const api = this.setTsInputType<Buffer>();
+    api._inputSchema = this._inputSchema;
     api._messageType = MessageType.Binary;
     return api;
   }
@@ -144,7 +149,10 @@ export class SNSHandlerWrapperFactory<
 
   initFunction<U>(func: (secrets: Record<TSecrets, string>) => Promise<U>) {
     const factory = this.fork<TInput, TSecrets, THandler, SInput, U>();
+    factory._inputSchema = this._inputSchema;
+    factory._messageType = this._messageType;
     factory.setInitFunction(func);
+
     return factory;
   }
 

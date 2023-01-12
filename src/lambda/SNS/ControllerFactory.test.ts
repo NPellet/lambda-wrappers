@@ -207,7 +207,7 @@ describe('Testing API Controller factory', function () {
   });
 });
 
-describe('Testing wrapFunc', function () {
+describe('SNS wrapFunc', function () {
   test('Basic functionality', async () => {
     const fn = jest.fn();
 
