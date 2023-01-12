@@ -13,10 +13,11 @@ import { defaultSourceConfig } from '../util/defaultConfig';
 
 export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
   private _disableSentry: boolean;
-  protected _messageType: MessageType;
+  protected _messageType: MessageType = MessageType.Object;
   public _runtimeCfg: SourceConfig;
   public _handler: string;
   public _secrets: Record<string, SecretConfig<any>>;
+  private _initFunction: (...args: any) => Promise<any>;
 
   constructor(protected mgr: LambdaFactoryManager<TSecretList>) {}
 
@@ -59,8 +60,10 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     const expandedSecrets = this.expandSecrets(secrets);
 
     return {
+      initFunction: this._initFunction,
       ...cfg,
       secretInjection: expandedSecrets,
+      secretFetchers: this.mgr.secretFetchers ?? {},
       sources: _.defaultsDeep(
         {},
         this._runtimeCfg,
@@ -99,6 +102,13 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
       }
     }
     return secrets;
+  }
+
+  protected setInitFunction(func: (...args: any) => Promise<any>) {
+    this._initFunction = async (secrets) => {
+      await this.init();
+      return func(secrets);
+    };
   }
 
   protected async init() {

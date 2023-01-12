@@ -108,7 +108,7 @@ describe('Testing API Controller factory', function () {
 
     const out2 = await handler(apiGatewayEventClone, LambdaContext, () => {});
 
-    expect(mockHandler).toHaveBeenCalled(); // Validation doesn't pass
+    expect(mockHandler).toHaveBeenCalled(); // Validation passes
     expect(out2.statusCode).toBe(HTTPError.BAD_REQUEST('').getStatusCode());
   });
 
@@ -254,5 +254,30 @@ describe('Testing API Controller factory', function () {
       ).setInputSchema(yup.object());
       expect(createConf(fac1).messageType).toBe(MessageType.Object);
     });
+  });
+});
+
+describe('API Gateway wrapFunc', function () {
+  test('Basic functionality', async () => {
+    const fn = jest.fn();
+
+    const out = new LambdaFactoryManager()
+      .apiGatewayWrapperFactory('my_handler')
+      .setTsInputType<{ a: number }>()
+      .wrapFunc(async function (payload, init, secrets) {
+        // All good
+        fn();
+        return HTTPError.BAD_REQUEST();
+      });
+
+    await expect(
+      out.my_handler(
+        { ...testApiGatewayEvent, body: JSON.stringify({ a: '2' }) },
+        LambdaContext,
+        () => {}
+      )
+    ).resolves.toMatchObject({ statusCode: 400 });
+
+    expect(fn).toHaveBeenCalled();
   });
 });

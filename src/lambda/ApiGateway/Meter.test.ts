@@ -66,7 +66,7 @@ describe('Testing API Gateway metering', function () {
         metric.descriptor.name ==
         defaultSourceConfig._general?.metricNames?.lambda_invocations
     );
-
+    console.log(metrics);
     // 1 cold start
     expect(
       metrics.find(
