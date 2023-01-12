@@ -53,54 +53,56 @@ AWS Lambda's are a great piece of engineering and makes our life easier, but the
 This package provides an opiniated stack to insert additional logic in handling lambdas triggered from the API Gateway, the Event Bridge, SQS and SNS (and we will be adding more sources later !).
 
 <!-- vscode-markdown-toc -->
-* [Breaking changes in v2.x](#Breakingchangesinv2.x)
-* [Why ?](#Why)
-* [How it works](#Howitworks)
-* [Installation](#Installation)
-* [Features](#Features)
-* [Demo Usage](#DemoUsage)
-	* [1. Create a service-wide (or cross-service) manager](#Createaservice-wideorcross-servicemanager)
-	* [The simple way:](#Thesimpleway:)
-	* [The more complete way:](#Themorecompleteway:)
-		* [2. Create a route / event handler using the manager](#Createarouteeventhandlerusingthemanager)
-		* [3. Create a controller](#Createacontroller)
-* [Details](#Details)
-	* [Triggering from different AWS sources](#TriggeringfromdifferentAWSsources)
-	* [Notes on immutability](#Notesonimmutability)
-	* [Handler method name](#Handlermethodname)
-* [Detailed Usage](#DetailedUsage)
-	* [Main exports](#Mainexports)
-	* [Complete example](#Completeexample)
-	* [Notes on the Wrapper Factory](#NotesontheWrapperFactory)
-	* [Other notes](#Othernotes)
-	* [Implementing a controller](#Implementingacontroller)
-	* [Implementing multiple routes / events in a controller](#Implementingmultiplerouteseventsinacontroller)
-* [Type system](#Typesystem)
-* [JSON, String, Number or Buffer ?](#JSONStringNumberorBuffer)
-* [Metering](#Metering)
-	* [General metrics](#Generalmetrics)
-	* [API Gateway](#APIGateway)
-	* [SNS](#SNS)
-	* [SQS](#SQS)
-* [Using Sentry](#UsingSentry)
-	* [Disabling Sentry](#DisablingSentry)
-* [Secret injection](#Secretinjection)
-	* [Dealing with Key-Value Secrets](#DealingwithKey-ValueSecrets)
-	* [Dealing with String Secrets](#DealingwithStringSecrets)
-	* [Providing a secret list to the manager](#Providingasecretlisttothemanager)
-	* [Providing alternative secret sources](#Providingalternativesecretsources)
-* [Configuring runtime](#Configuringruntime)
-	* [Manager level](#Managerlevel)
-	* [Wrapper handler level](#Wrapperhandlerlevel)
-* [Specificifities](#Specificifities)
-	* [API Gateway](#APIGateway-1)
-		* [Input](#Input)
-		* [Output](#Output)
-		* [Error handling](#Errorhandling)
-	* [Event Bridge](#EventBridge)
-		* [Input](#Input-1)
-		* [Output](#Output-1)
-* [A note on error handling in controllers](#Anoteonerrorhandlingincontrollers)
+- [AWS Lambda Wrappers](#aws-lambda-wrappers)
+  - [Breaking changes in v2.x](#breaking-changes-in-v2x)
+  - [Why ?](#why-)
+  - [How it works](#how-it-works)
+  - [Installation](#installation)
+  - [Features](#features)
+  - [Demo Usage](#demo-usage)
+    - [1. Create a service-wide (or cross-service) manager](#1-create-a-service-wide-or-cross-service-manager)
+    - [The simple way](#the-simple-way)
+    - [2. Implement your business logic directly](#2-implement-your-business-logic-directly)
+    - [The more complete way:](#the-more-complete-way)
+      - [2. Create a route / event handler using the manager](#2-create-a-route--event-handler-using-the-manager)
+      - [3. Create a controller](#3-create-a-controller)
+  - [Details](#details)
+    - [Triggering from different AWS sources](#triggering-from-different-aws-sources)
+    - [Notes on immutability](#notes-on-immutability)
+    - [Handler method name](#handler-method-name)
+  - [Detailed Usage](#detailed-usage)
+    - [Main exports](#main-exports)
+    - [Complete example](#complete-example)
+    - [Notes on the Wrapper Factory](#notes-on-the-wrapper-factory)
+    - [Other notes](#other-notes)
+    - [Implementing a controller](#implementing-a-controller)
+    - [Implementing multiple routes / events in a controller](#implementing-multiple-routes--events-in-a-controller)
+  - [Type system](#type-system)
+  - [JSON, String, Number or Buffer ?](#json-string-number-or-buffer-)
+  - [Metering](#metering)
+    - [General metrics](#general-metrics)
+    - [API Gateway](#api-gateway)
+    - [SNS](#sns)
+    - [SQS](#sqs)
+  - [Using Sentry](#using-sentry)
+    - [Disabling Sentry](#disabling-sentry)
+  - [Secret injection](#secret-injection)
+    - [Dealing with Key-Value Secrets](#dealing-with-key-value-secrets)
+    - [Dealing with String Secrets](#dealing-with-string-secrets)
+    - [Providing a secret list to the manager](#providing-a-secret-list-to-the-manager)
+    - [Providing alternative secret sources](#providing-alternative-secret-sources)
+  - [Configuring runtime](#configuring-runtime)
+    - [Manager level](#manager-level)
+    - [Wrapper handler level](#wrapper-handler-level)
+  - [Specificifities](#specificifities)
+    - [API Gateway](#api-gateway-1)
+      - [Input](#input)
+      - [Output](#output)
+      - [Error handling](#error-handling)
+    - [Event Bridge](#event-bridge)
+      - [Input](#input-1)
+      - [Output](#output-1)
+  - [A note on error handling in controllers](#a-note-on-error-handling-in-controllers)
 
 <!-- vscode-markdown-toc-config
 	numbering=false
@@ -158,8 +160,9 @@ const mgr = new LambdaFactoryManager();
 // We'll import the manager later on !
 export default mgr;
 ```
-### <a name='Thesimpleway:'></a>The simple way:
+### <a name='Thesimpleway'></a>The simple way
 
+### <a name='Implementyourbusinesslogicdirectly'></a>2. Implement your business logic directly
 You can now create the route / event handler and specify its implementation as such:
 
 ```typescript
@@ -174,6 +177,8 @@ export const { handler_name, configuration } = manager
   });
 
 ```
+
+Your AWS Lambda handler that must be configured will then be `path/to/route.handler_name`
 
 ### <a name='Themorecompleteway:'></a>The more complete way:
 #### <a name='Createarouteeventhandlerusingthemanager'></a>2. Create a route / event handler using the manager
