@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { LambdaContext } from '../../test_utils/utils';
+import { LambdaContext, testSQSEvent } from '../../test_utils/utils';
 import * as yup from 'yup';
 import { SQSBatchResponse, SQSRecord } from 'aws-lambda';
 import {
@@ -258,5 +258,25 @@ describe('Testing SQS Wrapper factory', function () {
       ).setInputSchema(yup.object());
       expect(createConf(fac1).messageType).toBe(MessageType.Object);
     });
+  });
+});
+
+describe('SQS wrapFunc', function () {
+  test('Basic functionality', async () => {
+    const fn = jest.fn();
+
+    const out = new LambdaFactoryManager()
+      .sqsWrapperFactory('my_handler')
+      .setTsInputType<{ a: number }>()
+      .wrapFunc(async function (payload, init, secrets) {
+        // All good
+        fn();
+      });
+
+    await expect(
+      out.my_handler(testSQSEvent, LambdaContext, () => {})
+    ).resolves.toStrictEqual({ batchItemFailures: [] });
+
+    expect(fn).toHaveBeenCalled();
   });
 });
