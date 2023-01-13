@@ -198,7 +198,7 @@ export class SQSHandlerWrapperFactory<
       >,
       init: TInit,
       secrets?: Record<TSecrets, string | undefined>
-    ) => Promise<void>
+    ) => Promise<void | SQSBatchItemFailure>
   ) {
     const configuration = this.buildConfiguration();
 
