@@ -35,7 +35,7 @@ const VaultSecrets = {
   VaultSecretName2: VaultSecretName2,
 };
 
-new LambdaFactoryManager()
+export const LambdaManager = new LambdaFactoryManager()
   .setAWSSecrets(AWSSecrets)
   .addSecretSource<{ version?: number }>()(
   'hashicorpvault',
