@@ -81,12 +81,12 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
       V extends string,
       Z extends string,
       U extends TSecretRef,
-      W extends { [x in Z]: awsPreSecret }
+      W extends { [x in Z & string]: awsPreSecret }
     >(
       sourceName: V,
       _: U,
-      fetcher: SecretFetcher<string, P, keyof W & string>,
-      awsFetcher?: (aws: typeof needsAWSSecret) => W
+      awsFetcher: undefined | ((aws: typeof needsAWSSecret) => W),
+      fetcher: SecretFetcher<string, P, keyof W & string>
     ): 'aws' extends V ? never : typeof newMgr {
       if (sourceName === 'aws') {
         throw new Error("Source name can't be 'aws'. Reserved keyword");

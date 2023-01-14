@@ -281,3 +281,11 @@ describe('API Gateway wrapFunc', function () {
     expect(fn).toHaveBeenCalled();
   });
 });
+
+export const { handler_name, configuration } = new LambdaFactoryManager()
+  .apiGatewayWrapperFactory('handler_name')
+  .setTsInputType<string>()
+  .wrapFunc(async (data, init, secrets) => {
+    // Business logic here
+    return HTTPResponse.OK_NO_CONTENT();
+  });
