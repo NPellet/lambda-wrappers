@@ -11,9 +11,7 @@
 
 
 <p align="center">
-<span style="font-size: 20px;">
 [==> See examples <==](https://github.com/NPellet/lambda-wrappers/tree/main/examples)
-</span>
 </p>
 
 Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup and Secret prefetching
