@@ -8,6 +8,14 @@
   <img src="https://github.com/NPellet/lambda-wrappers/actions/workflows/test.yaml/badge.svg">
 </a>
 
+
+
+<p align="center">
+<span style="font-size: 20px;">
+[==> See examples <==](https://github.com/NPellet/lambda-wrappers/tree/main/examples)
+</span>
+</p>
+
 Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup and Secret prefetching
 
 ## <a name='Breakingchangesinv2.x'></a>Breaking changes in v2.x
