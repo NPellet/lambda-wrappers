@@ -24,13 +24,13 @@ describe('Testing BaseWrapperFactory features', function () {
     const mgr = new LambdaFactoryManager().addSecretSource<any>()(
       'gcp',
       {},
-      async () => {
-        return {};
-      },
       (aws) => {
         return {
           a: aws('abc', 'b', true),
         };
+      },
+      async () => {
+        return {};
       }
     );
 

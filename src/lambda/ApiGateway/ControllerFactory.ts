@@ -31,6 +31,7 @@ export class APIGatewayHandlerWrapperFactory<
 > extends BaseWrapperFactory<TSecretList> {
   public _outputSchema: SOutput;
   public _secrets: Record<TSecrets, SecretConfig<any>>;
+  protected _messageType: MessageType = MessageType.String;
   public _inputSchema: SInput;
   public: TInput;
   public __shimOutput: TOutput;

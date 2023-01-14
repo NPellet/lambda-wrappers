@@ -85,7 +85,7 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
     >(
       sourceName: V,
       _: U,
-      awsFetcher: (aws: typeof needsAWSSecret) => W | undefined,
+      awsFetcher: undefined | ((aws: typeof needsAWSSecret) => W),
       fetcher: SecretFetcher<string, P, keyof W & string>
     ): 'aws' extends V ? never : typeof newMgr {
       if (sourceName === 'aws') {

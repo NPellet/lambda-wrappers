@@ -735,6 +735,13 @@ const mgr = new LambdaFactoryManager()
   .addSecretSource<META>()( // Note here the "special" syntax, due to the fact that typescript doesn't have partial type inference at the time of writing
       "HashicorpVault",
       otherSecrets,
+      ( aws ) => { // aws is a convenience function helping with auto-completion, based on the secrets passed to the manager in .setAWSSecrets()
+        return {
+            // With auto-completion if you're using VSCode :) !
+            "authKey": aws("Hashicorp", "Auth", true),
+            "otherKey": aws("Hashicorp", "OtherInfo" ) // Required defaults to true
+        };
+      },
       async ( toFetch, awsSecrets ) => {
           /*
             toFetch is of type
@@ -747,7 +754,11 @@ const mgr = new LambdaFactoryManager()
             }>
 
             Where the key of the record is to be reused in the return object
-            Promise<Record<string, string>>
+            
+            { 
+              authKey?: string, 
+              otherKey?: string   
+            }
           */
 
         const hashicorp_auth = awsSecrets.authKey;
@@ -759,13 +770,6 @@ const mgr = new LambdaFactoryManager()
               out[k] = // Fetch here the secret;
           }
           return out;
-      },
-      ( aws ) => { // aws is a convenience function helping with auto-completion, based on the secrets passed to the manager in .setAWSSecrets()
-        return {
-            // With auto-completion if you're using VSCode :) !
-            "authKey": aws("Hashicorp", "Auth", true),
-            "otherKey": aws("Hashicorp", "OtherInfo" ) // Required defaults to true
-        };
       }
     );
 ```

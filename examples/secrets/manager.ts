@@ -1,5 +1,6 @@
 import { LambdaFactoryManager } from '../../src/lambda';
-import { SecretConfig } from '../../src/lambda/utils/secrets_manager';
+
+// List of AWS Secrets
 enum AWSSecretName1 {
   'SecretKey1',
   'SecretKey2',
@@ -19,6 +20,7 @@ const AWSSecrets = {
   Vault: AWSVaultSecret,
 };
 
+// List of Hashicorp Vault Secrets
 enum VaultSecretName1 {
   'VaultSecretKey1',
   'VaultSecretKey2',
@@ -33,19 +35,18 @@ const VaultSecrets = {
   VaultSecretName2: VaultSecretName2,
 };
 
-const mgr = new LambdaFactoryManager()
+new LambdaFactoryManager()
   .setAWSSecrets(AWSSecrets)
-  .addSecretSource<{ version?: number }>();
-
-const mgr2 = mgr(
+  .addSecretSource<{ version?: number }>()(
   'hashicorpvault',
   VaultSecrets,
   (aws) => {
     return {
-      token: aws('Vault', 'Token', true),
+      token: aws('Vault', 'Token', true), // Get the vault token
     };
   },
   async (secretsToFetch, vaultSecrets) => {
+    // vaultSecrets is of type { token?: string }
     const vaultToken = vaultSecrets.token!;
     let out: Record<string, string> = {};
 

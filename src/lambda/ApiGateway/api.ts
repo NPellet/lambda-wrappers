@@ -22,6 +22,7 @@ import otelapi, { SpanStatusCode } from '@opentelemetry/api';
 import { Request } from '../../util/records/apigateway/request';
 import { wrapLatencyMetering } from '../utils/telemetry';
 import { getApiGatewayTelemetryAttributes } from './telemetry/Meter';
+import { MessageType } from '../../util/types';
 /**
  * Make sure that the return format of the lambda matches what is expected from the API Gateway
  * @param handler
@@ -168,6 +169,9 @@ export const createApiGatewayHandler = <
         }
       );
 
+      if (event.headers['Content-Type'] === 'application/json') {
+        configuration.messageType = MessageType.Object;
+      }
       const request = new Request<TInput>(event, configuration.messageType);
       let data: TInput;
 

@@ -18,7 +18,7 @@ describe('Testing manager behaviour', function () {
   it("Cannot a secret source that's called aws", function () {
     const mgr = new LambdaFactoryManager();
     expect(() => {
-      mgr.addSecretSource<any>()('aws', {}, async () => {
+      mgr.addSecretSource<any>()('aws', {}, undefined, async () => {
         return {};
       });
     }).toThrow();
