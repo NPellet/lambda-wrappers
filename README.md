@@ -65,9 +65,9 @@ This package provides an opiniated stack to insert additional logic in handling 
   - [Features](#features)
   - [Demo Usage](#demo-usage)
     - [1. Create a service-wide (or cross-service) manager](#1-create-a-service-wide-or-cross-service-manager)
-    - [The simple way](#the-simple-way)
+    - [Go down the simpler functional route](#go-down-the-simpler-functional-route)
       - [2. Implement your business logic directly](#2-implement-your-business-logic-directly)
-    - [The more complete way:](#the-more-complete-way)
+    - [Go down the more complex OOP route:](#go-down-the-more-complex-oop-route)
       - [2. Create a route / event handler using the manager](#2-create-a-route--event-handler-using-the-manager)
       - [3. Create a controller](#3-create-a-controller)
   - [Details](#details)
@@ -164,14 +164,13 @@ const mgr = new LambdaFactoryManager();
 // We'll import the manager later on !
 export default mgr;
 ```
-### <a name='Thesimpleway'></a>The simple way
+### <a name='Godownthesimplerfunctionalroute'></a>Go down the simpler functional route
 
 #### <a name='Implementyourbusinesslogicdirectly'></a>2. Implement your business logic directly
 You can now create the route / event handler and specify its implementation as such:
 
 ```typescript
 import manager from './path/to/manager'; 
-// Note here how the name of the object is the one you set in the `apiGatewayWrapperFactory` method. It's also the handler you must configure in AWS
 export const { handler_name, configuration } = manager
   .apiGatewayWrapperFactory('handler_name')
   .setTsInputType<string>()
@@ -182,9 +181,12 @@ export const { handler_name, configuration } = manager
 
 ```
 
-Your AWS Lambda handler that must be configured will then be `path/to/route.handler_name`
+Note here how the function name in the output object is the one you set in the `apiGatewayWrapperFactory` method. It's also the handler you must configure in AWS:  `path/to/route.handler_name`
 
-### <a name='Themorecompleteway:'></a>The more complete way:
+If you implement multiple handlers per module and you need to access the `configuration` object, you will need to rename it.
+
+
+### <a name='GodownthemorecomplexOOProute:'></a>Go down the more complex OOP route:
 #### <a name='Createarouteeventhandlerusingthemanager'></a>2. Create a route / event handler using the manager
 
 It is good practice to separate the logic (a controller) from the handler itself (the entrypoint exposed to AWS), which allows you to swap controllers or implement multiple lambdas with a single controller. <br>
