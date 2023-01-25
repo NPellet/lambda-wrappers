@@ -11,7 +11,6 @@ import {
 } from './utils/secrets_manager';
 import { NodeOptions } from '@sentry/node';
 import { SourceConfig } from './config';
-import { BaseSchema } from 'yup';
 
 type awsPreSecret = {
   secret: string;
@@ -28,11 +27,15 @@ export type SecretFetcher<
   awsSecrets: Partial<Record<AWSKEYS, string>>
 ) => Promise<Partial<Record<KEYS, string>>>;
 
-export class LambdaFactoryManager<T extends TAllSecretRefs> {
+
+
+
+export class LambdaFactoryManager<T extends TAllSecretRefs, V extends Record<string, (...args: any ) => Promise<void>> = {}> {
   runtimeCfg: SourceConfig | undefined = undefined;
   sentryCfg: NodeOptions = {};
   secretFetchers: Record<keyof T, SecretFetcher<string, any>>;
   preSecrets: Record<keyof T, awsPreSecret>;
+  validations: V;
 
   constructor() {}
 
@@ -115,6 +118,20 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
     };
   }
 
+
+public addValidation<U extends string, Z extends (...args: any[]) => boolean>( methodName: U, validationMethod: Z ) {
+
+  const newMgr = new LambdaFactoryManager<T, V & { [T in U]: Z }>();
+  newMgr.runtimeCfg = this.runtimeCfg;
+  newMgr.preSecrets = this.preSecrets;
+  newMgr.secretFetchers = this.secretFetchers;
+  newMgr.sentryCfg = this.sentryCfg;
+
+  newMgr.validations = { ...this.validations, [ methodName ]: validationMethod }
+  
+  return newMgr;
+}
+
   public configureSentry(sentryOptions: NodeOptions, expand: boolean = true) {
     if (expand) {
       Object.assign(this.sentryCfg, sentryOptions);
@@ -150,7 +167,7 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
       string,
       U,
       undefined,
-      undefined
+      V
     >(this);
 
     return wrapper.setHandler(handler);

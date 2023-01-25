@@ -47,15 +47,13 @@ export type SourceConfig = Partial<{
 
 export type HandlerConfiguration<
   TInit = any,
-  U extends any | ObjectSchema<any> = any,
-  V extends any | ObjectSchema<any> = any,
   TSecrets extends string = string
 > = {
   secretInjection?: Record<TSecrets, SecretConfig<METABase>>;
 
   secretFetchers?: Record<string, SecretFetcher<TSecrets, any>>;
-  yupSchemaInput?: U;
-  yupSchemaOutput?: V;
+  validateInputFn?: ( data: any, rawData: any ) => Promise<void>;
+  validateOutputFn?: ( data: any, rawData: any ) => Promise<void>;
   initFunction?: (secrets: SecretsRecord<TSecrets>) => Promise<TInit>;
   sentry?: boolean;
   opentelemetry?: boolean;
@@ -67,10 +65,8 @@ export type HandlerConfiguration<
 
 export type HandlerConfigurationWithType<
   I,
-  U extends any | ObjectSchema<any> = any,
-  V extends any | ObjectSchema<any> = any,
   TSecrets extends string = string
-> = Omit<HandlerConfiguration<I, U, V, TSecrets>, 'type'> & {
+> = Omit<HandlerConfiguration<I, TSecrets>, 'type'> & {
   type: LambdaType;
 };
 

@@ -43,7 +43,7 @@ export const createApiGatewayHandler = <
     HTTPResponse<O> | HTTPError
   >,
   configuration: Omit<
-    HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
+    HandlerConfiguration<TInit, TSecrets>,
     'type'
   >
 ) => {
@@ -115,9 +115,9 @@ export const createApiGatewayHandler = <
         body: '',
       };
     }
-    if (configuration.yupSchemaOutput) {
+    if (configuration.validateOutputFn) {
       try {
-        await configuration.yupSchemaOutput?.validate(responseData);
+        await configuration.validateOutputFn(responseData, response);
       } catch (e) {
         recordException(e);
         return {
@@ -187,10 +187,9 @@ export const createApiGatewayHandler = <
         };
       }
 
-      if (configuration.yupSchemaInput) {
+      if (configuration.validateInputFn) {
         try {
-          await configuration.yupSchemaInput.validate(data);
-          console.log('Valid !');
+          await configuration.validateInputFn(data, request.getRawData());
         } catch (e) {
           log.warn(
             `Lambda's input schema failed to validate. Returning statusCode 500 to the API Gateway`

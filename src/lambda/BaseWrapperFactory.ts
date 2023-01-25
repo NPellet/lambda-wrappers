@@ -1,9 +1,8 @@
 import {
   SecretConfig,
   TAllSecretRefs,
-  TSecretRef,
 } from './utils/secrets_manager';
-import type { LambdaFactoryManager } from './Manager';
+import { LambdaFactoryManager } from './Manager';
 import { AWSLambda } from '@sentry/serverless';
 import { MessageType } from '../util/types';
 import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from 'yup';
@@ -18,6 +17,9 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
   public _handler: string;
   public _secrets: Record<string, SecretConfig<any>>;
   private _initFunction: (...args: any) => Promise<any>;
+
+  validateInputFn: (data: any) => Promise<void>;
+  validateOutputFn: (data: any) => Promise<void>;
 
   constructor(protected mgr: LambdaFactoryManager<TSecretList>) {}
 
@@ -53,9 +55,9 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     }
   }
 
-  protected expandConfiguration<IF, SInput, SOutput, TSecrets extends string>(
-    cfg: HandlerConfiguration<IF, SInput, SOutput, TSecrets>
-  ): HandlerConfiguration<IF, SInput, SOutput, TSecrets> {
+  protected expandConfiguration<IF,  TSecrets extends string>(
+    cfg: HandlerConfiguration<IF, TSecrets>
+  ): HandlerConfiguration<IF, TSecrets> {
     const secrets = cfg.secretInjection;
     const expandedSecrets = this.expandSecrets(secrets);
 
@@ -64,6 +66,8 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
       ...cfg,
       secretInjection: expandedSecrets,
       secretFetchers: this.mgr.secretFetchers ?? {},
+      validateInputFn: this.validateInputFn,
+      validateOutputFn: this.validateOutputFn,
       sources: _.defaultsDeep(
         {},
         this._runtimeCfg,
@@ -135,3 +139,4 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     };
   }
 }
+
