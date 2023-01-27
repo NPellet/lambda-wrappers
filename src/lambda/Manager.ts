@@ -233,22 +233,3 @@ export class LambdaFactoryManager<T extends TAllSecretRefs, TVal extends TValida
     return snsWrapper.addValidations(this.validations).setHandler(handler);
   }
 }
-
-
-
-
-new LambdaFactoryManager().addValidation( "name", async ( data: any, raw: any, schema: BaseSchema ) => {
-
-}, ( wrapper: BaseWrapperFactory<any>, schema: BaseSchema ) => {
-
-  if (schema instanceof StringSchema) {
-    wrapper._messageType = MessageType.String;
-  } else if (schema instanceof NumberSchema) {
-    wrapper._messageType = MessageType.Number;
-  } else if (schema instanceof ObjectSchema) {
-    wrapper._messageType = MessageType.Object;
-  }
-
-  return [ schema ]
-
-})
