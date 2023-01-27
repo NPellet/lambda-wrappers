@@ -106,14 +106,7 @@ export const createApiGatewayHandler = <
       };
     }
 
-    if (!responseData) {
-      return {
-        headers,
-        isBase64Encoded: false,
-        statusCode: response.getStatusCode(),
-        body: '',
-      };
-    }
+    
     if (configuration.validateOutputFn) {
       try {
         await validateRecord(response, configuration.validateOutputFn);
@@ -127,6 +120,15 @@ export const createApiGatewayHandler = <
           body: 'Validation error: Output object not validating given output schema',
         };
       }
+    }
+
+    if (!responseData) {
+      return {
+        headers,
+        isBase64Encoded: false,
+        statusCode: response.getStatusCode(),
+        body: '',
+      };
     }
 
     if (typeof responseData === 'object') {

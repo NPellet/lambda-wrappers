@@ -45,7 +45,7 @@ describe('SNS: Telemetry', function () {
 });
 
 describe('SNS: Runtime config', function () {
-  it('Basic behaviour resolved the handler without exception', async () => {
+  it('Basic behaviour resolves the handler without exception', async () => {
     let called: boolean = false;
     const handler = createSNSHandler(
       async () => {
@@ -62,6 +62,16 @@ describe('SNS: Runtime config', function () {
 
     expect(called).toBe(true);
   });
+
+  it("Throwing from within the SNS handler throws the lambda and records exception", async() => {
+
+    const handler = createSNSHandler( async() => {
+      throw new Error("Whoops");
+    }, { messageType: MessageType.String });
+
+    await expect( handler( testSNSEvent, LambdaContext, () => {} ) ).rejects.toBeDefined();
+    expect( recordException ).toHaveBeenCalled();
+  })
 
   it('Validation failure silences the lambda', async () => {
     const handler = createSNSHandler(async () => { }, {

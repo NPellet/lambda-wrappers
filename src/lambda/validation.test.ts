@@ -46,6 +46,19 @@ describe("Testing runtime validation", () => {
                                 expect( _handler ).toHaveBeenCalled();
                                 expect( successValidator ).toHaveBeenCalledWith( testApiGatewayEvent.body, testApiGatewayEvent );
                             });
+
+                            it( "Failed output validator check", async() => {
+                                const no_content = HTTPResponse.OK_NO_CONTENT();
+                                const _handler = jest.fn(  async () => {
+                                    return no_content;
+                                });
+                                const { handler } = mgr.apiGatewayWrapperFactory("handler").validateOutput( "failValidator" ).wrapFunc( _handler )
+                    
+
+                                await expect( handler( testApiGatewayEvent, LambdaContext, () => {}) ).resolves.toMatchObject({ statusCode: 500, body: expect.stringContaining("Validation error: Output") })
+                                expect( failValidator ).toHaveBeenCalledWith( null, no_content );
+
+                            });
                         });
 
 

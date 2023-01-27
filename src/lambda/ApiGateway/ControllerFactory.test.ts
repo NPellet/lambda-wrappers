@@ -120,6 +120,8 @@ describe('Testing API Controller factory', function () {
     expect(out2.statusCode).toBe(HTTPError.BAD_REQUEST('').getStatusCode());
   });
 
+
+
   it('needsSecret required param defaults to true', () => {
     const fac = new APIGatewayHandlerWrapperFactory(new LambdaFactoryManager())
       .needsSecret('aws', 'abc', 'ThirdPartyAPI', 'adminApiKey', {})

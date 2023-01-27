@@ -64,7 +64,7 @@ export const createSNSHandler = <
       return await wrappedHandler(_record, context, callback);
     } catch (e) {
       recordException(e);
-      return;
+      throw e;
     }
   };
 
