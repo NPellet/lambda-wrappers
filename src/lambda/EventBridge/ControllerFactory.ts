@@ -92,6 +92,7 @@ export class EventBridgeHandlerWrapperFactory<
       await self.validations[methodName as string].apply(self, [data, rawData, ...args]);
     }
     this._validateInputFn.push(validation);
+    return this;
   }
 
   fork<

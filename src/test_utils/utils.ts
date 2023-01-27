@@ -235,6 +235,10 @@ export const testSQSEvent: SQSEvent = {
   Records: [testSQSRecord, testSQSRecord],
 };
 
+export const testSingleSQSEvent: SQSEvent = {
+  Records: [testSQSRecord],
+};
+
 export const testSNSEvent: SNSEvent = {
   Records: [testSNSRecord],
 };
