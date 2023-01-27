@@ -1,5 +1,5 @@
 import { ObjectSchema } from 'yup';
-import { MessageType } from '../util/types';
+import { MessageType, TValidationMethodBase } from '../util/types';
 import { SecretFetcher } from './Manager';
 import { METABase, SecretConfig, SecretsRecord } from './utils/secrets_manager';
 
@@ -52,8 +52,8 @@ export type HandlerConfiguration<
   secretInjection?: Record<TSecrets, SecretConfig<METABase>>;
 
   secretFetchers?: Record<string, SecretFetcher<TSecrets, any>>;
-  validateInputFn?: ( data: any, rawData: any ) => Promise<void>;
-  validateOutputFn?: ( data: any, rawData: any ) => Promise<void>;
+  validateInputFn?: TValidationMethodBase[];
+  validateOutputFn?: TValidationMethodBase[];
   initFunction?: (secrets: SecretsRecord<TSecrets>) => Promise<TInit>;
   sentry?: boolean;
   opentelemetry?: boolean;

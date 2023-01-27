@@ -1,7 +1,8 @@
+//import { SQSHandlerWrapperFactory } from './SQS/ControllerFactory';
+import { SNSHandlerWrapperFactory } from './SNS/ControllerFactory';
 import { APIGatewayHandlerWrapperFactory } from './ApiGateway/ControllerFactory';
 import { EventBridgeHandlerWrapperFactory } from './EventBridge/ControllerFactory';
-import { SNSHandlerWrapperFactory } from './SNS/ControllerFactory';
-import { SQSHandlerWrapperFactory } from './SQS/ControllerFactory';
+
 import {
   METABase,
   SecretFetchCfg,
@@ -11,6 +12,9 @@ import {
 } from './utils/secrets_manager';
 import { NodeOptions } from '@sentry/node';
 import { SourceConfig } from './config';
+import { TValidationMethod } from '../util/types';
+import { SQSHandlerWrapperFactory } from './SQS/ControllerFactory';
+
 
 type awsPreSecret = {
   secret: string;
@@ -119,7 +123,7 @@ export class LambdaFactoryManager<T extends TAllSecretRefs, V extends Record<str
   }
 
 
-public addValidation<U extends string, Z extends (...args: any[]) => boolean>( methodName: U, validationMethod: Z ) {
+public addValidation<U extends string, Z extends TValidationMethod, Y>( methodName: U, validationMethod: Z) {
 
   const newMgr = new LambdaFactoryManager<T, V & { [T in U]: Z }>();
   newMgr.runtimeCfg = this.runtimeCfg;
@@ -159,9 +163,40 @@ public addValidation<U extends string, Z extends (...args: any[]) => boolean>( m
     return this;
   }
 
+
+
+
   public apiGatewayWrapperFactory<U extends string>(handler: U) {
-    const wrapper = new APIGatewayHandlerWrapperFactory<
+    const wrapper: APIGatewayHandlerWrapperFactory<
+    any,
+    any,
+    T,
+    string,
+    U,
+    undefined, 
+    V
+  > = new APIGatewayHandlerWrapperFactory<
       any,
+      any,
+      T,
+      string,
+      U,
+      undefined, 
+      V
+    >(this);
+
+    return wrapper.addValidations( this.validations ).setHandler(handler);
+  }
+
+  public eventBridgeWrapperFactory<U extends string>(handler: U) {
+    const wrapper:  EventBridgeHandlerWrapperFactory<
+    any,
+    T,
+    string,
+    U,
+    undefined,
+    V
+  > = new EventBridgeHandlerWrapperFactory<
       any,
       T,
       string,
@@ -169,32 +204,20 @@ public addValidation<U extends string, Z extends (...args: any[]) => boolean>( m
       undefined,
       V
     >(this);
-
-    return wrapper.setHandler(handler);
-  }
-
-  public eventBridgeWrapperFactory<U extends string>(handler: U) {
-    const wrapper = new EventBridgeHandlerWrapperFactory<
-      any,
-      T,
-      string,
-      U,
-      undefined
-    >(this);
-    return wrapper.setHandler(handler);
+    return wrapper.addValidations( this.validations ).setHandler(handler);
   }
 
   public sqsWrapperFactory<U extends string>(handler: U) {
-    const wrapper = new SQSHandlerWrapperFactory<any, T, string, U, undefined>(
-      this
-    );
-    return wrapper.setHandler(handler);
+    let sqsWrapper: SQSHandlerWrapperFactory<any, T, string, string, undefined, V>;  
+    sqsWrapper = new SQSHandlerWrapperFactory<any, T, string, string, undefined, V>( this );
+    return sqsWrapper.addValidations( this.validations ).setHandler(handler);
   }
 
+
   public snsWrapperFactory<U extends string>(handler: U) {
-    const wrapper = new SNSHandlerWrapperFactory<any, T, string, U, undefined>(
-      this
-    );
-    return wrapper.setHandler(handler);
+    let snsWrapper: SNSHandlerWrapperFactory<any, T, string, U, undefined, V>;
+    snsWrapper = new SNSHandlerWrapperFactory<any, T, string, U, undefined, V>(this);
+    return snsWrapper.addValidations( this.validations ).setHandler(handler);
   }
 }
+

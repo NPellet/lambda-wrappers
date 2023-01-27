@@ -3,6 +3,7 @@ import {
   memoryExporter,
   sampledAwsHeader,
   testEventBridgeEvent,
+  yupValidation,
 } from "../../test_utils/utils";
 
 import _ from "lodash";
@@ -83,9 +84,9 @@ describe("Event bridge handler", function () {
       {
         initFunction: async () => { },
         messageType: MessageType.Binary,
-        yupSchemaInput: yup.object({
+        validateInputFn: [yupValidation(yup.object({
           field: yup.number().required(),
-        }),
+        }))],
         sources: {
           eventBridge: {
             failLambdaOnValidationFail: true,
@@ -203,9 +204,9 @@ describe("Event bridge handler", function () {
             "failLambdaOnValidationFail": true
           }
         },
-        yupSchemaInput: yup.object({
+        validateInputFn: [yupValidation(yup.object({
           field: yup.number().required(),
-        }),
+        }))],
         messageType: MessageType.Object,
       }
     );
@@ -226,10 +227,9 @@ describe("Event bridge handler", function () {
             "failLambdaOnValidationFail": false
           }
         },
-
-        yupSchemaInput: yup.object({
+        validateInputFn: [yupValidation(yup.object({
           field: yup.number().required(),
-        }),
+        }))],
         messageType: MessageType.Object,      }
     );
 

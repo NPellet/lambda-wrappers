@@ -4,7 +4,7 @@ import {
 } from './utils/secrets_manager';
 import { LambdaFactoryManager } from './Manager';
 import { AWSLambda } from '@sentry/serverless';
-import { MessageType } from '../util/types';
+import { MessageType, TValidationMethod, TValidationMethodBase, TValidationsBase } from '../util/types';
 import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from 'yup';
 import { HandlerConfiguration, SourceConfig } from './config';
 import _ from 'lodash';
@@ -18,8 +18,9 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
   public _secrets: Record<string, SecretConfig<any>>;
   private _initFunction: (...args: any) => Promise<any>;
 
-  validateInputFn: (data: any) => Promise<void>;
-  validateOutputFn: (data: any) => Promise<void>;
+  protected _validateInputFn: TValidationMethodBase[] = [];
+  protected _validateOutputFn: TValidationMethodBase[] = [];
+  protected validations: TValidationsBase = {};
 
   constructor(protected mgr: LambdaFactoryManager<TSecretList>) {}
 
@@ -29,6 +30,9 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     newEl._handler = this._handler;
     newEl._runtimeCfg = this._runtimeCfg;
     newEl._secrets = this._secrets;
+    newEl._validateInputFn = this._validateInputFn;
+    newEl._validateOutputFn = this._validateOutputFn;
+    newEl.validations = this.validations;
   }
 
   public sentryDisable() {
@@ -66,8 +70,8 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
       ...cfg,
       secretInjection: expandedSecrets,
       secretFetchers: this.mgr.secretFetchers ?? {},
-      validateInputFn: this.validateInputFn,
-      validateOutputFn: this.validateOutputFn,
+      validateInputFn: this._validateInputFn,
+      validateOutputFn: this._validateOutputFn,
       sources: _.defaultsDeep(
         {},
         this._runtimeCfg,

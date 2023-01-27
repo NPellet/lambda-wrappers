@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import * as yup from 'yup';
 import { EventBridgeHandlerWrapperFactory } from './ControllerFactory';
 import { LambdaFactoryManager } from '../Manager';
 import { LambdaContext, testEventBridgeEvent } from '../../test_utils/utils';
@@ -41,14 +40,14 @@ describe('Testing EventBridge wrapper factory', function () {
       .setTsInputType<{ a: string }>()
       .needsSecret('aws', 'key', 'a', 'b', undefined, true)
       .sentryDisable()
-      .setInputSchema(
+      /*.setInputSchema(
         yup.object({
           a: yup.number(),
         })
-      );
+      );*/
     // @ts-ignore
     expect(fac2._handler).toBe('ahandler');
-    expect(fac2._inputSchema).toBeInstanceOf(yup.ObjectSchema);
+    //expect(fac2._inputSchema).toBeInstanceOf(yup.ObjectSchema);
     expect(fac2._secrets.key).toStrictEqual({
       source: 'aws',
       meta: undefined,

@@ -11,6 +11,7 @@ import {
   wrapTelemetryEventBridge,
 } from './telemetry/Wrapper';
 import { wrapLatencyMetering } from '../utils/telemetry';
+import { validateRecord } from '../../util/validateRecord';
 
 export const createEventBridgeHandler = <
   T,
@@ -26,7 +27,7 @@ export const createEventBridgeHandler = <
     TSecrets,
     void
   >,
-  configuration: HandlerConfiguration<I, SInput>
+  configuration: HandlerConfiguration<I>
 ): Handler<
   EventBridgeEvent<
     string,
@@ -51,9 +52,9 @@ export const createEventBridgeHandler = <
 
     const _event = new AwsEventBridgeEvent<V>(event);
 
-    if (configuration.yupSchemaInput) {
+    if (configuration.validateInputFn) {
       try {
-        await configuration.yupSchemaInput.validate(_event.getData());
+        await validateRecord( _event, configuration.validateInputFn );
       } catch (e) {
         log.warn(`Lambda's input schema failed to validate.`);
         log.debug(e);

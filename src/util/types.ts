@@ -41,3 +41,11 @@ export type IfHandler<T> = T extends {
 }
   ? (a: U, b: V) => W
   : never;
+
+
+  export type TValidationsBase = Record<string, (...args: any ) => Promise<void>>;
+
+  export type AllParametersExceptFirst<T> = T extends ( _: any, __: any, ...args: infer P) => any ? P : never;
+
+  export type TValidationMethodBase = (data: any, rawData: any) => Promise<void>;  
+  export type TValidationMethod = (data: any, rawData: any, ...args: any[]) => Promise<void>;

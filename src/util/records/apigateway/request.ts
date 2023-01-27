@@ -18,6 +18,10 @@ export class Request<T> extends GenericRecord<T, string> {
   public getRawData() {
     return this.rawData;
   }
+  
+  public getRawRecord() {
+    return this.getRawData();
+  }
 
   public getBody(): string {
     return this.rawData.body || ""

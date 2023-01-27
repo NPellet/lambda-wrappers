@@ -30,6 +30,7 @@ import {
   SQSEvent,
 } from 'aws-lambda';
 import { APIGatewayHandlerWrapperFactory } from '../lambda/ApiGateway/ControllerFactory';
+import { BaseSchema } from 'yup';
 
 export const contextSetter = {
   set(carrier: any, key: string, value: string) {
@@ -252,3 +253,10 @@ export const LambdaContext: Context = {
   fail: () => {},
   succeed: () => {},
 };
+
+export const yupValidation = function( schema: BaseSchema ) {
+  return async function( data: any, rawData: any, ) {
+    await schema.validate( data );
+  }
+}
+

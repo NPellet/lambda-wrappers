@@ -1,0 +1,11 @@
+{
+  "name": "aws-lambda-handlers-yup",
+  "version": "1.0.0",
+  "description": "Yup validator for the lambda handlers",
+  "main": "index.js",
+  "scripts": {
+    
+  },
+  "author": "Norman Pellet",
+  "license": "MIT"
+}

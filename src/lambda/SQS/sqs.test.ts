@@ -3,6 +3,7 @@ import {
   LambdaContext,
   memoryExporter,
   testSQSRecord,
+  yupValidation,
 } from '../../test_utils/utils';
 import * as yup from 'yup';
 import { SQSRecord } from 'aws-lambda';
@@ -69,10 +70,10 @@ describe('Testing SQS Handler wrapper', function () {
 
   it('Failed input schema outputs a batchItemFailure but does not record exception', async () => {
     const handler = createSQSHandler(async (data, init, secrets) => {}, {
-      yupSchemaInput: yup.object({
+      validateInputFn: [yupValidation(yup.object({
         requiredInputString: yup.string().required(),
         aNumber: yup.number(),
-      }),
+      }))],
 
       messageType: MessageType.Binary,
     });
@@ -191,10 +192,10 @@ describe('Testing SQS Opentelemetry', function () {
       },
       {
         opentelemetry: true,
-        yupSchemaInput: yup.object({
+        validateInputFn: [yupValidation(yup.object({
           requiredInputString: yup.string().required(),
           aNumber: yup.number(),
-        }),
+        }))],
 
         messageType: MessageType.Object,
       }
@@ -225,9 +226,9 @@ describe('SQS: Runtime config', function () {
         },
       },
       messageType: MessageType.String,
-      yupSchemaInput: yup.object({
+      validateInputFn: [yupValidation(yup.object({
         field: yup.number().required(),
-      }),
+      }))],
     });
 
     await expect(
@@ -241,9 +242,10 @@ describe('SQS: Runtime config', function () {
         },
       },
       messageType: MessageType.String,
-      yupSchemaInput: yup.object({
+      
+      validateInputFn: [yupValidation(yup.object({
         field: yup.number().required(),
-      }),
+      }))],
     });
 
     await expect(
@@ -261,9 +263,9 @@ describe('SQS: Runtime config', function () {
           silenceRecordOnValidationFail: true,
         },
       },
-      yupSchemaInput: yup.object({
+      validateInputFn: [yupValidation(yup.object({
         field: yup.number().required(),
-      }),
+      }))],
       messageType: MessageType.String,
     });
     await handler({ Records: [testSQSRecord] }, LambdaContext, () => {});
@@ -279,9 +281,9 @@ describe('SQS: Runtime config', function () {
         },
       },
 
-      yupSchemaInput: yup.object({
+      validateInputFn: [yupValidation(yup.object({
         field: yup.number().required(),
-      }),
+      }))],
       messageType: MessageType.String,
     });
 

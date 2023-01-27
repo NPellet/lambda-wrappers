@@ -1,10 +1,9 @@
-import { BaseSchema, InferType } from 'yup';
 import {
   HandlerConfiguration,
   ConfigGeneral,
   SourceConfigSQS,
 } from '../config';
-import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
+import { AllParametersExceptFirst, ConstructorOf, MessageType, TValidationsBase } from '../../util/types';
 import { SecretsContentOf, TAllSecretRefs } from '../utils/secrets_manager';
 import { createSQSHandler } from './sqs';
 import { SQSBatchItemFailure } from 'aws-lambda';
@@ -16,17 +15,9 @@ export class SQSHandlerWrapperFactory<
   TSecretList extends TAllSecretRefs,
   TSecrets extends string = string,
   THandler extends string = 'handle',
-  SInput extends BaseSchema | undefined = undefined,
-  TInit = undefined
+  TInit = undefined,
+  TValidations extends TValidationsBase = {}
 > extends BaseWrapperFactory<TSecretList> {
-  public _inputSchema: SInput;
-
-  setInputSchema<U extends BaseSchema>(schema: U) {
-    const api = this.fork<TInput, TSecrets, THandler, U, TInit>();
-    api._inputSchema = schema;
-    api.setMessageTypeFromSchema(schema);
-    return api;
-  }
 
   needsSecret<
     SRC extends keyof TSecretList & string,
@@ -44,60 +35,41 @@ export class SQSHandlerWrapperFactory<
       TInput,
       string extends TSecrets ? U : TSecrets | U,
       THandler,
-      SInput,
-      TInit
+      TInit,
+      TValidations
     >();
 
     api._needsSecret(source, key, secretName, secretKey, meta, required);
-    api._inputSchema = this._inputSchema;
     return api;
   }
 
   setHandler<T extends string>(handler: T) {
-    const api = this.fork<TInput, TSecrets, T, SInput>();
-    api._inputSchema = this._inputSchema;
+    const api = this.fork<TInput, TSecrets, T, TInit, TValidations>();
     api._handler = handler;
     return api;
   }
 
-  private copyAll(
-    newObj: SQSHandlerWrapperFactory<
-      any,
-      TSecretList,
-      TSecrets,
-      THandler,
-      SInput,
-      TInit
-    >
-  ) {
-    newObj._inputSchema = this._inputSchema;
-  }
-
   setTsInputType<U>() {
-    const api = this.fork<U, TSecrets, THandler, SInput, TInit>();
+    const api = this.fork<U, TSecrets, THandler, TInit, TValidations>();
     api._messageType = MessageType.Object;
-    this.copyAll(api);
     return api;
   }
 
   setStringInputType() {
     const api = this.setTsInputType<string>();
     api._messageType = MessageType.String;
-    this.copyAll(api);
     return api;
   }
 
   setNumberInputType() {
     const api = this.setTsInputType<number>();
     api._messageType = MessageType.Number;
-    this.copyAll(api);
     return api;
   }
 
   setBinaryInputType() {
     const api = this.setTsInputType<Buffer>();
     api._messageType = MessageType.Binary;
-    this.copyAll(api);
     return api;
   }
 
@@ -113,34 +85,48 @@ export class SQSHandlerWrapperFactory<
     TInput,
     TSecrets extends string = string,
     THandler extends string = 'handle',
-    SInput extends BaseSchema | undefined = undefined,
-    TInit = undefined
+    TInit = undefined,
+    TValidations extends TValidationsBase = {}
   >() {
     const n = new SQSHandlerWrapperFactory<
       TInput,
       TSecretList,
       TSecrets,
       THandler,
-      SInput,
-      TInit
+      TInit,
+      TValidations
     >(this.mgr);
     super.fork(n);
     return n;
   }
 
   initFunction<U>(func: (secrets: Record<TSecrets, string>) => Promise<U>) {
-    const factory = this.fork<TInput, TSecrets, THandler, SInput, U>();
-    factory._inputSchema = this._inputSchema;
+    const factory = this.fork<TInput, TSecrets, THandler, U, TValidations>();
     factory.setInitFunction(func);
     return factory;
   }
 
+  public addValidations<U extends Record<string, (...args: any[]) => Promise<void>>>(validations: U) {
+    const wrapper = this.fork<TInput, TSecrets, THandler, TInit, TValidations & U>();
+    wrapper.validations = { ...this.validations, ...validations };
+    return wrapper;
+  }
+
+  validateInput<U extends keyof TValidations>(methodName: U, ...args: AllParametersExceptFirst<TValidations[U]>) {
+    const self = this;
+    const validation = async function (data: any, rawData: any) {
+      await self.validations[methodName as string].apply(self, [data, rawData, ...args]);
+    }
+    this._validateInputFn.push(validation);
+    return this;
+  }
+
+
   private buildConfiguration() {
-    const configuration: HandlerConfiguration<TInit, SInput, any, TSecrets> =
+    const configuration: HandlerConfiguration<TInit, TSecrets> =
       this.expandConfiguration({
         opentelemetry: true,
         sentry: true,
-        yupSchemaInput: this._inputSchema,
         secretInjection: this._secrets,
         messageType: this._messageType,
       });
@@ -150,20 +136,13 @@ export class SQSHandlerWrapperFactory<
 
   createHandler(
     controllerFactory: ConstructorOf<
-      TSQSCtrlInterface<THandler, TInput, SInput, TSecrets>
+      TSQSCtrlInterface<THandler, TInput, TSecrets>
     >
   ) {
-    type INPUT = TOrSchema<TInput, SInput>;
 
     type TInterface = {
       [x in THandler]: (
-        payload: AwsSQSRecord<
-          unknown extends TInput
-            ? SInput extends BaseSchema
-              ? InferType<SInput>
-              : unknown
-            : TInput
-        >,
+        payload: AwsSQSRecord<TInput>,
         secrets: Record<TSecrets, string>
       ) => Promise<void | SQSBatchItemFailure>;
     };
@@ -173,7 +152,7 @@ export class SQSHandlerWrapperFactory<
     });
     const configuration = newWrapper.buildConfiguration();
 
-    const handler = createSQSHandler<INPUT, TInterface, TSecrets, SInput>(
+    const handler = createSQSHandler<TInput, TInterface, TSecrets>(
       async (event, init, secrets, c) => {
         return init[this._handler](event, secrets);
       },
@@ -188,14 +167,7 @@ export class SQSHandlerWrapperFactory<
 
   wrapFunc(
     func: (
-      payload: AwsSQSRecord<
-        // subst for TOrSchema
-        unknown extends TInput
-          ? SInput extends BaseSchema
-            ? InferType<SInput>
-            : unknown
-          : TInput
-      >,
+      payload: AwsSQSRecord<TInput>,
       init: TInit,
       secrets?: Record<TSecrets, string | undefined>
     ) => Promise<void | SQSBatchItemFailure>
@@ -203,10 +175,9 @@ export class SQSHandlerWrapperFactory<
     const configuration = this.buildConfiguration();
 
     const handler = createSQSHandler<
-      TOrSchema<TInput, SInput>,
+      TInput,
       TInit,
-      TSecrets,
-      SInput
+      TSecrets
     >(async (event, init, secrets) => {
       return func(event, init, secrets);
     }, configuration);
@@ -226,25 +197,18 @@ export type SQSCtrlInterface<T> = T extends SQSHandlerWrapperFactory<
   infer TInput,
   any,
   infer TSecrets,
-  infer THandler,
-  infer SInput
+  infer THandler
 >
-  ? {
-      [x in THandler]: (
-        payload: AwsSQSRecord<TOrSchema<TInput, SInput>>,
-        secrets: Record<TSecrets, string>
-      ) => Promise<void | SQSBatchItemFailure>;
-    }
+  ? TSQSCtrlInterface<THandler, TInput, TSecrets>
   : never;
 
 type TSQSCtrlInterface<
   THandler extends string,
   TInput,
-  SInput,
   TSecrets extends string
 > = {
-  [x in THandler]: (
-    payload: AwsSQSRecord<TOrSchema<TInput, SInput>>,
-    secrets?: Record<TSecrets, string | undefined>
-  ) => Promise<void | SQSBatchItemFailure>;
-};
+    [x in THandler]: (
+      payload: AwsSQSRecord<TInput>,
+      secrets?: Record<TSecrets, string | undefined>
+    ) => Promise<void | SQSBatchItemFailure>;
+  };

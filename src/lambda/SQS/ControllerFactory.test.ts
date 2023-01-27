@@ -45,15 +45,10 @@ describe('Testing SQS Wrapper factory', function () {
     const fac2 = fac
       .setTsInputType<{ a: string }>()
       .needsSecret('aws', 'key', 'a', 'b', undefined, true)
-      .sentryDisable()
-      .setInputSchema(
-        yup.object({
-          a: yup.number(),
-        })
-      );
+      .sentryDisable();
 
     expect(fac2._handler).toBe('ahandler');
-    expect(fac2._inputSchema).toBeInstanceOf(yup.ObjectSchema);
+    //expect(fac2._inputSchema).toBeInstanceOf(yup.ObjectSchema);
     expect(fac2._secrets.key).toStrictEqual({
       meta: undefined,
       source: 'aws',
@@ -69,7 +64,7 @@ describe('Testing SQS Wrapper factory', function () {
     const controllerFactory = new SQSHandlerWrapperFactory(
       new LambdaFactoryManager()
     )
-      .setInputSchema(schema)
+      .setTsInputType<{ a: string}>()
       .setHandler('create');
 
     type IF = CtrlInterfaceOf<typeof controllerFactory>;
@@ -238,26 +233,7 @@ describe('Testing SQS Wrapper factory', function () {
       expect(createConf(fac1).messageType).toBe(MessageType.Binary);
     });
 
-    test('Using setInputSchema with a string schema yields a message of type String in config', async () => {
-      const fac1 = new SQSHandlerWrapperFactory(
-        new LambdaFactoryManager()
-      ).setInputSchema(yup.string());
-      expect(createConf(fac1).messageType).toBe(MessageType.String);
-    });
-
-    test('Using setInputSchema with a number schema yields a message of type String in config', async () => {
-      const fac1 = new SQSHandlerWrapperFactory(
-        new LambdaFactoryManager()
-      ).setInputSchema(yup.number());
-      expect(createConf(fac1).messageType).toBe(MessageType.Number);
-    });
-
-    test('Using setInputSchema with a object schema yields a message of type String in config', async () => {
-      const fac1 = new SQSHandlerWrapperFactory(
-        new LambdaFactoryManager()
-      ).setInputSchema(yup.object());
-      expect(createConf(fac1).messageType).toBe(MessageType.Object);
-    });
+   
   });
 });
 

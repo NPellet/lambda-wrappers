@@ -2,7 +2,6 @@ import {
   Callback,
   Context,
   SQSBatchItemFailure,
-  SQSBatchResponse,
   SQSEvent,
   SQSHandler,
   SQSRecord,
@@ -11,8 +10,6 @@ import { HandlerConfiguration, LambdaType } from '../config';
 import { LambdaInitSecretHandler } from '../../util/LambdaHandler';
 import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
-import { BaseSchema } from 'yup';
-import { TOrSchema } from '../../util/types';
 import {
   getSQSTelemetryAttributes,
   wrapTelemetrySQS,
@@ -25,18 +22,16 @@ import { recordException } from '../../util/exceptions';
 export const createSQSHandler = <
   TInput,
   TInit,
-  TSecrets extends string,
-  SInput extends BaseSchema | undefined = undefined
->(
+  TSecrets extends string
+  >(
   handler: LambdaInitSecretHandler<
-    AwsSQSRecord<TOrSchema<TInput, SInput>>,
+    AwsSQSRecord<TInput>,
     TInit,
     TSecrets,
     void | SQSBatchItemFailure
   >,
-  configuration: HandlerConfiguration<TInit, SInput>
+  configuration: HandlerConfiguration<TInit>
 ): SQSHandler => {
-  type V = TOrSchema<TInput, SInput>;
   const wrappedHandler = wrapGenericHandler(handler, {
     type: LambdaType.SQS,
     ...configuration,
@@ -44,10 +39,10 @@ export const createSQSHandler = <
 
   let innerLoop = async (record: SQSRecord, context: Context) => {
     log.debug(record);
-    const _record = new AwsSQSRecord<V>(record, configuration.messageType);
+    const _record = new AwsSQSRecord<TInput>(record, configuration.messageType);
 
     try {
-      await validateRecord(_record, configuration.yupSchemaInput);
+      await validateRecord(_record, configuration.validateInputFn);
     } catch (e) {
       if (configuration.sources?.sqs?.recordExceptionOnValidationFail) {
         recordException(e);
@@ -73,7 +68,7 @@ export const createSQSHandler = <
       return out;
     } catch (e) {
       // Do notrecord. Automatically recorded
-      const _record = new AwsSQSRecord<V>(record, configuration.messageType);
+      const _record = new AwsSQSRecord<TInput>(record, configuration.messageType);
       return failSQSRecord(_record);
     }
   };

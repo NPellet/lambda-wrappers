@@ -2,20 +2,17 @@ import {
   Callback,
   Context,
   SNSEvent,
-  SNSEventRecord,
   SNSHandler,
 } from 'aws-lambda';
 import { HandlerConfiguration, LambdaType } from '../config';
 import { LambdaInitSecretHandler } from '../../util/LambdaHandler';
 import { log } from '../utils/logger';
 import { wrapGenericHandler } from '../Wrapper';
-import { BaseSchema } from 'yup';
-import { TOrSchema } from '../../util/types';
 import {
   getSNSTelemetryAttributes,
   wrapTelemetrySNS,
 } from './telemetry/Wrapper';
-import { flush, wrapLatencyMetering } from '../utils/telemetry';
+import { wrapLatencyMetering } from '../utils/telemetry';
 import { AwsSNSRecord } from '../../util/records/sns/record';
 import { validateRecord } from '../../util/validateRecord';
 import { recordException } from '../../util/exceptions';
@@ -23,18 +20,16 @@ import { recordException } from '../../util/exceptions';
 export const createSNSHandler = <
   TInput,
   TInit,
-  TSecrets extends string,
-  SInput extends BaseSchema | undefined = undefined
->(
+  TSecrets extends string>(
   handler: LambdaInitSecretHandler<
-    AwsSNSRecord<TOrSchema<TInput, SInput>>,
+    AwsSNSRecord<TInput>,
     TInit,
     TSecrets,
     void
   >,
-  configuration: HandlerConfiguration<TInit, SInput>
+  configuration: HandlerConfiguration<TInit>
 ): SNSHandler => {
-  type V = TOrSchema<TInput, SInput>;
+  
   const wrappedHandler = wrapGenericHandler(handler, {
     type: LambdaType.SNS,
     ...configuration,
@@ -45,14 +40,14 @@ export const createSNSHandler = <
     context: Context,
     callback: Callback
   ) => {
-    log.info(`Received SNS event with ${event.Records.length} records.`);
-
+    log.info(`Received SNS event`, { topic: event.Records[0].Sns.TopicArn });
+    // Only one event per SNS message
     const record = event.Records[0];
     log.debug(record);
-    const _record = new AwsSNSRecord<V>(record, configuration.messageType);
+    const _record = new AwsSNSRecord<TInput>(record, configuration.messageType);
 
     try {
-      await validateRecord(_record, configuration.yupSchemaInput);
+      await validateRecord(_record, configuration.validateInputFn);
     } catch (e) {
       if (configuration.sources?.sns?.recordExceptionOnValidationFail) {
         recordException(e);
