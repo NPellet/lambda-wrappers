@@ -14,6 +14,8 @@ import { NodeOptions } from '@sentry/node';
 import { SourceConfig } from './config';
 import { TValidationMethod } from '../util/types';
 import { SQSHandlerWrapperFactory } from './SQS/ControllerFactory';
+import { APIGatewayEvent, EventBridgeEvent, SNSEvent, SQSEvent } from 'aws-lambda';
+import { BaseSchema } from 'yup';
 
 
 type awsPreSecret = {
@@ -34,16 +36,16 @@ export type SecretFetcher<
 
 
 
-export class LambdaFactoryManager<T extends TAllSecretRefs, V extends Record<string, (...args: any ) => Promise<void>> = {}> {
+export class LambdaFactoryManager<T extends TAllSecretRefs, V extends Record<string, (...args: any) => Promise<void>> = {}> {
   runtimeCfg: SourceConfig | undefined = undefined;
   sentryCfg: NodeOptions = {};
   secretFetchers: Record<keyof T, SecretFetcher<string, any>>;
   preSecrets: Record<keyof T, awsPreSecret>;
   validations: V;
 
-  constructor() {}
+  constructor() { }
 
-  public async init() {}
+  public async init() { }
 
   public setRuntimeConfig(cfg: SourceConfig) {
     this.runtimeCfg = cfg;
@@ -123,18 +125,18 @@ export class LambdaFactoryManager<T extends TAllSecretRefs, V extends Record<str
   }
 
 
-public addValidation<U extends string, Z extends TValidationMethod, Y>( methodName: U, validationMethod: Z) {
+  public addValidation<U extends string, Z extends TValidationMethod, Y>(methodName: U, validationMethod: Z) {
 
-  const newMgr = new LambdaFactoryManager<T, V & { [T in U]: Z }>();
-  newMgr.runtimeCfg = this.runtimeCfg;
-  newMgr.preSecrets = this.preSecrets;
-  newMgr.secretFetchers = this.secretFetchers;
-  newMgr.sentryCfg = this.sentryCfg;
+    const newMgr = new LambdaFactoryManager<T, V & { [T in U]: Z }>();
+    newMgr.runtimeCfg = this.runtimeCfg;
+    newMgr.preSecrets = this.preSecrets;
+    newMgr.secretFetchers = this.secretFetchers;
+    newMgr.sentryCfg = this.sentryCfg;
 
-  newMgr.validations = { ...this.validations, [ methodName ]: validationMethod }
-  
-  return newMgr;
-}
+    newMgr.validations = { ...this.validations, [methodName]: validationMethod }
+
+    return newMgr;
+  }
 
   public configureSentry(sentryOptions: NodeOptions, expand: boolean = true) {
     if (expand) {
@@ -168,35 +170,15 @@ public addValidation<U extends string, Z extends TValidationMethod, Y>( methodNa
 
   public apiGatewayWrapperFactory<U extends string>(handler: U) {
     const wrapper: APIGatewayHandlerWrapperFactory<
-    any,
-    any,
-    T,
-    string,
-    U,
-    undefined, 
-    V
-  > = new APIGatewayHandlerWrapperFactory<
       any,
       any,
       T,
       string,
       U,
-      undefined, 
+      undefined,
       V
-    >(this);
-
-    return wrapper.addValidations( this.validations ).setHandler(handler);
-  }
-
-  public eventBridgeWrapperFactory<U extends string>(handler: U) {
-    const wrapper:  EventBridgeHandlerWrapperFactory<
-    any,
-    T,
-    string,
-    U,
-    undefined,
-    V
-  > = new EventBridgeHandlerWrapperFactory<
+    > = new APIGatewayHandlerWrapperFactory<
+      any,
       any,
       T,
       string,
@@ -204,20 +186,41 @@ public addValidation<U extends string, Z extends TValidationMethod, Y>( methodNa
       undefined,
       V
     >(this);
-    return wrapper.addValidations( this.validations ).setHandler(handler);
+
+    return wrapper.addValidations(this.validations).setHandler(handler);
+  }
+
+  public eventBridgeWrapperFactory<U extends string>(handler: U) {
+    const wrapper: EventBridgeHandlerWrapperFactory<
+      any,
+      T,
+      string,
+      U,
+      undefined,
+      V
+    > = new EventBridgeHandlerWrapperFactory<
+      any,
+      T,
+      string,
+      U,
+      undefined,
+      V
+    >(this);
+    return wrapper.addValidations(this.validations).setHandler(handler);
   }
 
   public sqsWrapperFactory<U extends string>(handler: U) {
-    let sqsWrapper: SQSHandlerWrapperFactory<any, T, string, string, undefined, V>;  
-    sqsWrapper = new SQSHandlerWrapperFactory<any, T, string, string, undefined, V>( this );
-    return sqsWrapper.addValidations( this.validations ).setHandler(handler);
+    let sqsWrapper: SQSHandlerWrapperFactory<any, T, string, string, undefined, V>;
+    sqsWrapper = new SQSHandlerWrapperFactory<any, T, string, string, undefined, V>(this);
+    return sqsWrapper.addValidations(this.validations).setHandler(handler);
   }
 
 
   public snsWrapperFactory<U extends string>(handler: U) {
     let snsWrapper: SNSHandlerWrapperFactory<any, T, string, U, undefined, V>;
     snsWrapper = new SNSHandlerWrapperFactory<any, T, string, U, undefined, V>(this);
-    return snsWrapper.addValidations( this.validations ).setHandler(handler);
+    return snsWrapper.addValidations(this.validations).setHandler(handler);
   }
 }
+
 
