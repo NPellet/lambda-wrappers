@@ -9,7 +9,7 @@ import {
   HTTPResponse,
 } from '../../util/records/apigateway/response';
 import { Request } from '../../util/records/apigateway/request';
-import { AllParametersExceptFirst, ConstructorOf, MessageType, TValidationsBase } from '../../util/types';
+import { AllParametersExceptFirst, ConstructorOf, MessageType, TValidationInitParams, TValidationsBase } from '../../util/types';
 import { createApiGatewayHandler } from './api';
 import {
   SecretsContentOf,
@@ -29,7 +29,7 @@ export class APIGatewayHandlerWrapperFactory<
   TValidations extends TValidationsBase = {}
 > extends BaseWrapperFactory<TSecretList> {
 
-  protected _messageType: MessageType = MessageType.String;
+  public _messageType: MessageType = MessageType.String;
 
   needsSecret<
     SRC extends keyof TSecretList & string,
@@ -181,21 +181,25 @@ export class APIGatewayHandlerWrapperFactory<
     return wrapper;
   }
 
-  validateInput<U extends keyof TValidations>(methodName: U, ...args: AllParametersExceptFirst<TValidations[U]>) {
+  validateInput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
     const self = this;
+
+    const out = self.validations[ methodName as string ].init( this, ...args );
     const validation = async function (data: any, rawData: any) {
-      
-      await self.validations[methodName as string].apply(self, [data, rawData, ...args]);
+      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...out]);
     }
+
     this._validateInputFn.push(validation);
     return this;
   }
 
-  validateOutput<U extends keyof TValidations>(methodName: U, ...args: AllParametersExceptFirst<TValidations[U]>) {
+  validateOutput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
     const self = this;
+    const out = self.validations[ methodName as string ].init( this, ...args );
     const validation = async function (data: any, rawData: any) {
-      await self.validations[methodName as string].apply(self, [data, rawData, ...args]);
+      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...out]);
     }
+
     this._validateOutputFn.push(validation);  
     return this;
   }

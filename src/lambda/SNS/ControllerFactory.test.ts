@@ -34,14 +34,14 @@ describe('Testing API Controller factory', function () {
       .setTsInputType<{ a: string }>()
       .needsSecret('aws', 'key', 'a', 'b', undefined, true)
       .sentryDisable();
-     /* .setInputSchema(
-        yup.object({
-          a: yup.number(),
-        })
-      );*/
+    /* .setInputSchema(
+       yup.object({
+         a: yup.number(),
+       })
+     );*/
     // @ts-ignore
     expect(fac2._handler).toBe('ahandler');
- //   expect(fac2._inputSchema).toBeInstanceOf(yup.ObjectSchema);
+    //   expect(fac2._inputSchema).toBeInstanceOf(yup.ObjectSchema);
     expect(fac2._secrets.key).toStrictEqual({
       meta: undefined,
       source: 'aws',
@@ -56,10 +56,15 @@ describe('Testing API Controller factory', function () {
     const controllerFactory = new SNSHandlerWrapperFactory(
       new LambdaFactoryManager()
     )
-    .addValidations({ "yup": async function( d, r, s: BaseSchema) {
-      await s.validate( d );
-    }})
-    .validateInput('yup', schema)
+      .addValidations({
+        "yup": {
+          validate: async function (d, r, s: BaseSchema) {
+            await s.validate(d);
+          },
+          init: (wrapper, s: BaseSchema) => [s]
+        }
+      })
+      .validateInput('yup', schema)
       .setHandler('create');
 
     const mockHandler = jest.fn(async (data, secrets) => {
@@ -98,7 +103,7 @@ describe('Testing API Controller factory', function () {
           ],
         },
         LambdaContext,
-        () => {}
+        () => { }
       )
     ).rejects.toBeDefined();
 
@@ -115,7 +120,7 @@ describe('Testing API Controller factory', function () {
         ],
       },
       LambdaContext,
-      () => {}
+      () => { }
     );
 
     expect(mockHandler).toHaveBeenCalledTimes(1);
@@ -153,7 +158,7 @@ describe('Testing API Controller factory', function () {
         static async init() {
           return new Ctrl();
         }
-        async h() {}
+        async h() { }
       }
     );
 
@@ -205,7 +210,7 @@ describe('SNS wrapFunc', function () {
       });
 
     await expect(
-      out.my_handler(testSNSEvent, LambdaContext, () => {})
+      out.my_handler(testSNSEvent, LambdaContext, () => { })
     ).resolves.toBeUndefined();
 
     expect(fn).toHaveBeenCalled();

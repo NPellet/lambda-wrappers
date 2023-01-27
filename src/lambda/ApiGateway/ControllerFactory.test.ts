@@ -54,9 +54,11 @@ describe('Testing API Controller factory', function () {
         true
       )
       .addValidations({
-        yup: async function( d, r, schema: yup.BaseSchema ) {
-          console.log( schema, d );
-          await schema.validate( d );
+        "yup": {
+          validate: async function (d, r, s: yup.BaseSchema) {
+            await s.validate(d);
+          },
+          init: (wrapper, s: yup.BaseSchema) => [s]
         }
       })
       .setTsOutputType<{ b: number }>()

@@ -12,7 +12,7 @@ import { defaultSourceConfig } from '../util/defaultConfig';
 
 export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
   private _disableSentry: boolean;
-  protected _messageType: MessageType = MessageType.Object;
+  public _messageType: MessageType = MessageType.Object;
   public _runtimeCfg: SourceConfig;
   public _handler: string;
   public _secrets: Record<string, SecretConfig<any>>;
@@ -49,16 +49,7 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     return !this._disableSentry && !('DISABLE_SENTRY' in process.env);
   }
 
-  protected setMessageTypeFromSchema(schema: BaseSchema) {
-    if (schema instanceof StringSchema) {
-      this._messageType = MessageType.String;
-    } else if (schema instanceof NumberSchema) {
-      this._messageType = MessageType.Number;
-    } else if (schema instanceof ObjectSchema) {
-      this._messageType = MessageType.Object;
-    }
-  }
-
+  
   protected expandConfiguration<IF,  TSecrets extends string>(
     cfg: HandlerConfiguration<IF, TSecrets>
   ): HandlerConfiguration<IF, TSecrets> {

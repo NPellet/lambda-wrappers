@@ -106,20 +106,25 @@ export class SQSHandlerWrapperFactory<
     return factory;
   }
 
-  public addValidations<U extends Record<string, (...args: any[]) => Promise<void>>>(validations: U) {
+  public addValidations<U extends TValidationsBase>(validations: U) {
     const wrapper = this.fork<TInput, TSecrets, THandler, TInit, TValidations & U>();
     wrapper.validations = { ...this.validations, ...validations };
     return wrapper;
   }
 
+
   validateInput<U extends keyof TValidations>(methodName: U, ...args: AllParametersExceptFirst<TValidations[U]>) {
     const self = this;
+
+    const out = self.validations[ methodName as string ].init( this, ...args );
     const validation = async function (data: any, rawData: any) {
-      await self.validations[methodName as string].apply(self, [data, rawData, ...args]);
+      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...out]);
     }
+
     this._validateInputFn.push(validation);
     return this;
   }
+
 
 
   private buildConfiguration() {

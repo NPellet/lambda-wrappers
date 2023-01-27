@@ -3,7 +3,7 @@ import {
   ConfigGeneral,
   SourceConfigSNS,
 } from '../config';
-import { AllParametersExceptFirst, ConstructorOf, MessageType, TValidationsBase } from '../../util/types';
+import { AllParametersExceptFirst, ConstructorOf, MessageType, TValidationInitParams, TValidationsBase } from '../../util/types';
 import {
   SecretsContentOf,
   TAllSecretRefs,
@@ -20,7 +20,7 @@ export class SNSHandlerWrapperFactory<
   TInit = undefined,
   TValidations extends TValidationsBase = {}
 > extends BaseWrapperFactory<TSecretList> {
-  protected _messageType: MessageType = MessageType.String;
+  public _messageType: MessageType = MessageType.String;
 
   needsSecret<
     SRC extends keyof TSecretList & string,
@@ -115,17 +115,21 @@ export class SNSHandlerWrapperFactory<
     return factory;
   }
 
-  public addValidations<U extends Record<string, (...args: any[]) => Promise<void>>>(validations: U) {
+  public addValidations<U extends TValidationsBase>(validations: U) {
     const wrapper = this.fork<TInput, TSecrets, THandler, TInit, TValidations & U>();
     wrapper.validations = { ...this.validations, ...validations };
     return wrapper;
   }
 
-  validateInput<U extends keyof TValidations>(methodName: U, ...args: AllParametersExceptFirst<TValidations[U]>) {
+  
+  validateInput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
     const self = this;
+
+    const out = self.validations[ methodName as string ].init( this, ...args );
     const validation = async function (data: any, rawData: any) {
-      await self.validations[methodName as string].apply(self, [data, rawData, ...args]);
+      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...out]);
     }
+
     this._validateInputFn.push(validation);
     return this;
   }

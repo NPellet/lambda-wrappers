@@ -19,8 +19,8 @@ describe("Testing runtime validation", () => {
     })
 
     const mgr = new LambdaFactoryManager()
-                        .addValidation("failValidator", failValidator )
-                        .addValidation("successValidator", successValidator );
+                        .addValidation("failValidator",  failValidator, ( e ) => []  )
+                        .addValidation("successValidator", successValidator,  ( e ) => []  );
 
     
 
