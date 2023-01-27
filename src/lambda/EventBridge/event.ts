@@ -16,13 +16,9 @@ import { validateRecord } from '../../util/validateRecord';
 export const createEventBridgeHandler = <
   T,
   I,
-  TSecrets extends string,
-  SInput extends BaseSchema | undefined = undefined
->(
+  TSecrets extends string>(
   listener: LambdaInitSecretHandler<
-    AwsEventBridgeEvent<
-      SInput extends ObjectSchema<any> ? InferType<SInput> : T
-    >,
+    AwsEventBridgeEvent<T>,
     I,
     TSecrets,
     void
@@ -31,10 +27,10 @@ export const createEventBridgeHandler = <
 ): Handler<
   EventBridgeEvent<
     string,
-    SInput extends ObjectSchema<any> ? InferType<SInput> : T
+     T
   >
 > => {
-  type V = SInput extends ObjectSchema<any> ? InferType<SInput> : T;
+  type V =  T;
   const wrappedHandler = wrapGenericHandler(listener, {
     type: LambdaType.EVENT_BRIDGE,
     ...configuration,

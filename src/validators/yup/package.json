@@ -4,8 +4,14 @@
   "description": "Yup validator for the lambda handlers",
   "main": "index.js",
   "scripts": {
-    
+    "build": "node esbuild.cjs && npx tsc"
   },
   "author": "Norman Pellet",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "yup": "^0.32.11"
+  },
+  "devDependencies": {
+    "esbuild": "^0.17.5"
+  }
 }
