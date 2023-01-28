@@ -1,8 +1,9 @@
 {
   "name": "aws-lambda-handlers-yup",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "Yup validator for the lambda handlers",
-  "main": "index.js",
+  "main": "dist/main.js",
+  "types": "dist/validators/yup/src/main.d.ts",
   "scripts": {
     "build": "node esbuild.cjs && npx tsc"
   },
@@ -13,5 +14,8 @@
   },
   "devDependencies": {
     "esbuild": "^0.17.5"
+  },
+  "peerDependencies": {
+    "aws-lambda-handlers": "^3.0.0"
   }
 }

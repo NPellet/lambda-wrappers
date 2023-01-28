@@ -1,9 +1,9 @@
 import { APIGatewayEvent } from "aws-lambda";
 import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from "yup";
-import { BaseWrapperFactory } from "../../../lambda/BaseWrapperFactory";
-import { LambdaFactoryManager } from "../../../lambda/Manager";
-import { TAllSecretRefs } from "../../../lambda/utils/secrets_manager";
-import { MessageType, TValidationsBase } from "../../../util/types";
+import { BaseWrapperFactory } from "aws-lambda-handlers";
+import { LambdaFactoryManager } from "aws-lambda-handlers";
+import { TAllSecretRefs } from "aws-lambda-handlers";
+import { MessageType, TValidationsBase } from "aws-lambda-handlers";
 
 const yupValidation = <U extends TAllSecretRefs, Z extends TValidationsBase>(manager: LambdaFactoryManager<U, Z>) => {
 
@@ -24,10 +24,7 @@ const yupValidation = <U extends TAllSecretRefs, Z extends TValidationsBase>(man
     }
 
     return [schema]
-
   })
-
-
 }
 
 export default yupValidation;
