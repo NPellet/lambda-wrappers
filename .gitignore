@@ -7,3 +7,5 @@ cdk_utils
 coverage
 *.bk.md
 
+.DS_Store
+test/**

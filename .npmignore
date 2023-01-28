@@ -6,4 +6,4 @@ test_utils
 docs/
 coverage
 cdk_utils
-src/validators
+validators/**
