@@ -16,11 +16,11 @@ Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic
 
 ## <a name='Breakingchangesinv3.x'></a>Breaking changes in v3.x
 
-From v3, the validation system has been reworked, and we're dropping native support of yup in favor of a more global approach. Validators can now be registered at the manager level and consumed by the implementation of the AWS Lambda.
+From v3.x, the validation system has been reworked, and we're dropping native support of yup in favor of a more global approach. Validators can now be registered at the manager level and consumed by the implementation of the AWS Lambda.
 
 One major side-effect - and downside, really - is that we no longer infer the input and output types from the schemas. This must now be explicitely written by the implementation (e.g. `.setTsInputType<InferType<typeof schema>>()` for yup).
 
-The major upside is that you can write validators not only for the payload, but also for any additional information provided to the lambda, via for example the headers for the API Gateway, or via the Message Attributes for SQS.
+The major upside is that you can write validators not only for the payload, but also for any additional information provided to the lambda, via for example the headers for the API Gateway, or via the Message Attributes for SQS. Lambdas can also chain validators, to not only enforce schema validation, but any other type of validator you may decide to write at the manager level.
 
 Check out [Runtime Validation](#runtime-validation) for explanations and examples.
 
@@ -194,9 +194,11 @@ export const { handler_name, configuration } = manager
 
 ```
 
-Note here how the function name in the output object is the one you set in the `apiGatewayWrapperFactory` method. It's also the handler you must configure in AWS:  `path/to/route.handler_name`
+Note here how the name of the function in the output object (here: `handler_name`) is the one you set in the `apiGatewayWrapperFactory` method. It's also the handler you must configure in AWS:  `path/to/route.handler_name`
 
-If you implement multiple handlers per module and you need to access the `configuration` object, you will need to rename it.
+You can use this to implement multiple functions in a single file (though we do not recommend it)
+
+If you implement multiple handlers per file and you need to access the `configuration` object, you will need to rename the `configuration` object during destructuring.
 
 
 ### <a name='GodownthemorecomplexOOProute:'></a>Go down the more complex OOP route:
@@ -222,7 +224,7 @@ export type Interface = CtrlInterfaceOf<typeof wrapperFactory>;
 
 #### <a name='Createacontroller'></a>3. Create a controller
 
-You can now write your controller, which must implement the interface exported by the Lambda wrapper (we called it `Interface`)
+You may now write the controller, which must implement the interface exported by the Lambda wrapper (we called it `Interface`, see above)
 
 ```typescript
 // path/to/controller.ts
@@ -239,6 +241,8 @@ class Controller implements Interface {
 ```
 
 And that's it for the most basic implementation ! You may now use `path/to/route.handler` as a Lambda entry-point.
+
+The syntax `handler_name: IfHandler<Interface> = ` allows to automatically infer the types of the method arguments without needing to be explicit. This is because in typescript (in 4.9 at least), arguments in methods that implement an interface are not inferred and default to `any`. So rather than asking you to be explicit and set the type of the arguments, we think it's easier to just explicitely type the whole method.
 
 ## <a name='Details'></a>Details
 
@@ -520,10 +524,10 @@ Note that this doesn't give you runtime validation yet.
 
 When writing the `LambdaFactoryManager`, you can add to it validators functions, which can be optionally consumed by the lambda implementation. Validators may be used to enforce a schema, but may also validate other other message properties (headers, message attributes, source origins, etc...)
 
-Validators
-- Must be asynchronous (even if the validation is synchronous, the function needs to return a Promise)
-- Throw an error when the validation fails
-- The validator takes two functions
+Validators must:
+- be asynchronous (even if the validation is synchronous, the function needs to return a Promise)
+- throw an error when the validation fails
+- takes a name and two functions
   - The validator itseld
   - An init function, run at cold start, allowing modifications of the arguments (and the BaseWrapperFactory as well) (see example below)
   
