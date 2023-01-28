@@ -94,6 +94,7 @@ This package provides an opiniated stack to insert additional logic in handling 
     - [Implementing multiple routes / events in a controller](#implementing-multiple-routes--events-in-a-controller)
   - [Type system](#type-system)
   - [Runtime validation](#runtime-validation)
+    - [Using pre-baked validators](#using-pre-baked-validators)
   - [JSON, String, Number or Buffer ?](#json-string-number-or-buffer-)
   - [Metering](#metering)
     - [General metrics](#general-metrics)
@@ -522,34 +523,70 @@ When writing the `LambdaFactoryManager`, you can add to it validators functions,
 Validators
 - Must be asynchronous (even if the validation is synchronous, the function needs to return a Promise)
 - Throw an error when the validation fails
+- The validator takes two functions
+  - The validator itseld
+  - An init function, run at cold start, allowing modifications of the arguments (and the BaseWrapperFactory as well) (see example below)
+  
 
-Adding a validator to the manager takes the following syntax (exemple with ```yup```)
+Adding a validator to the manager takes the following syntax
 
 ```typescript
 const mgr = new LambdaFactoryManager().addValidation(
-    "validationName", 
+    "validationName",
+    // Validation function 
     async (
       data: any, 
       rawData: APIGatewayEvent | EventBridgeEvent<any, any> | SQSEvent | SNSEvent, 
-      schema: BaseSchema
+      arg2: T2,
+      arg3: T3,
+      //...
     ) => {
 
       await schema.validate( data );
+    }, 
+    // Init function
+    ( wrapper: BaseWrapperFactory<any>, arg2: T4 ): [ T2, T3 ] => {
+
+      let a: T2;
+      let b: T3;
+      return [ a, b ];
     }
 );
 ```
 
-Now, the two first 2 parameters are fed at runtime from the lambda. The first one is the extracted data itself (parsed request body, SNS message body, etc) and the second argument is the raw event that the lambda has received. It can be of any time because at the LambdaManager level, you don't know yet if you're consuming an API Gateway resource or any other type of event.
+In other words, the `init` function defines the arguments that the `validateInput` and `validateOutput` take (in this case 1 arg of type `T4`) and returns a tuple or arguments fed into the validator (in  this case 2 args of type `T2` and `T3`).
+
+This allows you to run type modifications, e.g. schema compilation (which should only run on a cold start), without exposing the logic to the consumer of the validator.
+
+
+Note the two first 2 parameters of the validation function are fixed and of type `any`. They represent the (1) extracted data itself (parsed request body, SNS message body, etc) and (2) the raw event that the lambda has received. It can be of any type because at the LambdaManager level, you don't know yet if you're consuming an API Gateway resource or any other type of event.
 
 From the third argument on, the values are passed during the consumption of the validator:
 
 ```typescript
-mgr.apiGatewayWrapperFactory("handler").validateInput( "validationName", yup.object( {} ));
+declare a: T4;
+mgr.apiGatewayWrapperFactory("handler").validateInput( "validationName", a );
 ```
 
 There is strong type safety in the sense that the second argument of the `validateInput` method matches the type of the third argument in the validator method (and so on, the n+2 argument of the `validateInput` matches the type of the n+3 argument of the validator, n >= 0 ).
 
 The API Gateway factory also features a `validateOutput` method.
+
+### Using pre-baked validators
+
+We provide for you npm packages bundling common validators, notably:
+
+- [`aws-lambda-handlers-yup`](https://www.npmjs.com/package/aws-lambda-handlers-yup): Yup schema validation
+- [`aws-lambda-handlers-zod`](https://www.npmjs.com/package/aws-lambda-handlers-zod): Zod schema validation
+
+They expose one default export, a function taking a `LambdaFactoryManager` and returning another `LambdaFactoryManager` with the validator included.
+
+```typescript
+import yupValidation from 'aws-lambda-handlers-yup';
+const mgr = yupValidation( new LambdaFactoryManager() );
+```
+
+`yup` and `zod` are listed as dependencies in their respective packages, which means that if you install them with your manager, your bundler will include them with your manager and, in turn, your lambda will also be bundles will ALL validators you have installed (whether you actually use the validation or not). This shouldn't affect the runtime, but it will bloat a bit your package size.
 
 
 ## <a name='JSONStringNumberorBuffer'></a>JSON, String, Number or Buffer ?

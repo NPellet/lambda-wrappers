@@ -3,7 +3,7 @@
   "version": "1.0.4",
   "description": "Yup validator for the lambda handlers",
   "main": "dist/main.js",
-  "types": "dist/validators/yup/src/main.d.ts",
+  "types": "dist/main.d.ts",
   "scripts": {
     "build": "node esbuild.cjs && npx tsc"
   },
