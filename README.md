@@ -18,11 +18,11 @@ Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic
 
 From v3, the validation system has been reworked, and we're dropping native support of yup in favor of a more global approach. Validators can now be registered at the manager level and consumed by the implementation of the AWS Lambda.
 
-One major side-effect - and downside, really - is that we no longer infer the input and output types from the schemas. This must now be explicitely written by the implementation (e.g. `.setTsInputType<InferType<typeof schema>>` for yup).
+One major side-effect - and downside, really - is that we no longer infer the input and output types from the schemas. This must now be explicitely written by the implementation (e.g. `.setTsInputType<InferType<typeof schema>>()` for yup).
 
 The major upside is that you can write validators not only for the payload, but also for any additional information provided to the lambda, via for example the headers for the API Gateway, or via the Message Attributes for SQS.
 
-
+Check out [Runtime Validation](#runtime-validation) for explanations and examples.
 
 ## <a name='Breakingchangesinv2.x'></a>Breaking changes in v2.x
 
@@ -554,12 +554,11 @@ const mgr = new LambdaFactoryManager().addValidation(
 );
 ```
 
-In other words, the `init` function defines the arguments that the `validateInput` and `validateOutput` take (in this case 1 arg of type `T4`) and returns a tuple or arguments fed into the validator (in  this case 2 args of type `T2` and `T3`).
+In other words, the `init` function defines the arguments that the `validateInput` and `validateOutput` take (in this case: 1 arg of type `T4`) and returns a tuple or arguments fed into the validator (in this case: 2 args of type `T2` and `T3`).
 
-This allows you to run type modifications, e.g. schema compilation (which should only run on a cold start), without exposing the logic to the consumer of the validator.
+This allows you to run type modifications, e.g. schema compilation (which should only run on a cold start).
 
-
-Note the two first 2 parameters of the validation function are fixed and of type `any`. They represent the (1) extracted data itself (parsed request body, SNS message body, etc) and (2) the raw event that the lambda has received. It can be of any type because at the LambdaManager level, you don't know yet if you're consuming an API Gateway resource or any other type of event.
+Note the two first 2 parameters of the validation function are fixed and of type `any`. They represent the (1) extracted data itself (parsed request body, SNS message body, etc) and (2) the raw event that the lambda has received. It can be of any type because the validator defined at the `LambdaManager` level could be used with any event source (API Gateway, EB, SQS, SNS).
 
 From the third argument on, the values are passed during the consumption of the validator:
 
@@ -571,6 +570,29 @@ mgr.apiGatewayWrapperFactory("handler").validateInput( "validationName", a );
 There is strong type safety in the sense that the second argument of the `validateInput` method matches the type of the third argument in the validator method (and so on, the n+2 argument of the `validateInput` matches the type of the n+3 argument of the validator, n >= 0 ).
 
 The API Gateway factory also features a `validateOutput` method.
+
+For example, a schema validation for `yup` could be written like that:
+
+```typescript
+manager.addValidation("yup", async function (data, rawData: any, schema: BaseSchema) {
+    // Let it throw when the validation fails
+    await schema.validate(data, {
+      strict: true,
+      abortEarly: true
+    });
+  }, (wrapper: BaseWrapperFactory<any>, schema: BaseSchema): [BaseSchema] => {
+
+    if (schema instanceof StringSchema) {
+      wrapper._messageType = MessageType.String;
+    } else if (schema instanceof NumberSchema) {
+      wrapper._messageType = MessageType.Number;
+    } else if (schema instanceof ObjectSchema) {
+      wrapper._messageType = MessageType.Object;
+    }
+
+    return [schema]
+  })
+```
 
 ### Using pre-baked validators
 
@@ -595,16 +617,13 @@ The API Gateway, SNS and SQS pass the message body (or request as a string), and
 
 Here are the rules we generally apply:
 
-- If you have called `setInputSchema`, the handler will look at the schema type:
-
-  - If it's an `ObjectSchema`, it will run JSON.parse before validation
-  - If it's a `StringSchema`, it will run no parsing before validation
-  - If it's a `NumberSchema`, it will run parseFloat before validation
-
+- If you have called the yup or zod validator, we infer from the `interface` of the schema and set it for you..
+  
 - If the schema is not set, but `setTsInputType` was called, then the handler will use JSON.parse
 - If `setNumberInputType`, `setStringInputType` or `setBinaryInputType` is used instead of `setTsInputType`, then the handler will parse a float, nothing and a base64 buffer, respectively
 
 - If nothing is called, there will do no parsing and the type will unknown anyway. In other words, you will get a string for API Gateway, SQS and SNS, and potentially a JSON for the Event Bridge.
+- For the API Gateway, if the `Content-Type` headers of the request are `application/json`, we'll use JSON.parse to parse the body.
 
 ## <a name='Metering'></a>Metering
 
