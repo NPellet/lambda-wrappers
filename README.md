@@ -301,22 +301,7 @@ type HandlerIf = CtrlInterfaceOf<wrapperFactory>;
 */
 ```
 
-The handler can be further composed to enhance the type safety and runtime safety of the controller. See [Runtime Validation](#runtime-validation) for examples on how to enforce runtime schema validation.
 
-```typescript
-const wrapperFactory = manager
-  .apiGatewayWrapperFactory('handler_name')
-  .setTsInputType<Animal>()
- 
-
-export type InterfaceHandler = CtrlInterfaceOf<typeof wrapperFactory>;
-
-// Creating the handler and the configuration
-
-import Controller from './path/to/controller';
-export const { handler, configuration } =
-  wrapperFactory.createWrapper(Controller);
-```
 
 ## <a name='DetailedUsage'></a>Detailed Usage
 
