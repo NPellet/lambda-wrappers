@@ -14,6 +14,16 @@
 
 Enhance your AWS Lambdas with wrappers to bring strong typings and runtime logic to your lambdas. Now with Sentry, Opentelemetry and Yup and Secret prefetching
 
+## <a name='Breakingchangesinv3.x'></a>Breaking changes in v3.x
+
+From v3, the validation system has been reworked, and we're dropping native support of yup in favor of a more global approach. Validators can now be registered at the manager level and consumed by the implementation of the AWS Lambda.
+
+One major side-effect - and downside, really - is that we no longer infer the input and output types from the schemas. This must now be explicitely written by the implementation (e.g. `.setTsInputType<InferType<typeof schema>>()` for yup).
+
+The major upside is that you can write validators not only for the payload, but also for any additional information provided to the lambda, via for example the headers for the API Gateway, or via the Message Attributes for SQS.
+
+Check out [Runtime Validation](#runtime-validation) for explanations and examples.
+
 ## <a name='Breakingchangesinv2.x'></a>Breaking changes in v2.x
 
 The only changes between v2.x and v1.x are in the handling of the secrets.
@@ -58,6 +68,7 @@ This package provides an opiniated stack to insert additional logic in handling 
 
 <!-- vscode-markdown-toc -->
 - [AWS Lambda Handlers](#aws-lambda-handlers)
+  - [Breaking changes in v3.x](#breaking-changes-in-v3x)
   - [Breaking changes in v2.x](#breaking-changes-in-v2x)
   - [Why ?](#why-)
   - [How it works](#how-it-works)
@@ -82,6 +93,8 @@ This package provides an opiniated stack to insert additional logic in handling 
     - [Implementing a controller](#implementing-a-controller)
     - [Implementing multiple routes / events in a controller](#implementing-multiple-routes--events-in-a-controller)
   - [Type system](#type-system)
+  - [Runtime validation](#runtime-validation)
+    - [Using pre-baked validators](#using-pre-baked-validators)
   - [JSON, String, Number or Buffer ?](#json-string-number-or-buffer-)
   - [Metering](#metering)
     - [General metrics](#general-metrics)
@@ -139,7 +152,7 @@ npm i aws-lambda-handlers
 ## <a name='Features'></a>Features
 
 - Strongly typed TS Interfaces to be implemented by Controllers
-- Optional payload input (and output) validation against a schema
+- Optional payload input (and output) validation against a schema (or any other validation function)
 - Wrapping with Sentry (with cross-oranisation configuration sharing)
 - Tracing with Opentelemetry, separating Lambda spans with source spans (no need for the auto-instrumentation)
 - Before executing a controller, secrets may be pre-fetched and provided to you
@@ -284,17 +297,13 @@ type HandlerIf = CtrlInterfaceOf<wrapperFactory>;
 */
 ```
 
-The handler can be further composed to enhance the type safety and runtime safety of the controller:
+The handler can be further composed to enhance the type safety and runtime safety of the controller. See [Runtime Validation](#runtime-validation) for examples on how to enforce runtime schema validation.
 
 ```typescript
 const wrapperFactory = manager
   .apiGatewayWrapperFactory('handler_name')
   .setTsInputType<Animal>()
-  .setOutputSchema(
-    yup.object({
-      handled: yup.boolean(),
-    })
-  );
+ 
 
 export type InterfaceHandler = CtrlInterfaceOf<typeof wrapperFactory>;
 
@@ -329,8 +338,8 @@ const handlerWrapperFactory = manager
   .apiGatewayWrapperFactory('handle')
   .setTsInputType<INPUT_TYPE>() // Injects type safety, overrides yup schema
   .setTsOutputType<OUTPUT_TYPE>() // Injects type safety, overrides yup schema
-  .setInputSchema(yupSchema) // Of type yup
-  .setOutputSchema(yupSchema) // Of type yup
+  .validateInput("yup", yupSchema) // Of type yup.BaseSchema // ! The yup validator must be defined first
+  .validateOutput("yup", yupSchema) // Of type yup.BaseSchema // ! The yup validator must be defined first
   .needsSecret(
     'aws',
     'process_env_key',
@@ -499,9 +508,108 @@ export class Controller // The controller must now implement 4 interfaces, 1 for
 
 When specifying `setTsInputType` (and `setTsOutputType` for the API Gateway), the input data will reference those types (even when a schema is set) but do nothing at the runtime (you need to set a schema for that)
 
-When specifying a yup schema using `setInputSchema` and `setOutputSchema`, but when the corresponding `setTsInputType` and `setTsOutputType` are not set, the type of the input and output is dictated by yup's `InferType< typeof schema >`. The only way to overwrite that if - for example - yup's inferred type isn't good enough, is to override it with `setTsInputType`. This doesn't change the runtime validation, which solely depends on the presence of the schema or not.
+If you are validating against a schema, most libraries provide with a way to infer a typescript type from the schema type. You may leverage the use of static type inference to avoid typing your TS typings twice:
 
-On another note, the schema validation can be asynchronous. It is validated before your handler is called and its validation is finished before your handler is executed. If the validation fails, your wrapped handler will not be executed.
+- For yup, use `.setTsInputType<InferType<typeof schema>>()`
+- For zod, use `.setTsInputType<z.infer<typeof schema>>()`
+- For a JSON schema, use the package [json-schema-to-ts](https://www.npmjs.com/package/json-schema-to-ts) and use `.setTsInputType<FromSchema<typeof schema>>()`
+
+Note that this doesn't give you runtime validation yet.
+
+## <a name='Runtimevalidation'></a>Runtime validation
+
+When writing the `LambdaFactoryManager`, you can add to it validators functions, which can be optionally consumed by the lambda implementation. Validators may be used to enforce a schema, but may also validate other other message properties (headers, message attributes, source origins, etc...)
+
+Validators
+- Must be asynchronous (even if the validation is synchronous, the function needs to return a Promise)
+- Throw an error when the validation fails
+- The validator takes two functions
+  - The validator itseld
+  - An init function, run at cold start, allowing modifications of the arguments (and the BaseWrapperFactory as well) (see example below)
+  
+
+Adding a validator to the manager takes the following syntax
+
+```typescript
+const mgr = new LambdaFactoryManager().addValidation(
+    "validationName",
+    // Validation function 
+    async (
+      data: any, 
+      rawData: APIGatewayEvent | EventBridgeEvent<any, any> | SQSEvent | SNSEvent, 
+      arg2: T2,
+      arg3: T3,
+      //...
+    ) => {
+
+      await schema.validate( data );
+    }, 
+    // Init function
+    ( wrapper: BaseWrapperFactory<any>, arg2: T4 ): [ T2, T3 ] => {
+
+      let a: T2;
+      let b: T3;
+      return [ a, b ];
+    }
+);
+```
+
+In other words, the `init` function defines the arguments that the `validateInput` and `validateOutput` take (in this case: 1 arg of type `T4`) and returns a tuple or arguments fed into the validator (in this case: 2 args of type `T2` and `T3`).
+
+This allows you to run type modifications, e.g. schema compilation (which should only run on a cold start).
+
+Note the two first 2 parameters of the validation function are fixed and of type `any`. They represent the (1) extracted data itself (parsed request body, SNS message body, etc) and (2) the raw event that the lambda has received. It can be of any type because the validator defined at the `LambdaManager` level could be used with any event source (API Gateway, EB, SQS, SNS).
+
+From the third argument on, the values are passed during the consumption of the validator:
+
+```typescript
+declare a: T4;
+mgr.apiGatewayWrapperFactory("handler").validateInput( "validationName", a );
+```
+
+There is strong type safety in the sense that the second argument of the `validateInput` method matches the type of the third argument in the validator method (and so on, the n+2 argument of the `validateInput` matches the type of the n+3 argument of the validator, n >= 0 ).
+
+The API Gateway factory also features a `validateOutput` method.
+
+For example, a schema validation for `yup` could be written like that:
+
+```typescript
+manager.addValidation("yup", async function (data, rawData: any, schema: BaseSchema) {
+    // Let it throw when the validation fails
+    await schema.validate(data, {
+      strict: true,
+      abortEarly: true
+    });
+  }, (wrapper: BaseWrapperFactory<any>, schema: BaseSchema): [BaseSchema] => {
+
+    if (schema instanceof StringSchema) {
+      wrapper._messageType = MessageType.String;
+    } else if (schema instanceof NumberSchema) {
+      wrapper._messageType = MessageType.Number;
+    } else if (schema instanceof ObjectSchema) {
+      wrapper._messageType = MessageType.Object;
+    }
+
+    return [schema]
+  })
+```
+
+### Using pre-baked validators
+
+We provide for you npm packages bundling common validators, notably:
+
+- [`aws-lambda-handlers-yup`](https://www.npmjs.com/package/aws-lambda-handlers-yup): Yup schema validation
+- [`aws-lambda-handlers-zod`](https://www.npmjs.com/package/aws-lambda-handlers-zod): Zod schema validation
+
+They expose one default export, a function taking a `LambdaFactoryManager` and returning another `LambdaFactoryManager` with the validator included.
+
+```typescript
+import yupValidation from 'aws-lambda-handlers-yup';
+const mgr = yupValidation( new LambdaFactoryManager() );
+```
+
+`yup` and `zod` are listed as dependencies in their respective packages, which means that if you install them with your manager, your bundler will include them with your manager and, in turn, your lambda will also be bundles will ALL validators you have installed (whether you actually use the validation or not). This shouldn't affect the runtime, but it will bloat a bit your package size.
+
 
 ## <a name='JSONStringNumberorBuffer'></a>JSON, String, Number or Buffer ?
 
@@ -509,16 +617,13 @@ The API Gateway, SNS and SQS pass the message body (or request as a string), and
 
 Here are the rules we generally apply:
 
-- If you have called `setInputSchema`, the handler will look at the schema type:
-
-  - If it's an `ObjectSchema`, it will run JSON.parse before validation
-  - If it's a `StringSchema`, it will run no parsing before validation
-  - If it's a `NumberSchema`, it will run parseFloat before validation
-
+- If you have called the yup or zod validator, we infer from the `interface` of the schema and set it for you..
+  
 - If the schema is not set, but `setTsInputType` was called, then the handler will use JSON.parse
 - If `setNumberInputType`, `setStringInputType` or `setBinaryInputType` is used instead of `setTsInputType`, then the handler will parse a float, nothing and a base64 buffer, respectively
 
 - If nothing is called, there will do no parsing and the type will unknown anyway. In other words, you will get a string for API Gateway, SQS and SNS, and potentially a JSON for the Event Bridge.
+- For the API Gateway, if the `Content-Type` headers of the request are `application/json`, we'll use JSON.parse to parse the body.
 
 ## <a name='Metering'></a>Metering
 

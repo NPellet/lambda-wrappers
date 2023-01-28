@@ -1,16 +1,15 @@
-import { BaseSchema } from 'yup';
 import { log } from '../lambda/utils/logger';
 
 export const validateRecord = async <T>(
-  record: { getData(): T },
-  yupSchema?: BaseSchema
+  record: { getData(): T, getRawRecord(): any  },
+  validateMethod?: Array<( data: any, rawData: any ) => Promise<void>>
 ) => {
-  if (yupSchema) {
+  if (validateMethod) {
     try {
-      await yupSchema.validate(record.getData(), {
-        abortEarly: true,
-        strict: true,
-      });
+      for( let o of validateMethod ) { // Should we make those concurrent ?
+        await o(record.getData(), record.getRawRecord());
+      }
+      
     } catch (e) {
       log.warn(`Lambda's input schema failed to validate.`);
       log.debug(e);

@@ -53,7 +53,7 @@ export const wrapBaseLambdaHandler = <U, TInit, TSecrets extends string, V>(
 
     // const errorBag = localAsyncStorage.getStore()!.errorBag;
     return new Promise<V | void>((resolve, reject) => {
-      const shimmedCb = function (err, out: V | void) {
+      const shimmedCb = function (err: any , out: V | void) {
         log.debug('Running shim callback of lambda');
 
         if (err) {
@@ -76,12 +76,10 @@ export const wrapGenericHandler = <
   T,
   TInit,
   U,
-  SInput extends ObjectSchema<any> | any,
-  SOutput extends ObjectSchema<any> | any,
   TSecrets extends string
 >(
   handler: LambdaInitSecretHandler<T, TInit, TSecrets, U>,
-  configuration: HandlerConfigurationWithType<TInit, SInput, SOutput, TSecrets>
+  configuration: HandlerConfigurationWithType<TInit, TSecrets>
 ) => {
   // Needs to wrap before the secrets manager, because secrets should be available in the init phase
   let wrappedHandler = wrapBaseLambdaHandler(

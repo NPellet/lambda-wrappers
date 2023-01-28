@@ -1,6 +1,5 @@
-import { BaseSchema, InferType } from 'yup';
 import { HandlerConfiguration, SourceConfigEB, ConfigGeneral } from '../config';
-import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
+import { AllParametersExceptFirst, ConstructorOf, MessageType, TOrSchema, TValidationInitParams, TValidationsBase } from '../../util/types';
 import { SecretsContentOf, TAllSecretRefs } from '../utils/secrets_manager';
 import { createEventBridgeHandler } from './event';
 import { AwsEventBridgeEvent } from '../../util/records/eventbridge/eventbridge';
@@ -11,17 +10,10 @@ export class EventBridgeHandlerWrapperFactory<
   TSecretList extends TAllSecretRefs,
   TSecrets extends string = string,
   THandler extends string = 'handle',
-  SInput extends BaseSchema | undefined = undefined,
-  TInit = undefined
+  TInit = undefined,
+  TValidations extends TValidationsBase = {}
 > extends BaseWrapperFactory<TSecretList> {
-  public _inputSchema: SInput;
 
-  setInputSchema<U extends BaseSchema>(schema: U) {
-    const api = this.fork<TInput, TSecrets, THandler, U, TInit>();
-    api._inputSchema = schema;
-    api.setMessageTypeFromSchema(schema);
-    return api;
-  }
 
   configureRuntime(cfg: SourceConfigEB, general: ConfigGeneral) {
     super._configureRuntime({
@@ -47,47 +39,33 @@ export class EventBridgeHandlerWrapperFactory<
       TInput,
       string extends TSecrets ? U : TSecrets | U,
       THandler,
-      SInput,
-      TInit
+      TInit,
+      TValidations
     >();
+
     api._needsSecret(source, key, secretName, secretKey, meta, required);
-    api._inputSchema = this._inputSchema;
     return api;
   }
-
-  private copyAll(
-    newObj: EventBridgeHandlerWrapperFactory<
-      any,
-      TSecretList,
-      TSecrets,
-      THandler,
-      SInput,
-      TInit
-    >
-  ) {
-    newObj._inputSchema = this._inputSchema;
-  }
-
-  setTsInputType<U>() {
-    const api = this.fork<U, TSecrets, THandler, SInput, TInit>();
-    api._messageType = MessageType.Object;
-    this.copyAll(api);
-    return api;
-  }
+  
 
   setHandler<T extends string>(handler: T) {
-    const api = this.fork<TInput, TSecrets, T, SInput, TInit>();
-    api._inputSchema = this._inputSchema;
+    const api = this.fork<TInput, TSecrets, T, TInit, TValidations>();
     api._handler = handler;
     return api;
   }
 
+  setTsInputType<U>() {
+    const api = this.fork<U, TSecrets, THandler, TInit, TValidations>();
+    api._messageType = MessageType.Object;
+    return api;
+  }
+
+
   private buildConfiguration() {
-    const configuration: HandlerConfiguration<TInit, SInput, any, TSecrets> =
+    const configuration: HandlerConfiguration<TInit, TSecrets> =
       this.expandConfiguration({
         opentelemetry: true,
         sentry: true,
-        yupSchemaInput: this._inputSchema,
         secretInjection: this._secrets,
         messageType: this._messageType,
       });
@@ -96,27 +74,47 @@ export class EventBridgeHandlerWrapperFactory<
   }
 
   initFunction<U>(func: (secrets: Record<TSecrets, string>) => Promise<U>) {
-    const factory = this.fork<TInput, TSecrets, THandler, SInput, U>();
-    factory._inputSchema = this._inputSchema;
-    factory._messageType = this._messageType;
+    const factory = this.fork<TInput, TSecrets, THandler, U, TValidations>();
     factory.setInitFunction(func);
     return factory;
   }
+
+
+  public addValidations<U extends TValidationsBase>(validations: U) {
+    const wrapper = this.fork<TInput, TSecrets, THandler, TInit, TValidations & U>();
+    wrapper.validations = { ...this.validations, ...validations };
+    return wrapper;
+  }
+
+  
+  validateInput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
+    const self = this;
+
+    const out = self.validations[ methodName as string ].init( this, ...args );
+    const validation = async function (data: any, rawData: any) {
+      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...out]);
+    }
+
+    this._validateInputFn.push(validation);
+    return this;
+  }
+
+
 
   fork<
     TInput,
     TSecrets extends string,
     THandler extends string,
-    SInput extends BaseSchema | undefined = undefined,
-    TInit = undefined
+    TInit = undefined,
+    TValidations extends TValidationsBase = {}
   >() {
     const n = new EventBridgeHandlerWrapperFactory<
       TInput,
       TSecretList,
       TSecrets,
       THandler,
-      SInput,
-      TInit
+      TInit,
+      TValidations
     >(this.mgr);
 
     super.fork(n);
@@ -125,14 +123,13 @@ export class EventBridgeHandlerWrapperFactory<
 
   createHandler(
     controllerFactory: ConstructorOf<
-      TEBCtrlInterface<THandler, TInput, SInput, TSecrets>
+      TEBCtrlInterface<THandler, TInput, TSecrets>
     >
   ) {
-    type INPUT = TOrSchema<TInput, SInput>;
 
     type TInterface = {
       [x in THandler]: (
-        payload: AwsEventBridgeEvent<INPUT>,
+        payload: AwsEventBridgeEvent<TInput>,
         secrets: Record<TSecrets, string>
       ) => Promise<void>;
     };
@@ -143,10 +140,9 @@ export class EventBridgeHandlerWrapperFactory<
     const configuration = newWrapper.buildConfiguration();
 
     const handler = createEventBridgeHandler<
-      INPUT,
+      TInput,
       TInterface,
-      TSecrets,
-      SInput
+      TSecrets
     >(async (event, init, secrets, c) => {
       return init[this._handler](event, secrets);
     }, configuration);
@@ -159,14 +155,7 @@ export class EventBridgeHandlerWrapperFactory<
 
   wrapFunc(
     func: (
-      payload: AwsEventBridgeEvent<
-        // subst for TOrSchema
-        unknown extends TInput
-          ? SInput extends BaseSchema
-            ? InferType<SInput>
-            : unknown
-          : TInput
-      >,
+      payload: AwsEventBridgeEvent<TInput>,
       init: TInit,
       secrets?: Record<TSecrets, string | undefined>
     ) => Promise<void>
@@ -174,10 +163,9 @@ export class EventBridgeHandlerWrapperFactory<
     const configuration = this.buildConfiguration();
 
     const handler = createEventBridgeHandler<
-      TOrSchema<TInput, SInput>,
+      TInput,
       TInit,
-      TSecrets,
-      SInput
+      TSecrets
     >(async (event, init, secrets) => {
       return func(event, init, secrets);
     }, configuration);
@@ -198,21 +186,18 @@ export type EventBridgeCtrlInterface<T> =
     infer TInput,
     any,
     infer TSecrets,
-    infer THandler,
-    infer SInput,
-    infer TInit
+    infer THandler
   >
-    ? TEBCtrlInterface<THandler, TInput, SInput, TSecrets>
-    : never;
+  ? TEBCtrlInterface<THandler, TInput, TSecrets>
+  : never;
 
 type TEBCtrlInterface<
   THandler extends string,
   TInput,
-  SInput,
   TSecrets extends string
 > = {
-  [x in THandler]: (
-    payload: AwsEventBridgeEvent<TOrSchema<TInput, SInput>>,
-    secrets?: Record<TSecrets, string | undefined>
-  ) => Promise<void>;
-};
+    [x in THandler]: (
+      payload: AwsEventBridgeEvent<TInput>,
+      secrets?: Record<TSecrets, string | undefined>
+    ) => Promise<void>;
+  };

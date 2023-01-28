@@ -1,0 +1,21 @@
+{
+    "name": "aws-lambda-handlers-zod",
+    "version": "1.0.0",
+    "description": "Zod validator for the lambda handlers",
+    "main": "dist/main.js",
+    "types": "dist/main.d.ts",
+    "scripts": {
+        "build": "node esbuild.cjs && npx tsc"
+    },
+    "author": "Norman Pellet",
+    "license": "MIT",
+    "dependencies": {
+        "zod": "^3.20.2"
+    },
+    "devDependencies": {
+        "esbuild": "^0.17.5"
+    },
+    "peerDependencies": {
+        "aws-lambda-handlers": "^3.0.0"
+      }
+}

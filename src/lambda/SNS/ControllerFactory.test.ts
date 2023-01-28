@@ -4,8 +4,8 @@ import {
   LambdaContext,
   testSNSEvent,
   testSNSRecord,
+  yupValidation,
 } from '../../test_utils/utils';
-import * as yup from 'yup';
 import {
   SNSCtrlInterface,
   SNSHandlerWrapperFactory,
@@ -14,6 +14,8 @@ import { IfHandler, LambdaFactoryManager } from '..';
 import { MessageType } from '../../util/types';
 import { BaseWrapperFactory } from '../BaseWrapperFactory';
 import { _makeCompatibilityCheck } from '@opentelemetry/api/build/src/internal/semver';
+import { BaseSchema } from 'yup';
+import * as yup from 'yup';
 
 const spyOnExpandedConfiguration = jest.spyOn(
   BaseWrapperFactory.prototype,
@@ -31,15 +33,15 @@ describe('Testing API Controller factory', function () {
     const fac2 = fac
       .setTsInputType<{ a: string }>()
       .needsSecret('aws', 'key', 'a', 'b', undefined, true)
-      .sentryDisable()
-      .setInputSchema(
-        yup.object({
-          a: yup.number(),
-        })
-      );
+      .sentryDisable();
+    /* .setInputSchema(
+       yup.object({
+         a: yup.number(),
+       })
+     );*/
     // @ts-ignore
     expect(fac2._handler).toBe('ahandler');
-    expect(fac2._inputSchema).toBeInstanceOf(yup.ObjectSchema);
+    //   expect(fac2._inputSchema).toBeInstanceOf(yup.ObjectSchema);
     expect(fac2._secrets.key).toStrictEqual({
       meta: undefined,
       source: 'aws',
@@ -54,7 +56,15 @@ describe('Testing API Controller factory', function () {
     const controllerFactory = new SNSHandlerWrapperFactory(
       new LambdaFactoryManager()
     )
-      .setInputSchema(schema)
+      .addValidations({
+        "yup": {
+          validate: async function (d, r, s: BaseSchema) {
+            await s.validate(d);
+          },
+          init: (wrapper, s: BaseSchema) => [s]
+        }
+      })
+      .validateInput('yup', schema)
       .setHandler('create');
 
     const mockHandler = jest.fn(async (data, secrets) => {
@@ -93,7 +103,7 @@ describe('Testing API Controller factory', function () {
           ],
         },
         LambdaContext,
-        () => {}
+        () => { }
       )
     ).rejects.toBeDefined();
 
@@ -110,7 +120,7 @@ describe('Testing API Controller factory', function () {
         ],
       },
       LambdaContext,
-      () => {}
+      () => { }
     );
 
     expect(mockHandler).toHaveBeenCalledTimes(1);
@@ -148,7 +158,7 @@ describe('Testing API Controller factory', function () {
         static async init() {
           return new Ctrl();
         }
-        async h() {}
+        async h() { }
       }
     );
 
@@ -184,26 +194,6 @@ describe('Testing API Controller factory', function () {
       expect(createConf(fac1).messageType).toBe(MessageType.Binary);
     });
 
-    test('Using setInputSchema with a string schema yields a message of type String in config', async () => {
-      const fac1 = new SNSHandlerWrapperFactory(
-        new LambdaFactoryManager()
-      ).setInputSchema(yup.string());
-      expect(createConf(fac1).messageType).toBe(MessageType.String);
-    });
-
-    test('Using setInputSchema with a number schema yields a message of type String in config', async () => {
-      const fac1 = new SNSHandlerWrapperFactory(
-        new LambdaFactoryManager()
-      ).setInputSchema(yup.number());
-      expect(createConf(fac1).messageType).toBe(MessageType.Number);
-    });
-
-    test('Using setInputSchema with a object schema yields a message of type String in config', async () => {
-      const fac1 = new SNSHandlerWrapperFactory(
-        new LambdaFactoryManager()
-      ).setInputSchema(yup.object());
-      expect(createConf(fac1).messageType).toBe(MessageType.Object);
-    });
   });
 });
 
@@ -220,7 +210,7 @@ describe('SNS wrapFunc', function () {
       });
 
     await expect(
-      out.my_handler(testSNSEvent, LambdaContext, () => {})
+      out.my_handler(testSNSEvent, LambdaContext, () => { })
     ).resolves.toBeUndefined();
 
     expect(fn).toHaveBeenCalled();

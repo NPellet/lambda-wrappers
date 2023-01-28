@@ -1,4 +1,4 @@
-import { BaseSchema, InferType } from 'yup';
+
 import {
   HandlerConfiguration,
   SourceConfigAPIGateway,
@@ -9,15 +9,15 @@ import {
   HTTPResponse,
 } from '../../util/records/apigateway/response';
 import { Request } from '../../util/records/apigateway/request';
-import { ConstructorOf, MessageType, TOrSchema } from '../../util/types';
+import { AllParametersExceptFirst, ConstructorOf, MessageType, TValidationInitParams, TValidationsBase } from '../../util/types';
 import { createApiGatewayHandler } from './api';
 import {
-  SecretConfig,
   SecretsContentOf,
   TAllSecretRefs,
-  TSecretRef,
 } from '../utils/secrets_manager';
 import { BaseWrapperFactory } from '../BaseWrapperFactory';
+
+
 
 export class APIGatewayHandlerWrapperFactory<
   TInput,
@@ -25,48 +25,11 @@ export class APIGatewayHandlerWrapperFactory<
   TSecretList extends TAllSecretRefs,
   TSecrets extends string = string,
   THandler extends string = 'handle',
-  SInput extends BaseSchema | undefined = undefined,
-  SOutput extends BaseSchema | undefined = undefined,
-  TInit = undefined
+  TInit = undefined,
+  TValidations extends TValidationsBase = {}
 > extends BaseWrapperFactory<TSecretList> {
-  public _outputSchema: SOutput;
-  public _secrets: Record<TSecrets, SecretConfig<any>>;
-  protected _messageType: MessageType = MessageType.String;
-  public _inputSchema: SInput;
-  public: TInput;
-  public __shimOutput: TOutput;
 
-  setInputSchema<U extends BaseSchema>(schema: U) {
-    const api = this.fork<
-      TInput,
-      TOutput,
-      TSecrets,
-      THandler,
-      U,
-      SOutput,
-      TInit
-    >();
-    api._inputSchema = schema;
-    api._outputSchema = this._outputSchema;
-    api.setMessageTypeFromSchema(schema);
-
-    return api;
-  }
-
-  setOutputSchema<U extends BaseSchema>(schema: U) {
-    const api = this.fork<
-      TInput,
-      TOutput,
-      TSecrets,
-      THandler,
-      SInput,
-      U,
-      TInit
-    >();
-    api._outputSchema = schema;
-    api._inputSchema = this._inputSchema;
-    return api;
-  }
+  public _messageType: MessageType = MessageType.String;
 
   needsSecret<
     SRC extends keyof TSecretList & string,
@@ -85,13 +48,10 @@ export class APIGatewayHandlerWrapperFactory<
       TOutput,
       string extends TSecrets ? U : TSecrets | U,
       THandler,
-      SInput,
-      SOutput,
-      TInit
+      TInit,
+      TValidations
     >();
     api._needsSecret(source, key, secretName, secretKey, meta, required);
-    api._inputSchema = this._inputSchema;
-    api._outputSchema = this._outputSchema;
     return api;
   }
 
@@ -101,12 +61,10 @@ export class APIGatewayHandlerWrapperFactory<
       TOutput,
       TSecrets,
       THandler,
-      SInput,
-      SOutput,
-      TInit
+      TInit,
+      TValidations
     >();
     api._messageType = MessageType.Object;
-    this.copyAll(api);
     return api;
   }
 
@@ -128,21 +86,6 @@ export class APIGatewayHandlerWrapperFactory<
     return api;
   }
 
-  private copyAll(
-    newObj: APIGatewayHandlerWrapperFactory<
-      any,
-      any,
-      TSecretList,
-      TSecrets,
-      THandler,
-      SInput,
-      SOutput,
-      TInit
-    >
-  ) {
-    newObj._inputSchema = this._inputSchema;
-    newObj._outputSchema = this._outputSchema;
-  }
 
   configureRuntime(cfg: SourceConfigAPIGateway, general: ConfigGeneral) {
     super._configureRuntime({
@@ -158,11 +101,9 @@ export class APIGatewayHandlerWrapperFactory<
       U,
       TSecrets,
       THandler,
-      SInput,
-      SOutput,
-      TInit
+      TInit,
+      TValidations
     >();
-    this.copyAll(api);
     return api;
   }
 
@@ -172,14 +113,10 @@ export class APIGatewayHandlerWrapperFactory<
       TOutput,
       TSecrets,
       T,
-      SInput,
-      SOutput,
-      TInit
+      TInit,
+      TValidations
     >();
-    api._inputSchema = this._inputSchema;
-    api._outputSchema = this._outputSchema;
     api._handler = handler;
-
     return api;
   }
 
@@ -189,26 +126,23 @@ export class APIGatewayHandlerWrapperFactory<
       TOutput,
       TSecrets,
       THandler,
-      SInput,
-      SOutput,
-      U
+      U,
+      TValidations
     >();
-    factory._inputSchema = this._inputSchema;
     factory.setInitFunction(func);
     return factory;
   }
 
+
   private buildConfiguration() {
     const configuration: HandlerConfiguration<
       TInit,
-      SInput,
-      SOutput,
       TSecrets
     > = this.expandConfiguration({
       opentelemetry: true,
       sentry: true,
-      yupSchemaInput: this._inputSchema,
-      yupSchemaOutput: this._outputSchema,
+      //yupSchemaInput: this._inputSchema,
+      //yupSchemaOutput: this._outputSchema,
       secretInjection: this._secrets,
       messageType: this._messageType,
     });
@@ -221,9 +155,8 @@ export class APIGatewayHandlerWrapperFactory<
     TOutput,
     TSecrets extends string = string,
     THandler extends string = 'handle',
-    SInput extends BaseSchema | undefined = undefined,
-    SOutput extends BaseSchema | undefined = undefined,
-    TInit = undefined
+    TInit = undefined,
+    TValidations extends TValidationsBase = {}
   >() {
     const n = new APIGatewayHandlerWrapperFactory<
       TInput,
@@ -231,9 +164,8 @@ export class APIGatewayHandlerWrapperFactory<
       TSecretList,
       TSecrets,
       THandler,
-      SInput,
-      SOutput,
-      TInit
+      TInit,
+      TValidations
     >(this.mgr);
 
     super.fork(n);
@@ -242,9 +174,39 @@ export class APIGatewayHandlerWrapperFactory<
     return n;
   }
 
+
+  public addValidations<U extends TValidationsBase>(validations: U) {
+    const wrapper = this.fork<TInput, TOutput, TSecrets, THandler, TInit, TValidations & U>();
+    wrapper.validations = { ...this.validations, ...validations };
+    return wrapper;
+  }
+
+  validateInput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
+    const self = this;
+
+    const out = self.validations[ methodName as string ].init( this, ...args );
+    const validation = async function (data: any, rawData: any) {
+      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...out]);
+    }
+
+    this._validateInputFn.push(validation);
+    return this;
+  }
+
+  validateOutput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
+    const self = this;
+    const out = self.validations[ methodName as string ].init( this, ...args );
+    const validation = async function (data: any, rawData: any) {
+      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...out]);
+    }
+
+    this._validateOutputFn.push(validation);  
+    return this;
+  }
+
   createHandler(
     controllerFactory: ConstructorOf<
-      TAPIGatewayInterface<THandler, TInput, TOutput, SInput, SOutput, TSecrets>
+      TAPIGatewayInterface<THandler, TInput, TOutput, TSecrets>
     >
   ) {
     const newWrapper = this.initFunction((secrets) => {
@@ -253,19 +215,16 @@ export class APIGatewayHandlerWrapperFactory<
     const configuration = newWrapper.buildConfiguration();
 
     const handler = createApiGatewayHandler<
-      TOrSchema<TInput, SInput>,
-      TOrSchema<TOutput, SOutput>,
+      TInput,
+      TOutput,
       {
         [x in THandler]: (
-          payload: Request<TOrSchema<TInput, SInput>>,
+          payload: Request<TInput>,
           secrets: Record<TSecrets, string>
-        ) => Promise<HTTPResponse<TOrSchema<TOutput, SOutput>> | HTTPError>;
-      },
-      TSecrets,
-      SInput,
-      SOutput
+        ) => Promise<HTTPResponse<TOutput> | HTTPError>;
+      }, TSecrets
     >(async (event, init, secrets, c) => {
-      return init[this._handler](event, secrets);
+      return init[this._handler as THandler](event, secrets);
     }, configuration);
 
     return {
@@ -278,25 +237,20 @@ export class APIGatewayHandlerWrapperFactory<
     func: (
       payload: Request<
         // subst for TOrSchema
-        unknown extends TInput
-          ? SInput extends BaseSchema
-            ? InferType<SInput>
-            : unknown
-          : TInput
+        TInput
       >,
       init: TInit,
       secrets: Record<TSecrets, string | undefined>
-    ) => Promise<HTTPResponse<TOrSchema<TOutput, SOutput>> | HTTPError>
+    ) => Promise<HTTPResponse<TOutput> | HTTPError>
   ) {
     const configuration = this.buildConfiguration();
 
     const handler = createApiGatewayHandler<
-      TOrSchema<TInput, SInput>,
-      TOrSchema<TOutput, SOutput>,
+      TInput,
+      TOutput,
       TInit,
-      TSecrets,
-      SInput,
-      SOutput
+      TSecrets
+
     >(async (event, init, secrets) => {
       return func(event, init, secrets);
     }, configuration);
@@ -310,6 +264,8 @@ export class APIGatewayHandlerWrapperFactory<
       configuration: typeof configuration;
     };
   }
+
+
 }
 
 export type APIGatewayCtrlInterface<T> =
@@ -319,23 +275,20 @@ export type APIGatewayCtrlInterface<T> =
     any,
     infer TSecrets,
     infer THandler,
-    infer SInput,
-    infer SOutput,
+
     any
   >
-    ? TAPIGatewayInterface<THandler, TInput, TOutput, SInput, SOutput, TSecrets>
-    : never;
+  ? TAPIGatewayInterface<THandler, TInput, TOutput, TSecrets>
+  : never;
 
 type TAPIGatewayInterface<
   THandler extends string,
   TInput,
   TOutput,
-  SInput,
-  SOutput,
   TSecrets extends string
 > = {
-  [x in THandler]: (
-    payload: Request<TOrSchema<TInput, SInput>>,
-    secrets: Record<TSecrets, string | undefined>
-  ) => Promise<HTTPResponse<TOrSchema<TOutput, SOutput>> | HTTPError>;
-};
+    [x in THandler]: (
+      payload: Request<TInput>,
+      secrets: Record<TSecrets, string | undefined>
+    ) => Promise<HTTPResponse<TOutput> | HTTPError>;
+  };

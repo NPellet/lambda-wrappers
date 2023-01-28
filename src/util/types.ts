@@ -1,4 +1,6 @@
 import { BaseSchema, InferType } from 'yup';
+import { BaseWrapperFactory } from '../lambda/BaseWrapperFactory';
+import { BaseLambdaHandler } from './LambdaHandler';
 
 export type ConstructorOf<T> = {
   init(secrets: Record<string, string | undefined>): Promise<T>;
@@ -41,3 +43,13 @@ export type IfHandler<T> = T extends {
 }
   ? (a: U, b: V) => W
   : never;
+
+
+  export type TValidationsBase = Record<string, { init: (...args: any ) => Array<any>, validate: (...args: any ) => Promise<void> }>;
+
+  export type AllParametersExceptFirst<T> = T extends ( _: any, __: any, ...args: infer P) => any ? P : never;
+  export type TValidationInitParams<T> = T extends ( _: any, ...args: infer P) => any ? P : never;
+
+  export type TValidationMethodBase = (data: any, rawData: any) => Promise<void>;  
+  export type TValidationMethod = (data: any, rawData: any, ...args: any[]) => Promise<void>;  
+  export type TValidationMethodArgs<T extends Array<any>> = (data: any, rawData: any, ...args: T[]) => Promise<void>;

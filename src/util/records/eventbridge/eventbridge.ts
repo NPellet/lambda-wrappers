@@ -31,4 +31,8 @@ export class AwsEventBridgeEvent<T> extends GenericRecord<T, EventBridgeEvent<st
   public getRawData() {
     return this.data;
   }
+  
+  public getRawRecord() {
+    return this.getRawData();
+  }
 }

@@ -3,6 +3,7 @@ import {
   testApiGatewayEvent,
   LambdaContext,
   memoryExporter,
+  yupValidation,
 } from '../../test_utils/utils';
 import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import { SemanticAttributes } from '@opentelemetry/semantic-conventions';
@@ -301,9 +302,9 @@ describe('API Gateway: Checking schemas', () => {
         return HTTPResponse.OK('Ok');
       },
       {
-        yupSchemaInput: yup.object({
+        validateInputFn: [yupValidation(yup.object({
           num: yup.number().required(),
-        }),
+        }))],
         messageType: MessageType.Object,
       }
     );
@@ -345,9 +346,9 @@ describe('API Gateway: Checking schemas', () => {
       },
       {
         messageType: MessageType.String,
-        yupSchemaOutput: yup.object({
+        validateOutputFn: [yupValidation(yup.object({
           outputField: yup.number().required(),
-        }),
+        }))],
       }
     );
 

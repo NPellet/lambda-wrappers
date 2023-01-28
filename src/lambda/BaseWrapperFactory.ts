@@ -1,11 +1,10 @@
 import {
   SecretConfig,
   TAllSecretRefs,
-  TSecretRef,
 } from './utils/secrets_manager';
-import type { LambdaFactoryManager } from './Manager';
+import { LambdaFactoryManager } from './Manager';
 import { AWSLambda } from '@sentry/serverless';
-import { MessageType } from '../util/types';
+import { MessageType, TValidationMethod, TValidationMethodBase, TValidationsBase } from '../util/types';
 import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from 'yup';
 import { HandlerConfiguration, SourceConfig } from './config';
 import _ from 'lodash';
@@ -13,11 +12,15 @@ import { defaultSourceConfig } from '../util/defaultConfig';
 
 export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
   private _disableSentry: boolean;
-  protected _messageType: MessageType = MessageType.Object;
+  public _messageType: MessageType = MessageType.Object;
   public _runtimeCfg: SourceConfig;
   public _handler: string;
   public _secrets: Record<string, SecretConfig<any>>;
   private _initFunction: (...args: any) => Promise<any>;
+
+  protected _validateInputFn: TValidationMethodBase[] = [];
+  protected _validateOutputFn: TValidationMethodBase[] = [];
+  protected validations: TValidationsBase = {};
 
   constructor(protected mgr: LambdaFactoryManager<TSecretList>) {}
 
@@ -27,6 +30,9 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     newEl._handler = this._handler;
     newEl._runtimeCfg = this._runtimeCfg;
     newEl._secrets = this._secrets;
+    newEl._validateInputFn = this._validateInputFn;
+    newEl._validateOutputFn = this._validateOutputFn;
+    newEl.validations = this.validations;
   }
 
   public sentryDisable() {
@@ -43,19 +49,10 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     return !this._disableSentry && !('DISABLE_SENTRY' in process.env);
   }
 
-  protected setMessageTypeFromSchema(schema: BaseSchema) {
-    if (schema instanceof StringSchema) {
-      this._messageType = MessageType.String;
-    } else if (schema instanceof NumberSchema) {
-      this._messageType = MessageType.Number;
-    } else if (schema instanceof ObjectSchema) {
-      this._messageType = MessageType.Object;
-    }
-  }
-
-  protected expandConfiguration<IF, SInput, SOutput, TSecrets extends string>(
-    cfg: HandlerConfiguration<IF, SInput, SOutput, TSecrets>
-  ): HandlerConfiguration<IF, SInput, SOutput, TSecrets> {
+  
+  protected expandConfiguration<IF,  TSecrets extends string>(
+    cfg: HandlerConfiguration<IF, TSecrets>
+  ): HandlerConfiguration<IF, TSecrets> {
     const secrets = cfg.secretInjection;
     const expandedSecrets = this.expandSecrets(secrets);
 
@@ -64,6 +61,8 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
       ...cfg,
       secretInjection: expandedSecrets,
       secretFetchers: this.mgr.secretFetchers ?? {},
+      validateInputFn: this._validateInputFn,
+      validateOutputFn: this._validateOutputFn,
       sources: _.defaultsDeep(
         {},
         this._runtimeCfg,
@@ -135,3 +134,4 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     };
   }
 }
+

@@ -4,7 +4,6 @@ import {
   Callback,
   Context,
 } from 'aws-lambda';
-import { BaseSchema, InferType } from 'yup';
 import { recordException } from '../../util/exceptions';
 import {
   LambdaContext,
@@ -23,6 +22,8 @@ import { Request } from '../../util/records/apigateway/request';
 import { wrapLatencyMetering } from '../utils/telemetry';
 import { getApiGatewayTelemetryAttributes } from './telemetry/Meter';
 import { MessageType } from '../../util/types';
+import { Exception } from '@sentry/serverless';
+import { validateRecord } from '../../util/validateRecord';
 /**
  * Make sure that the return format of the lambda matches what is expected from the API Gateway
  * @param handler
@@ -32,22 +33,20 @@ export const createApiGatewayHandler = <
   T,
   O,
   TInit = any,
-  TSecrets extends string = any,
-  SInput extends BaseSchema | undefined = undefined,
-  SOutput extends BaseSchema | undefined = undefined
+  TSecrets extends string = any
 >(
   handler: LambdaInitSecretHandler<
-    Request<SInput extends BaseSchema ? InferType<SInput> : T>,
+    Request<T>,
     TInit,
     TSecrets,
     HTTPResponse<O> | HTTPError
   >,
   configuration: Omit<
-    HandlerConfiguration<TInit, SInput, SOutput, TSecrets>,
+    HandlerConfiguration<TInit, TSecrets>,
     'type'
   >
 ) => {
-  type TInput = SInput extends BaseSchema ? InferType<SInput> : T;
+  type TInput = T;
   type TOutput = Awaited<ReturnType<typeof handler>>;
 
   const buildResponse = async (
@@ -107,17 +106,11 @@ export const createApiGatewayHandler = <
       };
     }
 
-    if (!responseData) {
-      return {
-        headers,
-        isBase64Encoded: false,
-        statusCode: response.getStatusCode(),
-        body: '',
-      };
-    }
-    if (configuration.yupSchemaOutput) {
+    
+    if (configuration.validateOutputFn) {
       try {
-        await configuration.yupSchemaOutput?.validate(responseData);
+        await validateRecord(response, configuration.validateOutputFn);
+
       } catch (e) {
         recordException(e);
         return {
@@ -127,6 +120,15 @@ export const createApiGatewayHandler = <
           body: 'Validation error: Output object not validating given output schema',
         };
       }
+    }
+
+    if (!responseData) {
+      return {
+        headers,
+        isBase64Encoded: false,
+        statusCode: response.getStatusCode(),
+        body: '',
+      };
     }
 
     if (typeof responseData === 'object') {
@@ -177,7 +179,7 @@ export const createApiGatewayHandler = <
 
       try {
         data = request.getData();
-      } catch (e) {
+      } catch (e: any) {
         // For example, can't parse the JSON
         recordException(e);
         return {
@@ -187,11 +189,10 @@ export const createApiGatewayHandler = <
         };
       }
 
-      if (configuration.yupSchemaInput) {
+      if (configuration.validateInputFn) {
         try {
-          await configuration.yupSchemaInput.validate(data);
-          console.log('Valid !');
-        } catch (e) {
+          await validateRecord( request, configuration.validateInputFn );
+        } catch (e: any) {
           log.warn(
             `Lambda's input schema failed to validate. Returning statusCode 500 to the API Gateway`
           );
@@ -230,7 +231,7 @@ export const createApiGatewayHandler = <
       log.debug(out);
 
       return out;
-    } catch (e) {
+    } catch (e: any ) {
       // We do not rethrow the exception.
       // Exception should already be recorded by the rumtime wrapper
       // recordException(e);

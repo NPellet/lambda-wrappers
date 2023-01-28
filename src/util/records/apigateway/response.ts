@@ -14,7 +14,11 @@ class BaseHTTPResponse<T> implements Replyable<T> {
     private headers: Record<string, string>,
     private statusCode: number
   ) {}
-
+  
+  public getRawRecord() {
+    return this;
+  }
+  
   public getData(): T {
     return this.data;
   }

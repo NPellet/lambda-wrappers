@@ -1,7 +1,8 @@
+//import { SQSHandlerWrapperFactory } from './SQS/ControllerFactory';
+import { SNSHandlerWrapperFactory } from './SNS/ControllerFactory';
 import { APIGatewayHandlerWrapperFactory } from './ApiGateway/ControllerFactory';
 import { EventBridgeHandlerWrapperFactory } from './EventBridge/ControllerFactory';
-import { SNSHandlerWrapperFactory } from './SNS/ControllerFactory';
-import { SQSHandlerWrapperFactory } from './SQS/ControllerFactory';
+
 import {
   METABase,
   SecretFetchCfg,
@@ -11,7 +12,13 @@ import {
 } from './utils/secrets_manager';
 import { NodeOptions } from '@sentry/node';
 import { SourceConfig } from './config';
-import { BaseSchema } from 'yup';
+import { AllParametersExceptFirst, MessageType, TValidationMethod, TValidationMethodArgs, TValidationsBase } from '../util/types';
+import { SQSHandlerWrapperFactory } from './SQS/ControllerFactory';
+import { APIGatewayEvent, EventBridgeEvent, SNSEvent, SQSEvent } from 'aws-lambda';
+import { BaseSchema, NumberSchema, ObjectSchema, StringSchema } from 'yup';
+import { BaseWrapperFactory } from './BaseWrapperFactory';
+
+type TValidationInit = <T extends TAllSecretRefs>(el: BaseWrapperFactory<T>) => BaseWrapperFactory<T>
 
 type awsPreSecret = {
   secret: string;
@@ -28,15 +35,19 @@ export type SecretFetcher<
   awsSecrets: Partial<Record<AWSKEYS, string>>
 ) => Promise<Partial<Record<KEYS, string>>>;
 
-export class LambdaFactoryManager<T extends TAllSecretRefs> {
+
+
+
+export class LambdaFactoryManager<T extends TAllSecretRefs, TVal extends TValidationsBase = {}> {
   runtimeCfg: SourceConfig | undefined = undefined;
   sentryCfg: NodeOptions = {};
   secretFetchers: Record<keyof T, SecretFetcher<string, any>>;
   preSecrets: Record<keyof T, awsPreSecret>;
+  validations: TVal;
 
-  constructor() {}
+  constructor() { }
 
-  public async init() {}
+  public async init() { }
 
   public setRuntimeConfig(cfg: SourceConfig) {
     this.runtimeCfg = cfg;
@@ -100,7 +111,7 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
             lst: U;
             src: P;
           };
-        }
+        }, TVal
       >();
       newMgr.sentryCfg = _self.sentryCfg;
       newMgr.secretFetchers = {
@@ -113,6 +124,29 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
       //@ts-ignore // TODO: Find whether static asserts might exist in typescript ?
       return newMgr;
     };
+  }
+
+
+  public addValidation<U extends string, Z extends TValidationMethod, P extends ( el: BaseWrapperFactory<any>, ...args: Q ) => AllParametersExceptFirst<Z>, Q extends Array<any>>(methodName: U, validationMethod: Z, validationInit: P) {
+
+    const newMgr = new LambdaFactoryManager<T, TVal & { [T in U]: {
+      validate: Z,
+      init: P
+    } }>();
+
+    newMgr.runtimeCfg = this.runtimeCfg;
+    newMgr.preSecrets = this.preSecrets;
+    newMgr.secretFetchers = this.secretFetchers;
+    newMgr.sentryCfg = this.sentryCfg;
+
+    newMgr.validations = {
+      ...this.validations, [methodName]: {
+        validate: validationMethod,
+        init: validationInit 
+      }
+    }
+
+    return newMgr;
   }
 
   public configureSentry(sentryOptions: NodeOptions, expand: boolean = true) {
@@ -142,42 +176,63 @@ export class LambdaFactoryManager<T extends TAllSecretRefs> {
     return this;
   }
 
+
+
+
   public apiGatewayWrapperFactory<U extends string>(handler: U) {
-    const wrapper = new APIGatewayHandlerWrapperFactory<
+    const wrapper: APIGatewayHandlerWrapperFactory<
       any,
       any,
       T,
       string,
       U,
       undefined,
-      undefined
-    >(this);
-
-    return wrapper.setHandler(handler);
-  }
-
-  public eventBridgeWrapperFactory<U extends string>(handler: U) {
-    const wrapper = new EventBridgeHandlerWrapperFactory<
+      TVal
+    > = new APIGatewayHandlerWrapperFactory<
+      any,
       any,
       T,
       string,
       U,
-      undefined
+      undefined,
+      TVal
     >(this);
-    return wrapper.setHandler(handler);
+
+    return wrapper.addValidations(this.validations).setHandler(handler);
+  }
+
+  public eventBridgeWrapperFactory<U extends string>(handler: U) {
+    const wrapper: EventBridgeHandlerWrapperFactory<
+      any,
+      T,
+      string,
+      U,
+      undefined,
+      TVal
+    > = new EventBridgeHandlerWrapperFactory<
+      any,
+      T,
+      string,
+      U,
+      undefined,
+      TVal
+    >(this);
+    return wrapper.addValidations(this.validations).setHandler(handler);
   }
 
   public sqsWrapperFactory<U extends string>(handler: U) {
-    const wrapper = new SQSHandlerWrapperFactory<any, T, string, U, undefined>(
-      this
-    );
-    return wrapper.setHandler(handler);
+    let sqsWrapper: SQSHandlerWrapperFactory<any, T, string, string, undefined, TVal>;
+    sqsWrapper = new SQSHandlerWrapperFactory<any, T, string, string, undefined, TVal>(this);
+    return sqsWrapper.addValidations(this.validations).setHandler(handler);
   }
 
+
   public snsWrapperFactory<U extends string>(handler: U) {
-    const wrapper = new SNSHandlerWrapperFactory<any, T, string, U, undefined>(
-      this
-    );
-    return wrapper.setHandler(handler);
+    let snsWrapper: SNSHandlerWrapperFactory<any, T, string, U, undefined, TVal>;
+    snsWrapper = new SNSHandlerWrapperFactory<any, T, string, U, undefined, TVal>(this);
+    return snsWrapper.addValidations(this.validations).setHandler(handler);
   }
 }
+
+
+
