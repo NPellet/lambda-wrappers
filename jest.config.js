@@ -8,5 +8,6 @@ module.exports = {
   coveragePathIgnorePatterns: [
     '<rootDir>/src/lambda/utils/secrets_manager_aws.ts',
     '<rootDir>/src/test_utils',
+    '<rootDir>/validators/.*/tests/',
   ],
 };

@@ -1,18 +1,20 @@
-import { HTTPResponse, LambdaFactoryManager } from "aws-lambda-handlers";
+import { HTTPResponse, LambdaFactoryManager, MessageType } from "aws-lambda-handlers";
 import { LambdaContext, testApiGatewayEvent } from "./data";
 import zodValidation from "../src/main";
 import { z } from "zod";
 
 describe("Testing zod validation", function() {
     
+
+    const mgr = new LambdaFactoryManager();
+    const mgr2 = zodValidation( mgr );
+
+    
     it("Validation is enforced", async() => {
 
         const mainFunc = jest.fn( async function( data, init, secrets ) {
             return HTTPResponse.OK_NO_CONTENT();
         } );
-
-        const mgr = new LambdaFactoryManager();
-        const mgr2 = zodValidation( mgr );
 
         const { handler } = mgr2
             .apiGatewayWrapperFactory("handler")
@@ -40,5 +42,14 @@ describe("Testing zod validation", function() {
 
 
     });
+
+
+    it("Infers message type", function() {
+
+        expect( mgr2.eventBridgeWrapperFactory("a").validateInput( "zod", z.string() ).wrapFunc( async () => {} ).configuration.messageType ).toBe(MessageType.String)
+        expect( mgr2.eventBridgeWrapperFactory("a").validateInput( "zod", z.number() ).wrapFunc( async () => {} ).configuration.messageType ).toBe(MessageType.Number)
+        expect( mgr2.eventBridgeWrapperFactory("a").validateInput( "zod", z.object( {} ) ).wrapFunc( async () => {} ).configuration.messageType ).toBe(MessageType.Object)
+    })
+
     
 });

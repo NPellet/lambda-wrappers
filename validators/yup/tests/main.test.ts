@@ -1,18 +1,19 @@
-import { HTTPResponse, LambdaFactoryManager } from "aws-lambda-handlers";
+import { HTTPResponse, LambdaFactoryManager, MessageType } from "aws-lambda-handlers";
 import yupValidation from "../src/main";
 import * as yup from 'yup';
 import { LambdaContext, testApiGatewayEvent } from "./data";
 
 describe("Testing yup validation", function() {
     
+    const mgr = new LambdaFactoryManager();
+    const mgr2 = yupValidation( mgr );
+
+
     it("Validation is enforced", async() => {
 
         const mainFunc = jest.fn( async function( data, init, secrets ) {
             return HTTPResponse.OK_NO_CONTENT();
         } );
-
-        const mgr = new LambdaFactoryManager();
-        const mgr2 = yupValidation( mgr );
 
         const { handler } = mgr2
             .apiGatewayWrapperFactory("handler")
@@ -37,8 +38,12 @@ describe("Testing yup validation", function() {
         });
 
         expect( mainFunc ).not.toHaveBeenCalled();
-
-
     });
-    
+
+    it("Infers message type", function() {
+
+        expect( mgr2.eventBridgeWrapperFactory("a").validateInput( "yup", yup.string() ).wrapFunc( async () => {} ).configuration.messageType ).toBe(MessageType.String)
+        expect( mgr2.eventBridgeWrapperFactory("a").validateInput( "yup", yup.number() ).wrapFunc( async () => {} ).configuration.messageType ).toBe(MessageType.Number)
+        expect( mgr2.eventBridgeWrapperFactory("a").validateInput( "yup", yup.object() ).wrapFunc( async () => {} ).configuration.messageType ).toBe(MessageType.Object)
+    })
 });
