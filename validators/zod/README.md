@@ -27,7 +27,6 @@ The validator can then be used for runtime schema validation
 ```typescript
 import mgr from '/path/to/manager'
 import { z } from "zod";
-import { InferType } from 'yup';
 
 const schema = z.object( {
     keyStr: z.string(),
@@ -36,7 +35,7 @@ const schema = z.object( {
 
 const { handler } = mgr
     .apiGatewayWrapperFactory('handler')
-    .setTsInputType<InferType<typeof schema>>()
+    .setTsInputType<z.infer<typeof schema>>()
     .validateInput("zod", schema) // <== Note this line here
     .wrapFunc( async () => {
         //... Function logic

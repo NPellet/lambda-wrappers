@@ -1,23 +1,23 @@
 {
-    "name": "aws-lambda-handlers-zod",
-    "version": "1.0.2",
-    "description": "Zod validator for the lambda handlers",
+    "name": "aws-lambda-handlers-ajv",
+    "version": "1.0.1",
+    "description": "AJV validator for the AWS lambda handlers",
     "main": "dist/main.js",
     "types": "dist/main.d.ts",
-    "keywords": [
-        "lambda",
-        "aws",
-        "zod",
-        "validation",
-        "schema"
-    ],
     "scripts": {
         "build": "node esbuild.cjs && npx tsc"
     },
+    "keywords": [
+        "lambda",
+        "aws",
+        "ajv",
+        "validation",
+        "schema"
+      ],
     "author": "Norman Pellet",
     "license": "MIT",
     "dependencies": {
-        "zod": "^3.20.2"
+        "ajv": "^8.12.0"
     },
     "devDependencies": {
         "esbuild": "^0.17.5"

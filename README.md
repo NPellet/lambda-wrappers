@@ -589,6 +589,7 @@ We provide for you npm packages bundling common validators, notably:
 
 - [`aws-lambda-handlers-yup`](https://www.npmjs.com/package/aws-lambda-handlers-yup): Yup schema validation
 - [`aws-lambda-handlers-zod`](https://www.npmjs.com/package/aws-lambda-handlers-zod): Zod schema validation
+- [`aws-lambda-handlers-ajv`](https://www.npmjs.com/package/aws-lambda-handlers-ajv): AJV schema validation
 
 They expose one default export, a function taking a `LambdaFactoryManager` and returning another `LambdaFactoryManager` with the validator included.
 
