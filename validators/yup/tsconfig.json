@@ -10,6 +10,7 @@
     "strictNullChecks": true,
     "emitDeclarationOnly": true,
     "declaration": true,
+    
     "resolveJsonModule": true,
     "strict": false,
     "allowSyntheticDefaultImports": true,

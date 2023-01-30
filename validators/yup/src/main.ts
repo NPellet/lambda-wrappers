@@ -15,6 +15,8 @@ const yupValidation = <U extends TAllSecretRefs, Z extends TValidationsBase>(man
     });
   }, (wrapper: BaseWrapperFactory<any>, schema: BaseSchema): [BaseSchema] => {
 
+    console.log("Calling !");
+    console.log( schema );
     if (schema instanceof StringSchema) {
       wrapper._messageType = MessageType.String;
     } else if (schema instanceof NumberSchema) {

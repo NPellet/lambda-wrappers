@@ -1,6 +1,6 @@
 {
     "name": "aws-lambda-handlers-zod",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Zod validator for the lambda handlers",
     "main": "dist/main.js",
     "types": "dist/main.d.ts",
@@ -17,5 +17,5 @@
     },
     "peerDependencies": {
         "aws-lambda-handlers": "^3.0.0"
-      }
+    }
 }

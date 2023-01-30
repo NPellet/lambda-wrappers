@@ -118,7 +118,7 @@ export class SQSHandlerWrapperFactory<
 
     const out = self.validations[ methodName as string ].init( this, ...args );
     const validation = async function (data: any, rawData: any) {
-      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...out]);
+      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...( out || [] )]);
     }
 
     this._validateInputFn.push(validation);

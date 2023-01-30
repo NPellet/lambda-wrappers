@@ -242,7 +242,7 @@ class Controller implements Interface {
 
 And that's it for the most basic implementation ! You may now use `path/to/route.handler` as a Lambda entry-point.
 
-The syntax `handler_name: IfHandler<Interface> = ` allows to automatically infer the types of the method arguments without needing to be explicit. This is because in typescript (in 4.9 at least), arguments in methods that implement an interface are not inferred and default to `any`. So rather than asking you to be explicit and set the type of the arguments, we think it's easier to just explicitely type the whole method.
+The syntax `handler_name: IfHandler<Interface> = ` allows to automatically infer the types of the method arguments without needing to be explicit. This is because in typescript (in 4.9 at least), arguments in methods that implement an interface are not inferred and default to `any`. So rather than setting the type of the arguments explicitely, it's easier to just explicitely type the whole method.
 
 ## <a name='Details'></a>Details
 
