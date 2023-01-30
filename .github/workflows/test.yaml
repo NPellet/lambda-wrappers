@@ -16,6 +16,10 @@ jobs:
         with:
           node-version: 16
       - run: npm ci 
+      - run: npm ci
+        working-directory: ./validators/yup
+      - run: npm ci
+        working-directory: ./validators/zod
       - run: npm run test
       - uses: codecov/codecov-action@v3
        
