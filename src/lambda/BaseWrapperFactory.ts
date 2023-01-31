@@ -22,7 +22,7 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
   protected _validateOutputFn: TValidationMethodBase[] = [];
   protected validations: TValidationsBase = {};
 
-  constructor(protected mgr: LambdaFactoryManager<TSecretList>) {}
+  constructor(protected mgr: LambdaFactoryManager<TSecretList>) { }
 
   protected fork(newEl: BaseWrapperFactory<TSecretList>) {
     newEl._disableSentry = this._disableSentry;
@@ -35,26 +35,52 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     newEl.validations = this.validations;
   }
 
-  protected _validateInput( methodName: string, ...args: any[] ) {
+  protected _validateInput(methodName: string, ...args: any[]) {
 
     const self = this;
     let isInit: boolean = false;
     let out: any[];
-    
-    const init = async function() {
-      out = await self.validations[ methodName as string ].init( this, ...args );
+
+    const init = async function () {
+      out = await self.validations[methodName as string].init(this, ...args);
     }
 
     const validation = async function (data: any, rawData: any) {
-      if( ! isInit ) {
+      if (!isInit) {
         await init();
         isInit = true;
       }
-      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...( out || [] )]);
+      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...(out || [])]);
     }
 
     this._validateInputFn.push(validation);
   }
+
+
+  protected _validateOutput(methodName: string, ...args: any[]) {
+
+    const self = this;
+
+    let isInit: boolean = false;
+    let out: any[];
+    const init = async function () {
+      out = await self.validations[methodName as string].init(this, ...args);
+    }
+
+    const validation = async function (data: any, rawData: any) {
+      if (!isInit) {
+        await init();
+        isInit = true;
+      }
+
+      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...out]);
+    }
+
+    this._validateOutputFn.push(validation);
+    return this;
+
+  }
+
 
   public sentryDisable() {
     this._disableSentry = true;
@@ -70,8 +96,8 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     return !this._disableSentry && !('DISABLE_SENTRY' in process.env);
   }
 
-  
-  protected expandConfiguration<IF,  TSecrets extends string>(
+
+  protected expandConfiguration<IF, TSecrets extends string>(
     cfg: HandlerConfiguration<IF, TSecrets>
   ): HandlerConfiguration<IF, TSecrets> {
     const secrets = cfg.secretInjection;

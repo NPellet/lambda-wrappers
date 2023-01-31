@@ -44,8 +44,10 @@ export const createEventBridgeHandler = <
     log.info(
       `Received event through EventBridge from source ${event.source} and detail-type ${event['detail-type']}.`
     );
-    log.debug(event.detail);
-
+    if( configuration.sources?._general?.logInput ) {
+      log.info(event);
+    }
+    
     const _event = new AwsEventBridgeEvent<V>(event);
 
     if (configuration.validateInputFn) {

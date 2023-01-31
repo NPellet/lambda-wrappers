@@ -1,6 +1,4 @@
 import { BaseSchema, InferType } from 'yup';
-import { BaseWrapperFactory } from '../lambda/BaseWrapperFactory';
-import { BaseLambdaHandler } from './LambdaHandler';
 
 export type ConstructorOf<T> = {
   init(secrets: Record<string, string | undefined>): Promise<T>;

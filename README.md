@@ -95,10 +95,11 @@ This package provides an opiniated stack to insert additional logic in handling 
   - [Type system](#type-system)
   - [Runtime validation](#runtime-validation)
     - [Using pre-baked validators](#using-pre-baked-validators)
+    - [API Gateway](#api-gateway)
   - [JSON, String, Number or Buffer ?](#json-string-number-or-buffer-)
   - [Metering](#metering)
     - [General metrics](#general-metrics)
-    - [API Gateway](#api-gateway)
+    - [API Gateway](#api-gateway-1)
     - [SNS](#sns)
     - [SQS](#sqs)
   - [Using Sentry](#using-sentry)
@@ -112,7 +113,7 @@ This package provides an opiniated stack to insert additional logic in handling 
     - [Manager level](#manager-level)
     - [Wrapper handler level](#wrapper-handler-level)
   - [Specificifities](#specificifities)
-    - [API Gateway](#api-gateway-1)
+    - [API Gateway](#api-gateway-2)
       - [Input](#input)
       - [Output](#output)
       - [Error handling](#error-handling)
@@ -583,7 +584,7 @@ manager.addValidation("yup", async function (data, rawData: any, schema: BaseSch
   })
 ```
 
-### Using pre-baked validators
+### <a name='Usingpre-bakedvalidators'></a>Using pre-baked validators
 
 We provide for you npm packages bundling common validators, notably:
 
@@ -598,8 +599,11 @@ import yupValidation from 'aws-lambda-handlers-yup';
 const mgr = yupValidation( new LambdaFactoryManager() );
 ```
 
-`yup` and `zod` are listed as dependencies in their respective packages, which means that if you install them with your manager, your bundler will include them with your manager and, in turn, your lambda will also be bundles will ALL validators you have installed (whether you actually use the validation or not). This shouldn't affect the runtime, but it will bloat a bit your package size.
+`yup` and `zod` and `ajv` are listed as dependencies in their respective packages, which means that if you install them with your manager, your bundler will include them with your manager and, in turn, your lambda will also be bundles will ALL validators you have installed (whether you actually use the validation or not). This shouldn't affect the runtime, but it will bloat a bit your package size.
 
+### <a name='APIGateway'></a>API Gateway
+
+If you need to fail and API Gateway lambda, you may decide to throw an HTTPError (e.g. `throw new HTTPError.BAD_REQUEST()`) and the correct status code will be used. Otherwise, status code 500 will be used.
 
 ## <a name='JSONStringNumberorBuffer'></a>JSON, String, Number or Buffer ?
 
@@ -607,8 +611,7 @@ The API Gateway, SNS and SQS pass the message body (or request as a string), and
 
 Here are the rules we generally apply:
 
-- If you have called the yup or zod validator, we infer from the `interface` of the schema and set it for you..
-  
+- If you have called the yup, zod or ajv validator, we infer from the `interface` of the schema and set it for you..
 - If the schema is not set, but `setTsInputType` was called, then the handler will use JSON.parse
 - If `setNumberInputType`, `setStringInputType` or `setBinaryInputType` is used instead of `setTsInputType`, then the handler will parse a float, nothing and a base64 buffer, respectively
 
@@ -621,6 +624,9 @@ If you have configured the Opentelementry Metrics SDK, then the following metric
 
 Note that you can change the name of the metrics using the `.configureRuntime()` method (in the second argument, with type completion)
 
+Note: Make sure your opentelemetry metrics sdk (@opentelemetry/sdk-trace-node and @opentelemetry/sdk-trace-base) is at version at least 1.9.1. Some previous versions do not implement the most recent standard of the `forceFlush()` method.
+
+
 ### <a name='Generalmetrics'></a>General metrics
 
 - `lambda_exec_total` (counter): Number of total lambda invocations
@@ -628,7 +634,9 @@ Note that you can change the name of the metrics using the `.configureRuntime()`
 - `lambda_cold_start_total` (counter): Number of cold starts
 - `lambda_exec_time` (counter): Execution time in seconds
 
-### <a name='APIGateway'></a>API Gateway
+Note that the execution time we calculate can be significantly lower than the one provided by AWS, especially in case of a cold start (and more particularly when you are using auto-instrumementation for large libraries like aws-sdk v2). For a more accurate reading, we recommand you looking into the AWS Telemetry API which can give you more accurate results, but is outside of the scope of this framework.
+
+### <a name='APIGateway-1'></a>API Gateway
 
 In addition, the API Gateway will record
 
@@ -695,10 +703,9 @@ or by setting the environment variable DISABLE_SENTRY in the lambda's configurat
 ## <a name='Secretinjection'></a>Secret injection
 
 Another cool feature of those lambda wrappers is that secrets from the AWS Secret Manager can be injected before the handler is called.
-Secrets are fetched during a cold start, of after a 2h cache has expired, but never in between.
+Secrets are fetched during a cold start, of after a 2h cache has expired, but otherwise, the secret values are cached and reused between invocations.
 
-They are exposed in two ways:
-
+Secrets are exposed in two ways:
 - Injected into process.env
 - Available in the controller method (the 2nd argument)
 
@@ -714,6 +721,7 @@ controllerFactory.needsSecret(
 
 class Controller implements RouteHandler {
   handler: IfHandler<RouteHandler> = async (data, secrets) => {
+    //                                            ^^^^^^^^
     // secrets is of type Record<"key", string>
     // secrets.key is available as type "string" for use
     // process.env.key is also available for use
@@ -771,8 +779,6 @@ export const aws_secrets = {
 };
 ```
 
-(This format can automatically be generated using the package `aws-secrets-manager-aot`)
-
 By setting the secret list into the manager, they can provide type safety when calling `needsSecret`:
 
 ```typescript
@@ -799,7 +805,7 @@ Autocompletion of the secret key:
 
 ### <a name='Providingalternativesecretsources'></a>Providing alternative secret sources
 
-Since v2, it is possible to specify an implementation for secret managers other than the AWS secrets manager (for example, Hashicorp Vault, or some secrets from GCP)
+Since v2, it is possible to specify an implementation for secret managers other than the AWS secrets manager (for example, Hashicorp Vault, or GCP)
 
 Fetching credentials from other sources will typically require authentication, and you can store the authentication credentials in the AWS secrets manager, which will be retrieved before your custom fetcher is called.
 
@@ -854,12 +860,7 @@ const mgr = new LambdaFactoryManager()
               required: boolean
             }>
 
-            Where the key of the record is to be reused in the return object
-            
-            { 
-              authKey?: string, 
-              otherKey?: string   
-            }
+            Where the key of the record is to be reused as the key in the return object of type Record<string, string | undefined>
           */
 
         const hashicorp_auth = awsSecrets.authKey;
@@ -875,17 +876,21 @@ const mgr = new LambdaFactoryManager()
     );
 ```
 
-Note that the prefetching secrets are only embedded in the configuration is the consumer actually requires a secret from the added secret source. In that case, those prefetching secrets end up in the configuration and can be picked up by some of your IaC tools if you wish it.
+Note that the prefetched AWS secrets are only fetched if the consumer actually requires a secret from the additional secret source. In that case, those prefetching secrets end up in the configuration and can be picked up by some of your IaC tools if you wish it.
 
-In the example above, the "Hashicorp" secret is stored in AWS and prefetched at runtime. the `aws` method provided in the prefetch definition callback provides auto-completion with the aws secrets passed previously in `setAWSSecrets`. If the secret you need is not listed, TS will complain and you'll need to silence it. If you do not provide any AWS secrets, the `aws` method signature becomes `(string, string | undefined )` and therefore any string can be passed without TS complaining.
+In the example above, the "Hashicorp" secret is stored in AWS and prefetched at runtime. The `aws` method provided in the prefetch definition callback provides is just a helper to help with the configuration by providing auto-completion of the aws secrets:
 
-When the service consumes, the manager, the developer may now call:
+- If you previously passed secrets via `setAWSSecrets`, auto-completion is enabled and the typescript compiler will complain if you require a secret that "doesn't exist" (and you'll need to silence it).
+  
+- If you do not provide any AWS secrets, parameters of the `aws` method  become `( string, string | undefined )` and therefore any string can be passed without TS complaining.
+
+As the lambda consumes the manager, the developer may now call:
 
 ```typescript
 // Auto-completion here as well !
 api.needsSecret(
-  'HashicorpVault',
-  'injectedKey',
+  'HashicorpVault', // Same value as passed to the .addSecretSource method
+  'injectedKey', // Any string
   'Secret',
   'Key',
   {
@@ -895,7 +900,11 @@ api.needsSecret(
 );
 ```
 
-Which can then be consumed by the handler as `injectedKey`
+Which can then be consumed by the handler as `injectedKey`.
+
+Visit 
+[this example](https://github.com/NPellet/lambda-wrappers/tree/main/examples/secrets) for a more complete example.
+
 
 ## <a name='Configuringruntime'></a>Configuring runtime
 
@@ -910,6 +919,7 @@ const mgr = new LambdaFactoryManager().setRuntimeConfig({
   _general: {
     // General configuration for all types of even sources
     recordExceptionOnLambdaFail: true, // When your inner wrapper throws an unhandled error, should we record the exception ?
+    logInput: false // Whether to log (info level) the input data of the lambda handler
   },
   apiGateway: {
     recordExceptionOnValidationFail: true, // When the schema validation fails, should we record the exception ?
@@ -931,7 +941,7 @@ const mgr = new LambdaFactoryManager().setRuntimeConfig({
 
 Notes:
 
-- For SNS and SQS, if you want to use dead-letter queues, then `silenceRecordOnValidationFail` should be set to `false`. `true` will just not execute your handler and exit silently. For the DLQ to work, the record needs to fail, and therefore you need to retry it.
+- For SNS and SQS, if you want to use dead-letter queues, then `silenceRecordOnValidationFail` should be set to `false`. `true` will just not execute your handler and exit silently. For the DLQ to work, the record needs to fail, and therefore you need AWS to retry it.
 
 ### <a name='Wrapperhandlerlevel'></a>Wrapper handler level
 
@@ -949,7 +959,7 @@ Where `SpecificRuntimeConfig` matches the config for the API Gateway, EB, SNS an
 
 #### <a name='Input'></a>Input
 
-The payload passed to your handler is of type `Request<T>` ( where `T` is the static type set in `setTsInputType` or infered from the schema).
+The payload passed to your handler is of type `Request<T>` ( where `T` is the static type set in `setTsInputType` or infered from the schema ).
 
 The payload may be retrieved using:
 

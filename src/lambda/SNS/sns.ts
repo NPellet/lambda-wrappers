@@ -43,7 +43,11 @@ export const createSNSHandler = <
     log.info(`Received SNS event`, { topic: event.Records[0].Sns.TopicArn });
     // Only one event per SNS message
     const record = event.Records[0];
-    log.debug(record);
+    if( configuration.sources?._general?.logInput ) {
+      log.info(record);
+    }
+    
+    
     const _record = new AwsSNSRecord<TInput>(record, configuration.messageType);
 
     try {

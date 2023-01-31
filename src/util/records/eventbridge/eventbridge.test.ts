@@ -8,7 +8,8 @@ describe('Event bridge event', () => {
         testEventBridgeEvent
       );
   
-      expect(event.getDetailType()).toBe( testEventBridgeEvent["detail-type"]);
-      expect(event.getRawData()).toBe( testEventBridgeEvent);
+      expect(event.getDetailType()).toBe( testEventBridgeEvent["detail-type"] );
+      expect(event.getRawData()).toBe( testEventBridgeEvent );
+      expect(event.getRawRecord()).toBe( testEventBridgeEvent );
     });
 });

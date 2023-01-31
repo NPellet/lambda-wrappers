@@ -38,7 +38,11 @@ export const createSQSHandler = <
   });
 
   let innerLoop = async (record: SQSRecord, context: Context) => {
-    log.debug(record);
+    if( configuration.sources?._general?.logInput ) {
+      log.info(record);
+    }
+    
+    
     const _record = new AwsSQSRecord<TInput>(record, configuration.messageType);
 
     try {
