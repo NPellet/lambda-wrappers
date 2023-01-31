@@ -45,7 +45,7 @@ export type IfHandler<T> = T extends {
   : never;
 
 
-  export type TValidationsBase = Record<string, { init: (...args: any ) => Array<any>, validate: (...args: any ) => Promise<void> }>;
+  export type TValidationsBase = Record<string, { init: (...args: any ) => Array<any> | Promise<Array<any>>, validate: (...args: any ) => Promise<void> }>;
 
   export type AllParametersExceptFirst<T> = T extends ( _: any, __: any, ...args: infer P) => any ? P : never;
   export type TValidationInitParams<T> = T extends ( _: any, ...args: infer P) => any ? P : never;

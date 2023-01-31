@@ -181,22 +181,27 @@ export class APIGatewayHandlerWrapperFactory<
     return wrapper;
   }
 
-  validateInput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
-    const self = this;
 
-    const out = self.validations[ methodName as string ].init( this, ...args );
-    const validation = async function (data: any, rawData: any) {
-      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...( out || [] )]);
-    }
-
-    this._validateInputFn.push(validation);
+   validateInput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
+    this._validateInput( methodName as string, ...args );
     return this;
   }
 
   validateOutput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
     const self = this;
-    const out = self.validations[ methodName as string ].init( this, ...args );
+
+    let isInit: boolean = false;
+    let out: any[];
+    const init = async function() {
+      out = await self.validations[ methodName as string ].init( this, ...args );
+    }
+    
     const validation = async function (data: any, rawData: any) {
+      if( ! isInit ) {
+        await init();
+        isInit = true;
+      }
+
       await self.validations[methodName as string].validate.apply(self, [data, rawData, ...out]);
     }
 

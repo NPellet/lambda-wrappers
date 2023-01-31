@@ -35,6 +35,27 @@ export abstract class BaseWrapperFactory<TSecretList extends TAllSecretRefs> {
     newEl.validations = this.validations;
   }
 
+  protected _validateInput( methodName: string, ...args: any[] ) {
+
+    const self = this;
+    let isInit: boolean = false;
+    let out: any[];
+    
+    const init = async function() {
+      out = await self.validations[ methodName as string ].init( this, ...args );
+    }
+
+    const validation = async function (data: any, rawData: any) {
+      if( ! isInit ) {
+        await init();
+        isInit = true;
+      }
+      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...( out || [] )]);
+    }
+
+    this._validateInputFn.push(validation);
+  }
+
   public sentryDisable() {
     this._disableSentry = true;
     return this;

@@ -3,7 +3,7 @@ import {
   ConfigGeneral,
   SourceConfigSQS,
 } from '../config';
-import { AllParametersExceptFirst, ConstructorOf, MessageType, TValidationsBase } from '../../util/types';
+import { AllParametersExceptFirst, ConstructorOf, MessageType, TValidationInitParams, TValidationsBase } from '../../util/types';
 import { SecretsContentOf, TAllSecretRefs } from '../utils/secrets_manager';
 import { createSQSHandler } from './sqs';
 import { SQSBatchItemFailure } from 'aws-lambda';
@@ -112,19 +112,10 @@ export class SQSHandlerWrapperFactory<
     return wrapper;
   }
 
-
-  validateInput<U extends keyof TValidations>(methodName: U, ...args: AllParametersExceptFirst<TValidations[U]>) {
-    const self = this;
-
-    const out = self.validations[ methodName as string ].init( this, ...args );
-    const validation = async function (data: any, rawData: any) {
-      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...( out || [] )]);
-    }
-
-    this._validateInputFn.push(validation);
+   validateInput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
+    this._validateInput( methodName as string, ...args );
     return this;
   }
-
 
 
   private buildConfiguration() {

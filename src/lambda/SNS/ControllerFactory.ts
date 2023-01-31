@@ -122,15 +122,8 @@ export class SNSHandlerWrapperFactory<
   }
 
   
-  validateInput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
-    const self = this;
-
-    const out = self.validations[ methodName as string ].init( this, ...args );
-    const validation = async function (data: any, rawData: any) {
-      await self.validations[methodName as string].validate.apply(self, [data, rawData, ...( out || [] )]);
-    }
-
-    this._validateInputFn.push(validation);
+   validateInput<U extends keyof TValidations>(methodName: U, ...args: TValidationInitParams<TValidations[U]["init"]>) {
+    this._validateInput( methodName as string, ...args );
     return this;
   }
 

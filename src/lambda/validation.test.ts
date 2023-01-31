@@ -149,14 +149,17 @@ describe("Testing runtime validation", () => {
             const fac = mgr.apiGatewayWrapperFactory("handler");
 
             fac.validateInput("test");
-            expect(validatorInit).toHaveBeenCalled();
+            
 
             const handler = fac.wrapFunc(async function () {
                 return HTTPResponse.OK_NO_CONTENT();
             })
 
             await expect(handler.handler(testApiGatewayEvent, LambdaContext, () => { })).resolves.toMatchObject({ statusCode: 204 });
+            expect(validatorInit).toHaveBeenCalled();
             expect(validator).toHaveBeenCalled();
+            await expect(handler.handler(testApiGatewayEvent, LambdaContext, () => { })).resolves.toMatchObject({ statusCode: 204 });
+            expect(validatorInit).toHaveBeenCalledTimes(1);
         });
     });
 });

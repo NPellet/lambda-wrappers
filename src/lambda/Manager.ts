@@ -127,7 +127,7 @@ export class LambdaFactoryManager<T extends TAllSecretRefs, TVal extends TValida
   }
 
 
-  public addValidation<U extends string, Z extends TValidationMethod, P extends ( el: BaseWrapperFactory<any>, ...args: Q ) => AllParametersExceptFirst<Z>, Q extends Array<any>>(methodName: U, validationMethod: Z, validationInit: P) {
+  public addValidation<U extends string, Z extends TValidationMethod, P extends ( el: BaseWrapperFactory<any>, ...args: Q ) => AllParametersExceptFirst<Z> | Promise<AllParametersExceptFirst<Z>>, Q extends Array<any>>(methodName: U, validationMethod: Z, validationInit: P) {
 
     const newMgr = new LambdaFactoryManager<T, TVal & { [T in U]: {
       validate: Z,
