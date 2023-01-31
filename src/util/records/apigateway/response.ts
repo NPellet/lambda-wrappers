@@ -57,8 +57,7 @@ export class HTTPResponse<T> extends BaseHTTPResponse<T> {
   }
 }
 
-type T = string | Error;
-export class HTTPError extends BaseHTTPResponse<T> {
+export class HTTPError extends BaseHTTPResponse<string | Error> {
   public isError = true;
 
   private _anormal: boolean = false;
@@ -108,49 +107,49 @@ export class HTTPError extends BaseHTTPResponse<T> {
   }
 
   public static CONFLICT(
-    data: T = 'Conflict',
+    data = 'Conflict',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 409);
   }
 
   public static BAD_REQUEST(
-    data: T = 'Bad Request',
+    data = 'Bad Request',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 400);
   }
 
   public static UNAUTHORIZED(
-    data: T = 'Unauthorized',
+    data = 'Unauthorized',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 401);
   }
 
   public static FORBIDDEN(
-    data: T = 'Forbidden',
+    data = 'Forbidden',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 403);
   }
 
   public static NOT_FOUND(
-    data: T = 'Not Found',
+    data = 'Not Found',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 404);
   }
 
   public static VALIDATION_FAILED(
-    data: T = 'Validation Failed',
+    data = 'Validation Failed',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 422);
   }
 
   public static SERVER_ERROR(
-    data: T = 'Internal Server Error',
+    data = 'Internal Server Error',
     headers: Record<string, string> = {}
   ): HTTPError {
     return new HTTPError(data, headers, 500).anormal();

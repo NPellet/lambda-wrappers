@@ -22,7 +22,6 @@ import { Request } from '../../util/records/apigateway/request';
 import { wrapLatencyMetering } from '../utils/telemetry';
 import { getApiGatewayTelemetryAttributes } from './telemetry/Meter';
 import { MessageType } from '../../util/types';
-import { Exception } from '@sentry/serverless';
 import { validateRecord } from '../../util/validateRecord';
 /**
  * Make sure that the return format of the lambda matches what is expected from the API Gateway
@@ -56,10 +55,11 @@ export const createApiGatewayHandler = <
       !(response instanceof HTTPResponse) &&
       !(response instanceof HTTPError)
     ) {
-      const errorMessage =
-        'Lambda output not HTTPError nor Response. It should be either';
+      const errorMessage = 'Lambda output not HTTPError nor Response. It should be either';
+      
       log.error(errorMessage);
       log.debug(response);
+      
       recordException(new Error(errorMessage));
 
       return {
@@ -112,7 +112,18 @@ export const createApiGatewayHandler = <
         await validateRecord(response, configuration.validateOutputFn);
 
       } catch (e) {
+
         recordException(e);
+
+        if( e instanceof HTTPError ) {
+          const eData = e.getData();
+          return {
+            headers,
+            statusCode: e.getStatusCode(),
+            body: eData instanceof Error ? eData.toString() : eData
+          };
+        }
+        
         return {
           headers,
           isBase64Encoded: false,
@@ -160,7 +171,11 @@ export const createApiGatewayHandler = <
     let actualOut: TOutput | void;
 
     log.info(`Received event through APIGateway on path  ${event.path}.`);
-    log.debug(event);
+
+    if( configuration.sources?._general?.logInput ) {
+      log.debug(event);
+    }
+    
     try {
       //  const legacyEvent = new Event(event.detail);
       const newCtx: LambdaContext<APIGatewayEvent> = Object.assign(

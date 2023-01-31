@@ -127,20 +127,9 @@ export const flush = async () => {
   if (meterProvider.forceFlush) {
     // @ts-ignore
     try {
-      // @ts-ignore
+      // @ts-ignore‚
       await meterProvider.forceFlush();
 
-      // @ts-ignore
-      //if (meterProvider._sharedState?.metricCollectors) {
-        // @ts-ignore
-        /*for (let collector of meterProvider._sharedState.metricCollectors) {
-          if ('_metricReader' in collector) {
-            if ('_runOnce' in collector._metricReader) {
-              await collector._metricReader._runOnce();
-            }
-          }
-        }
-      }*/
     } catch (e) {
       log.error('Could not flush metrics');
       log.error(e);

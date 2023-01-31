@@ -1,4 +1,3 @@
-import { ObjectSchema } from 'yup';
 import { MessageType, TValidationMethodBase } from '../util/types';
 import { SecretFetcher } from './Manager';
 import { METABase, SecretConfig, SecretsRecord } from './utils/secrets_manager';
@@ -34,6 +33,8 @@ export type MetricNames = {
 
 export type ConfigGeneral = Partial<{
   recordExceptionOnLambdaFail: boolean;
+  logInput: string;
+  
   metricNames: Partial<MetricNames>;
 }>;
 

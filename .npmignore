@@ -7,3 +7,9 @@ docs/
 coverage
 cdk_utils
 validators/**
+test/**
+src/test_utils
+examples/**
+doc/**
+coverage/**
+cdk_utils/**
