@@ -2,7 +2,6 @@ import { APIGatewayEvent } from 'aws-lambda'
 import jwt from 'jsonwebtoken'
 import { LambdaFactoryManager } from '../../src/lambda/Manager';
 
-const key = "...";
 
 new LambdaFactoryManager().addValidation("authToken", async ( data: any, raw: APIGatewayEvent, key: string ) => {
 

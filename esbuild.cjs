@@ -18,7 +18,9 @@ require("esbuild")
     format: "cjs",
     outdir: "dist",
     sourcemap: true,
-    external: [ "winston", "@aws-sdk/client-secrets-manager", "@opentelemetry/api", "@opentelemetry/semantic-conventions", "aws-sdk" ],
+    //external: [ "winston", "@aws-sdk/client-secrets-manager", "@opentelemetry/api", "@opentelemetry/semantic-conventions", "aws-sdk" ],¨
+    minify: true,
+    plugins: [  nodeExternalsPlugin() ] 
   
   })
   .catch(() => process.exit(1));
