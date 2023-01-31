@@ -1,6 +1,6 @@
 {
     "name": "aws-lambda-handlers-ajv",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "AJV validator for the AWS lambda handlers",
     "main": "dist/main.js",
     "types": "dist/main.d.ts",
@@ -13,7 +13,7 @@
         "ajv",
         "validation",
         "schema"
-      ],
+    ],
     "author": "Norman Pellet",
     "license": "MIT",
     "dependencies": {

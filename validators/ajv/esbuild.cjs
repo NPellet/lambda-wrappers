@@ -9,7 +9,7 @@ require("esbuild")
     format: "cjs",
     outdir: "dist",
     sourcemap: true,
-    external: [ "zod", "aws-lambda-handlers" ],
+    external: [ "ajv", "aws-lambda-handlers" ],
   
   })
   .catch(() => process.exit(1));

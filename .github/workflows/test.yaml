@@ -20,6 +20,8 @@ jobs:
         working-directory: ./validators/yup
       - run: npm ci
         working-directory: ./validators/zod
+      - run: npm ci
+        working-directory: ./validators/ajv
       - run: npm run test
       - uses: codecov/codecov-action@v3
        
