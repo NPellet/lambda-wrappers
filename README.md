@@ -621,6 +621,9 @@ If you have configured the Opentelementry Metrics SDK, then the following metric
 
 Note that you can change the name of the metrics using the `.configureRuntime()` method (in the second argument, with type completion)
 
+Note: Make sure your opentelemetry metrics sdk (@opentelemetry/sdk-trace-node and @opentelemetry/sdk-trace-base) is at version at least 1.9.1. Some previous versions do not implement the most recent standard of the `forceFlush()` method.
+
+
 ### <a name='Generalmetrics'></a>General metrics
 
 - `lambda_exec_total` (counter): Number of total lambda invocations
